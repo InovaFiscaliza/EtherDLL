@@ -1,0 +1,2 @@
+[2024-08-05 14:31:42.878] [MIAerConn] [info] Application started
+[2024-08-05 14:31:52.182] [MIAerConn] [info] Connection successful
