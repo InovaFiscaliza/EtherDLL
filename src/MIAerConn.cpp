@@ -5,6 +5,9 @@
 #include <iostream>
 #include <fstream>
 
+#include <csignal>
+#include <thread>
+
 // Include the nlohmann JSON library
 #include <nlohmann/json.hpp>
 
@@ -26,23 +29,71 @@
 // For convenience handling JSON data
 using json = nlohmann::json;
 
+//
 // Global variables related to the application
+//
+
+// JSON configuration object
 json config;
+
+// Logger object
 spdlog::logger logger = spdlog::logger("MIAerConn");
 
+// Atomic flag to signal application error
+bool service_error = false;
+
+// Atomic flag to signal system or user kill signal
+bool interrupted = false;
+
+//
 // Global variables related to the API
-unsigned long APIserverId = 0; // Declare APIserverId. This service is intended to be used to connect to a single station, always 0.
-SScorpioAPIClient params; // Declare and initialize params
+//
+
+// API server ID. This service is intended to be used to connect to a single station, always 0.
+unsigned long APIserverId = 0;
+
+// Station connection paramenters
+SScorpioAPIClient station; 
+
 ErrorCB OnErrFunc;
 DataCB OnDataFunc;
 RealTimeDataCB OnRealtimeDataFunc;
+
+// Return code for API functions
 ERetCode errCode;
 
 //
-// FUNCTION: stringToWString(const std::string& str)
+// Signal handler function
 //
-// PURPOSE: Convert a string to a wide string.
+void signalHandler(int signal) {
+
+	if (signal == SIGINT)
+	{
+		interrupted = true;
+		logger.warn("Received interruption signal. Gracefully shutting down...");
+	}
+	else if (signal == SIGTERM)
+	{
+		interrupted = true;
+		logger.warn("Received termination signal. Gracefully shutting down...");
+	}
+	else 	{
+		std::string message = "Received unknown signal. #LttOS: " + std::to_string(signal);
+		logger.warn(message);
+	}
+}
+
 //
+// Register the signal handlers
+//
+void registerSignalHandlers() {
+	std::signal(SIGINT, signalHandler);  // Handles Ctrl+C
+	std::signal(SIGTERM, signalHandler); // Handles kill command
+}
+
+
+//
+// Convert a string to a wide string.
 //
 std::wstring stringToWString(const std::string& str) {
 	return std::wstring(str.begin(), str.end());
@@ -50,10 +101,7 @@ std::wstring stringToWString(const std::string& str) {
 
 
 //
-//  FUNCTION: StationConnect(void)
-//
-//  PURPOSE: Create a connection object to the station and connect to it.
-//
+// Create a connection object to the station and connect to it.
 //
 void StationConnect(bool* service_error)
 {
@@ -68,19 +116,19 @@ void StationConnect(bool* service_error)
 
 	// Hostname as simple string, extracted from th JSON configuration file
 	std::string hostNameStr = config["station address"].get<std::string>();
-	params.hostName = stringToWString(hostNameStr);
+	station.hostName = stringToWString(hostNameStr);
 
 	// Port as simple string, extracted from the JSON configuration file
 	std::string portStr = config["station port"].get<std::string>();
-	params.port = stringToWString(portStr);
+	station.port = stringToWString(portStr);
 
 	// Timeout as unsigned long, extracted from the JSON configuration file
-	params.sendTimeout = config["station timeout"].get<unsigned long>();
+	station.sendTimeout = config["station timeout"].get<unsigned long>();
 
 	// Create the connection object
 	errCode = ScorpioAPICreate(
 		NextServerId,
-		params,
+		station,
 		OnErrFunc,
 		OnDataFunc,
 		OnRealtimeDataFunc
@@ -103,7 +151,7 @@ void StationConnect(bool* service_error)
 	// Actually connect to the station
 	errCode = Connect(
 		NextServerId,
-		params,
+		station,
 		OnErrFunc,
 		OnDataFunc,
 		OnRealtimeDataFunc
@@ -124,10 +172,7 @@ void StationConnect(bool* service_error)
 }
 
 //
-//  FUNCTION: DisconnectAll(void)
-//
-//  PURPOSE: Disconnect station and socket clients
-//
+// Disconnect station and socket clients
 //
 void DisconnectAll(bool* service_error)
 {
@@ -154,8 +199,7 @@ void DisconnectAll(bool* service_error)
 
 int main() {
 
-	bool service_error = false;
-	bool system_kill_signal = true; // ! Implement function to handle system and users kill signal
+	registerSignalHandlers();
 
 	// Read configuration from JSON file
 	std::ifstream input_file("config.json");
@@ -185,12 +229,13 @@ int main() {
 	StationConnect(&service_error);
 
 	// while not service_error and not system kill signal
-	while (!service_error && !system_kill_signal) {
-		// wait for interrupt signal from console or system kill
-		// if signal received, set service_error to true
+	while (!service_error && !interrupted) {
+		// sleep for a while
+		logger.info("Waiting one second"); 
+		std::this_thread::sleep_for(std::chrono::seconds(1));
 	}
 
-	if (system_kill_signal) {
+	if (interrupted) {
 		logger.warn("Kill signal received. Stopping service.");
 	}
 	else {
