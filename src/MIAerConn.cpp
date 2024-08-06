@@ -70,12 +70,12 @@ void signalHandler(int signal) {
 	if (signal == SIGINT)
 	{
 		interrupted = true;
-		logger.warn("Received interruption signal. Gracefully shutting down...");
+		logger.warn("Received interruption signal (ctrl+C). Gracefully shutting down...");
 	}
 	else if (signal == SIGTERM)
 	{
 		interrupted = true;
-		logger.warn("Received termination signal. Gracefully shutting down...");
+		logger.warn("Received termination signal (kill). Gracefully shutting down...");
 	}
 	else 	{
 		std::string message = "Received unknown signal. #LttOS: " + std::to_string(signal);
@@ -99,6 +99,95 @@ std::wstring stringToWString(const std::string& str) {
 	return std::wstring(str.begin(), str.end());
 }
 
+//
+// Start the logger
+//
+void StartLogger(void) {
+
+	bool console_sink_enabled = config["log"]["console"]["enable"].get<bool>();
+
+	// Clear all the sinks from the logger
+	logger.sinks().clear();
+
+	if (console_sink_enabled) {
+		// Create a logger sink to write to the console
+		auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
+
+		// Get the console log levels from the configuration file
+		std::string console_log_level = config["log"]["console"]["level"].get<std::string>();
+
+		// Set the log levels for the console and file sinks
+		switch (console_log_level[0]) {
+		case 't':
+			console_sink->set_level(spdlog::level::trace);
+			break;
+		case 'd':
+			console_sink->set_level(spdlog::level::debug);
+			break;
+		case 'i':
+			console_sink->set_level(spdlog::level::info);
+			break;
+		case 'w':
+			console_sink->set_level(spdlog::level::warn);
+			break;
+		case 'e':
+			console_sink->set_level(spdlog::level::err);
+			break;
+		case 'c':
+			console_sink->set_level(spdlog::level::critical);
+			break;
+		default:
+			console_sink->set_level(spdlog::level::info);
+			break;
+		}
+
+		// Add the console sink to the logger
+		logger.sinks().push_back(console_sink);
+	}
+
+	bool file_sink_enabled = config["log"]["file"]["enable"].get<bool>();
+
+	if (file_sink_enabled) {
+		// Get the log filename from the configuration file
+		std::string log_filename = std::string(config["log"]["file"]["path"].get<std::string>());
+
+		// Create a logger sink that writes to a file
+		auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(log_filename, true);
+
+		// Get the file log levels from the configuration file
+		std::string file_log_level = config["log"]["file"]["level"].get<std::string>();
+
+		// Set the log levels for the console and file sinks
+		switch (file_log_level[0]) {
+		case 't':
+			file_sink->set_level(spdlog::level::trace);
+			break;
+		case 'd':
+			file_sink->set_level(spdlog::level::debug);
+			break;
+		case 'i':
+			file_sink->set_level(spdlog::level::info);
+			break;
+		case 'w':
+			file_sink->set_level(spdlog::level::warn);
+			break;
+		case 'e':
+			file_sink->set_level(spdlog::level::err);
+			break;
+		case 'c':
+			file_sink->set_level(spdlog::level::critical);
+			break;
+		default:
+			file_sink->set_level(spdlog::level::info);
+			break;
+		}
+
+		// Add the file sink to the logger
+		logger.sinks().push_back(file_sink);
+	}	
+
+	logger.info("Starting...");
+}
 
 //
 // Create a connection object to the station and connect to it.
@@ -115,15 +204,15 @@ void StationConnect(bool* service_error)
 	unsigned long NextServerId = APIserverId;
 
 	// Hostname as simple string, extracted from th JSON configuration file
-	std::string hostNameStr = config["station address"].get<std::string>();
+	std::string hostNameStr = config["station"]["address"].get<std::string>();
 	station.hostName = stringToWString(hostNameStr);
 
-	// Port as simple string, extracted from the JSON configuration file
-	std::string portStr = config["station port"].get<std::string>();
+	// Port as simple string, extracted from the JSON configuration file where it is defined as a number
+	std::string portStr = std::to_string(config["station"]["port"].get<int>());
 	station.port = stringToWString(portStr);
 
 	// Timeout as unsigned long, extracted from the JSON configuration file
-	station.sendTimeout = config["station timeout"].get<unsigned long>();
+	station.sendTimeout = config["station"]["timeout"].get<unsigned long>();
 
 	// Create the connection object
 	errCode = ScorpioAPICreate(
@@ -202,50 +291,28 @@ int main() {
 	registerSignalHandlers();
 
 	// Read configuration from JSON file
-	std::ifstream input_file("config.json");
-	input_file >> config;
+	std::ifstream config_file("config.json");
+	config = json::parse(config_file);
 
-	// Create a logger sink to write to the console
-	auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
-	console_sink->set_level(spdlog::level::trace);
-
-	// Get the log filename from the configuration file
-	std::string log_filename = std::string(config["log file"].get<std::string>());
-
-	// Create a logger sink that writes to a file
-	auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(log_filename, true);
-	file_sink->set_level(spdlog::level::trace);
-
-	// Create a logger object with the console and file sinks
-	logger.sinks().clear();
-	logger.sinks().push_back(console_sink);
-	logger.sinks().push_back(file_sink);
-	//logger.set_level(spdlog::level::debug);
-
-	logger.info("Application started");
-	// logger.warn("");
-	// logger.error("");
+	StartLogger();
 
 	StationConnect(&service_error);
 
 	// while not service_error and not system kill signal
 	while (!service_error && !interrupted) {
 		// sleep for a while
-		logger.info("Waiting one second"); 
+		logger.info("Waiting one second");
 		std::this_thread::sleep_for(std::chrono::seconds(1));
 	}
 
-	if (interrupted) {
-		logger.warn("Kill signal received. Stopping service.");
-	}
-	else {
+	if (service_error) {
 		logger.error("Stopping service due to the reported error");
 	}
 	// Close the connection
 	DisconnectAll(&service_error);
 
 	// Final flush before the application exits, save log to file.
-	file_sink->flush();
+	logger.flush();
 
 	if (service_error) {
 			return 1003;

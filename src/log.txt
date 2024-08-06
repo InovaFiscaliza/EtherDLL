@@ -1,13 +1,11 @@
-[2024-08-06 13:40:54.644] [MIAerConn] [info] Application started
-[2024-08-06 13:40:59.722] [MIAerConn] [info] Object creation successful
-[2024-08-06 13:40:59.728] [MIAerConn] [info] Connection with 166.139.112.178 stablished
-[2024-08-06 13:41:11.640] [MIAerConn] [info] Waiting one second
-[2024-08-06 13:41:26.125] [MIAerConn] [info] Waiting one second
-[2024-08-06 13:41:27.141] [MIAerConn] [info] Waiting one second
-[2024-08-06 13:41:28.157] [MIAerConn] [info] Waiting one second
-[2024-08-06 13:41:29.174] [MIAerConn] [info] Waiting one second
-[2024-08-06 13:41:30.183] [MIAerConn] [info] Waiting one second
-[2024-08-06 13:41:43.598] [MIAerConn] [warning] Received interruption signal. Gracefully shutting down...
-[2024-08-06 13:41:44.036] [MIAerConn] [info] Waiting one second
-[2024-08-06 13:43:23.432] [MIAerConn] [warning] Kill signal received. Stopping service.
-[2024-08-06 13:43:24.990] [MIAerConn] [error] Error disconnecting from station Invalid server ID
+[2024-08-06 14:42:26.137] [MIAerConn] [info] Starting...
+[2024-08-06 14:42:46.574] [MIAerConn] [info] Object creation successful
+[2024-08-06 14:42:53.269] [MIAerConn] [info] Connection with 166.139.112.178 stablished
+[2024-08-06 14:42:58.064] [MIAerConn] [info] Waiting one second
+[2024-08-06 14:43:01.991] [MIAerConn] [info] Waiting one second
+[2024-08-06 14:43:05.640] [MIAerConn] [info] Waiting one second
+[2024-08-06 14:43:11.735] [MIAerConn] [info] Waiting one second
+[2024-08-06 14:43:12.744] [MIAerConn] [info] Waiting one second
+[2024-08-06 14:43:13.757] [MIAerConn] [info] Waiting one second
+[2024-08-06 14:43:19.592] [MIAerConn] [warning] Received interruption signal (ctrl+C). Gracefully shutting down...
+[2024-08-06 14:43:44.689] [MIAerConn] [error] Error disconnecting from station Invalid server ID

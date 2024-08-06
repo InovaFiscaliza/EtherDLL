@@ -1,9 +1,21 @@
 {
-    "console log level": "trace",
-    "file log level": "trace",
-    "log file": "log.txt",
-    "station address": "166.139.112.178",
-    "station port": "3303",
-    "station timeout": 10000,
-    "service port": 3000
+  "log": {
+    "console": {
+      "enable": true,
+      "level": "trace"
+    },
+    "file": {
+      "enable": true,
+      "level": "trace",
+      "path": "log.txt"
+    }
+  },
+  "station": {
+    "address": "166.139.112.178",
+    "port": 3303,
+    "timeout": 10000
+  },
+  "service": {
+    "port": 3000
+  }
 }
