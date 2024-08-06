@@ -48,6 +48,14 @@ The following additional files are required to be placed within the same directo
 
 These file are provided with the manufacturer's SDK, and are not included in this repository.
 
+This repository includes libraries from other repositories, which are included as submodules. To clone the repository with the submodules, use the following command:
+
+The can be accessed at the following link:
+
+- [spdlog](https://github.com/gabime/spdlog) used for logging.
+- [nlohmann json](https://github.com/nlohmann/json) used to read configuration data and handle json format.
+- [easy socket](https://github.com/masesk/easy-socket) used to handle socket communication.
+
 
 
 

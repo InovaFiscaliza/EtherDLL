@@ -5,7 +5,7 @@ std::string ERetCodeToString(ERetCode code)
 {
     switch (code)
     {
-        case API_SUCCESS: return "API_SUCCESS";
+        case API_SUCCESS: return "API success";
         case API_NO_INSTANCE: return "No API instance";
         case CMD_SENT_ERROR: return "Command sent error";
         case INVALID_REQUEST_ID: return "Invalid request ID";
@@ -15,6 +15,6 @@ std::string ERetCodeToString(ERetCode code)
         case NO_VALID_API_LICENSE: return "No valid API license";
         case API_CONNECTONS_EXCEEDED: return "Maximal number of API connections exceeded";
         case MEMORY_ALLOC_ERROR: return "Memory allocation error";
-        default: return "Uknown error code";
+        default: return "Unknown error code";
     }
 }

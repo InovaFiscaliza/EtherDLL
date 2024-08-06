@@ -56,8 +56,9 @@ std::wstring stringToWString(const std::string& str) {
 //  PURPOSE: Create a connection object.
 //
 //
-ERetCode StationConnect(void)
+bool StationConnect(void)
 {
+	ERetCode errCode;
 
 	// Set connection parameters from the configuration file
 	std::string hostNameStr = config["station address"].get<std::string>();
@@ -69,13 +70,46 @@ ERetCode StationConnect(void)
 	params.sendTimeout = config["station timeout"].get<unsigned long>();
 
 	// Create the connection object
-	return ScorpioAPICreate(
+	errCode = ScorpioAPICreate(
 		serverId,
 		params,
 		OnErrFunc,
 		OnDataFunc,
 		OnRealtimeDataFunc
 	);
+
+	// Handle the error code from object creation
+	if (errCode != ERetCode::API_SUCCESS)
+	{
+		logger.error("Object associated with staion not created: %s", ERetCodeToString(errCode));
+		ErrorStatus = true;
+		return false;
+	}
+	else
+	{
+		logger.info("Object creation successful");
+	}
+
+	// Actually connect to the station
+	errCode = Connect(
+		serverId,
+		params,
+		OnErrFunc,
+		OnDataFunc,
+		OnRealtimeDataFunc
+	);
+
+	// Handle the error code from station connection
+	if (errCode != ERetCode::API_SUCCESS)
+	{
+		logger.error("Connection with %s not stablished. %s", params.hostName , ERetCodeToString(errCode));
+		ErrorStatus = true;
+		return errCode;
+	}
+	else
+	{
+		logger.info("Connection to %s successful",params.hostName);
+	}
 }
 
 int main() {
@@ -106,15 +140,7 @@ int main() {
 	// logger.error("");
 
     errCode = StationConnect();
-    if (errCode != ERetCode::API_SUCCESS)
-    {
-		logger.error("Connection Error: %s",ERetCodeToString(errCode));
-		ErrorStatus = true;
-	}
-	else
-	{
-		logger.info("Connection successful");
-    } 
+
 
 // Final flush before the application exits, save log to file.
 	file_sink->flush();
