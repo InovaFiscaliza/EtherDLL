@@ -1,11 +1,5 @@
-[2024-08-06 14:42:26.137] [MIAerConn] [info] Starting...
-[2024-08-06 14:42:46.574] [MIAerConn] [info] Object creation successful
-[2024-08-06 14:42:53.269] [MIAerConn] [info] Connection with 166.139.112.178 stablished
-[2024-08-06 14:42:58.064] [MIAerConn] [info] Waiting one second
-[2024-08-06 14:43:01.991] [MIAerConn] [info] Waiting one second
-[2024-08-06 14:43:05.640] [MIAerConn] [info] Waiting one second
-[2024-08-06 14:43:11.735] [MIAerConn] [info] Waiting one second
-[2024-08-06 14:43:12.744] [MIAerConn] [info] Waiting one second
-[2024-08-06 14:43:13.757] [MIAerConn] [info] Waiting one second
-[2024-08-06 14:43:19.592] [MIAerConn] [warning] Received interruption signal (ctrl+C). Gracefully shutting down...
-[2024-08-06 14:43:44.689] [MIAerConn] [error] Error disconnecting from station Invalid server ID
+[2024-08-07 13:15:50.580] [MIAerConn] [info] Starting...
+[2024-08-07 13:18:31.646] [MIAerConn] [info] Object creation successful
+[2024-08-07 13:19:11.133] [MIAerConn] [error] Connection with 166.139.112.178 not stablished: Command sent error
+[2024-08-07 13:19:27.790] [MIAerConn] [error] Stopping service due to the reported error
+[2024-08-07 13:19:43.302] [MIAerConn] [error] Error disconnecting from station Invalid server ID

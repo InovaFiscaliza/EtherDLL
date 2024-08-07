@@ -53,7 +53,11 @@ bool interrupted = false;
 unsigned long APIserverId = 0;
 
 // Station connection paramenters
-SScorpioAPIClient station; 
+SScorpioAPIClient station;
+
+// Station capabilities
+SCapabilities StationCapabilities;
+
 
 ErrorCB OnErrFunc;
 DataCB OnDataFunc;
@@ -194,14 +198,8 @@ void StartLogger(void) {
 //
 void StationConnect(bool* service_error)
 {
-	// Error code using API ERetCode enum
-	ERetCode errCode;
-
-	// Error message string to be used in the logger
-	std::string message;
-
 	// Create a local copy of APIserverId. This is necessary because TCI methods update the APIserverId value to the next available ID.
-	unsigned long NextServerId = APIserverId;
+	// unsigned long NextServerId = APIserverId;
 
 	// Hostname as simple string, extracted from th JSON configuration file
 	std::string hostNameStr = config["station"]["address"].get<std::string>();
@@ -214,14 +212,20 @@ void StationConnect(bool* service_error)
 	// Timeout as unsigned long, extracted from the JSON configuration file
 	station.sendTimeout = config["station"]["timeout"].get<unsigned long>();
 
+	// Error code using API ERetCode enum
+	ERetCode errCode;
+
 	// Create the connection object
 	errCode = ScorpioAPICreate(
-		NextServerId,
+		APIserverId,
 		station,
 		OnErrFunc,
 		OnDataFunc,
 		OnRealtimeDataFunc
 	);
+
+	// Error message string to be used in the logger
+	std::string message;
 
 	// Handle the error code from object creation
 	if (errCode != ERetCode::API_SUCCESS)
@@ -229,22 +233,17 @@ void StationConnect(bool* service_error)
 		message = "Object associated with station not created: " + ERetCodeToString(errCode);
 		logger.error(message);
 		*service_error = true;
+		return;
 	}
 	else
 	{
 		logger.info("Object creation successful");
 	}
 
-	NextServerId = APIserverId;
+	// NextServerId = APIserverId;
 
-	// Actually connect to the station
-	errCode = Connect(
-		NextServerId,
-		station,
-		OnErrFunc,
-		OnDataFunc,
-		OnRealtimeDataFunc
-	);
+	// Once the object was successfully created, test connection to the station
+	errCode = RequestCapabilities(APIserverId, StationCapabilities);
 
 	// Handle the error code from station connection
 	if (errCode != ERetCode::API_SUCCESS)
@@ -252,6 +251,7 @@ void StationConnect(bool* service_error)
 		message = "Connection with " + hostNameStr + " not stablished: " + ERetCodeToString(errCode);
 		logger.error(message);
 		*service_error = true;
+		return;
 	}
 	else
 	{
