@@ -3,21 +3,29 @@
 
 // Include the standard C++ headers
 #include <iostream>
-#include <fstream>
+#include <thread>
+#include <atomic>
+#include <vector>
+#include <string>
+#include <mutex>
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <windows.h>
 
 #include <csignal>
-#include <thread>
+#include <chrono>
+#include <fstream>
+
+#pragma comment(lib, "Ws2_32.lib")
 
 // Include the nlohmann JSON library
 #include <nlohmann/json.hpp>
+using json = nlohmann::json;
 
 // Include the spdlog library
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/sinks/basic_file_sink.h>
-
-// Include the EasySocket library
-#include <masesk/EasySocket.hpp>
 
 // Include the ScorpioAPI libraries
 #include <StdAfx.h>
@@ -25,9 +33,9 @@
 
 // Include to solution specific libraries
 #include <messages.h>
+#include <MIAerConnCodes.hpp>
 
 // For convenience handling JSON data
-using json = nlohmann::json;
 
 //
 // Global variables related to the application
@@ -40,10 +48,15 @@ json config;
 spdlog::logger logger = spdlog::logger("MIAerConn");
 
 // Atomic flag to signal application error
-bool service_error = false;
+std::atomic<bool> running{ true }; // Atomic flag to control the thread loops
 
-// Atomic flag to signal system or user kill signal
-bool interrupted = false;
+std::atomic<MCService::Code> interruptionCode{ MCService::Code::RUNNING }; // Code to represent the cause for not running
+
+// Vector used for the command queue
+std::vector<std::string> commandQueue;
+
+// Mutex to protect the command queue
+std::mutex commandMutex;
 
 //
 // Global variables related to the API
@@ -52,12 +65,11 @@ bool interrupted = false;
 // API server ID. This service is intended to be used to connect to a single station, always 0.
 unsigned long APIserverId = 0;
 
-// Station connection paramenters
+// Station connection parameters
 SScorpioAPIClient station;
 
 // Station capabilities
 SCapabilities StationCapabilities;
-
 
 ErrorCB OnErrFunc;
 DataCB OnDataFunc;
@@ -73,13 +85,15 @@ void signalHandler(int signal) {
 
 	if (signal == SIGINT)
 	{
-		interrupted = true;
-		logger.warn("Received interruption signal (ctrl+C). Gracefully shutting down...");
+		running.store(false);
+		interruptionCode.store(MCService::Code::CTRL_C_INTERRUPT);
+		logger.warn("Received interruption signal (ctrl+C)");
 	}
 	else if (signal == SIGTERM)
 	{
-		interrupted = true;
-		logger.warn("Received termination signal (kill). Gracefully shutting down...");
+		running.store(false);
+		interruptionCode.store(MCService::Code::KILL_INTERRUPT);
+		logger.warn("Received termination signal (kill)");
 	}
 	else 	{
 		std::string message = "Received unknown signal. #LttOS: " + std::to_string(signal);
@@ -193,10 +207,124 @@ void StartLogger(void) {
 	logger.info("Starting...");
 }
 
+
+//
+// Function to handle command connections
+//
+void handleCommandConnection(SOCKET clientSocket) {
+	char buffer[1024];
+	int bytesRead = recv(clientSocket, buffer, sizeof(buffer), 0);
+	if (bytesRead > 0) {
+		std::string command(buffer, bytesRead);
+		{
+			std::lock_guard<std::mutex> lock(commandMutex);
+			commandQueue.push_back(command);
+		}
+		std::string ack = "ACK";
+		send(clientSocket, ack.c_str(), static_cast<int>(ack.length()), 0);
+	}
+	closesocket(clientSocket);
+}
+
+//
+// Function to handle streaming data
+//
+void handleStreamConnection(SOCKET clientSocket) {
+	char buffer[1024];
+	int bytesRead = recv(clientSocket, buffer, sizeof(buffer), 0);
+	if (bytesRead > 0) {
+		std::string connectionCode(buffer, bytesRead);
+		std::cout << "Client connected with code: " << connectionCode << std::endl;
+
+		// Example streaming data (you would replace this with real data)
+		std::vector<std::string> streamData = { "Data1", "Data2", "Data3" };
+		for (const auto& data : streamData) {
+			send(clientSocket, data.c_str(), static_cast<int>(data.length()), 0);
+			std::this_thread::sleep_for(std::chrono::seconds(1)); // Simulate delay between data packets
+		}
+	}
+	closesocket(clientSocket);
+}
+
+
+//
+// Function to listen on a specific port
+//
+void listenOnPort(	std::string name,
+					MCService::Code ServiceCode,
+					int port,
+					void (*connectionHandler)(SOCKET)) {
+
+	SOCKET listenSocket = INVALID_SOCKET;
+	struct addrinfo* result = NULL;
+	struct addrinfo hints;
+
+	ZeroMemory(&hints, sizeof(hints));
+	hints.ai_family = AF_INET;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_protocol = IPPROTO_TCP;
+	hints.ai_flags = AI_PASSIVE;
+
+	std::string portStr = std::to_string(port);
+	int iResult = getaddrinfo(NULL, portStr.c_str(), &hints, &result);
+	if (iResult != 0) {
+		logger.error("getaddrinfo failed: " + std::to_string(iResult));
+		running.store(false);
+		interruptionCode.store(ServiceCode);
+		WSACleanup();
+		return;
+	}
+
+	listenSocket = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
+	if (listenSocket == INVALID_SOCKET) {
+		logger.error("Error at socket(): " + std::to_string(WSAGetLastError()));
+		running.store(false);
+		interruptionCode.store(ServiceCode);
+		freeaddrinfo(result);
+		WSACleanup();
+		return;
+	}
+
+	iResult = bind(listenSocket, result->ai_addr, static_cast<int>(result->ai_addrlen));
+	if (iResult == SOCKET_ERROR) {
+		logger.error("bind failed: " + std::to_string(WSAGetLastError()));
+		running.store(false);
+		interruptionCode.store(ServiceCode);
+		freeaddrinfo(result);
+		closesocket(listenSocket);
+		WSACleanup();
+		return;
+	}
+
+	freeaddrinfo(result);
+
+	iResult = listen(listenSocket, SOMAXCONN);
+	if (iResult == SOCKET_ERROR) {
+		logger.error("Listen failed: " + std::to_string(WSAGetLastError()));
+		running.store(false);
+		interruptionCode.store(ServiceCode);
+		closesocket(listenSocket);
+		WSACleanup();
+		return;
+	}
+
+	logger.info(name + "is listening on port " + std::to_string(port));
+
+	while (running.load()) {
+		SOCKET clientSocket = accept(listenSocket, NULL, NULL);
+		if (clientSocket != INVALID_SOCKET) {
+			std::thread(connectionHandler, clientSocket).detach();
+		}
+	}
+
+	closesocket(listenSocket);
+	logger.info(name + " stopped listening on port " + std::to_string(port));
+}
+
 //
 // Create a connection object to the station and connect to it.
 //
-void StationConnect(bool* service_error)
+void StationConnect(void)
 {
 	// Create a local copy of APIserverId. This is necessary because TCI methods update the APIserverId value to the next available ID.
 	// unsigned long NextServerId = APIserverId;
@@ -232,7 +360,8 @@ void StationConnect(bool* service_error)
 	{
 		message = "Object associated with station not created: " + ERetCodeToString(errCode);
 		logger.error(message);
-		*service_error = true;
+		running.store(false);
+		interruptionCode.store(MCService::Code::STATION_ERROR);
 		return;
 	}
 	else
@@ -250,7 +379,8 @@ void StationConnect(bool* service_error)
 	{
 		message = "Connection with " + hostNameStr + " not stablished: " + ERetCodeToString(errCode);
 		logger.error(message);
-		*service_error = true;
+//		running.store(false);
+		interruptionCode.store(MCService::Code::STATION_ERROR);
 		return;
 	}
 	else
@@ -263,7 +393,7 @@ void StationConnect(bool* service_error)
 //
 // Disconnect station and socket clients
 //
-void DisconnectAll(bool* service_error)
+void DisconnectAll(void)
 {
 	ERetCode errCode;
 	std::string message;
@@ -277,7 +407,8 @@ void DisconnectAll(bool* service_error)
 	{
 		message = "Error disconnecting from station " + ERetCodeToString(errCode);
 		logger.error(message);
-		*service_error = true;
+		running.store(false);
+		interruptionCode.store(MCService::Code::STATION_ERROR);
 	}
 	else
 	{
@@ -296,28 +427,54 @@ int main() {
 
 	StartLogger();
 
-	StationConnect(&service_error);
 
-	// while not service_error and not system kill signal
-	while (!service_error && !interrupted) {
-		// sleep for a while
-		logger.info("Waiting one second");
-		std::this_thread::sleep_for(std::chrono::seconds(1));
+	int CommandPort = config["service"]["command_port"].get<int>();
+	int StreamPort = config["service"]["stream_port"].get<int>();
+	int timeout = config["service"]["timeout"].get<int>();
+
+	StationConnect();
+
+	std::thread commandThread(listenOnPort,
+									"Control service",
+									MCService::Code::COMMAND_ERROR,
+									CommandPort,
+									handleCommandConnection);
+
+	std::thread streamThread(listenOnPort,
+									"Stream service",
+									MCService::Code::STREAM_ERROR,
+									StreamPort,
+									handleStreamConnection);
+
+	// Main loop to process commands
+	while (running.load()) {
+		{
+			std::lock_guard<std::mutex> lock(commandMutex);
+			if (!commandQueue.empty()) {
+				std::string command = commandQueue.back();
+				commandQueue.pop_back();
+				std::cout << "Processing command: " << command << std::endl;
+				// Process the command and possibly send responses back to clients
+			}
+		}
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	}
 
-	if (service_error) {
-		logger.error("Stopping service due to the reported error");
+	logger.info("Service will shutdown...");
+
+	// Join threads before exiting
+	if (commandThread.joinable()) {
+		commandThread.join();
 	}
+	if (streamThread.joinable()) {
+		streamThread.join();
+	}
+	
 	// Close the connection
-	DisconnectAll(&service_error);
+	DisconnectAll();
 
 	// Final flush before the application exits, save log to file.
 	logger.flush();
 
-	if (service_error) {
-			return 1003;
-		}
-		else {
-			return 0;
-		}
+	return static_cast<int>(interruptionCode.load());
 }

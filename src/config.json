@@ -16,6 +16,8 @@
     "timeout": 10000
   },
   "service": {
-    "port": 3000
+    "command_port": 3000,
+    "stream_port": 3001,
+    "timeout": 10000
   }
 }

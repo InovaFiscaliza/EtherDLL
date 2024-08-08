@@ -165,6 +165,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="MIAerConnCodes.hpp" />
     <ClInclude Include="messages.h" />
     <ClInclude Include="MoreEquipCtrlMsg.h" />
     <ClInclude Include="OccupSpectConnect.h" />
