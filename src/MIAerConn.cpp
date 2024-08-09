@@ -448,15 +448,15 @@ int main() {
 
 	// Main loop to process commands
 	while (running.load()) {
-		{
 			std::lock_guard<std::mutex> lock(commandMutex);
+
 			if (!commandQueue.empty()) {
 				std::string command = commandQueue.back();
 				commandQueue.pop_back();
 				std::cout << "Processing command: " << command << std::endl;
 				// Process the command and possibly send responses back to clients
 			}
-		}
+
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	}
 
