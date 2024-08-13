@@ -54,7 +54,6 @@ The can be accessed at the following link:
 
 - [spdlog](https://github.com/gabime/spdlog) used for logging.
 - [nlohmann json](https://github.com/nlohmann/json) used to read configuration data and handle json format.
-- [easy socket](https://github.com/masesk/easy-socket) used to handle socket communication.
 
 
 

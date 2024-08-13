@@ -18,6 +18,7 @@
   "service": {
     "command_port": 3000,
     "stream_port": 3001,
+    "stream_sleep": 500,
     "timeout": 10000
   }
 }

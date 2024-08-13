@@ -17,9 +17,6 @@
     <ClInclude Include="StdAfx.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="OccupSpectConnect.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="MoreEquipCtrlMsg.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -27,6 +24,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="MIAerConnCodes.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="OccupSpectConnect.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

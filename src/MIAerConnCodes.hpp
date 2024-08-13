@@ -20,9 +20,9 @@ namespace MCService {
         case Code::RUNNING: return "Service running";
         case Code::KILL_INTERRUPT: return "Service interrupted by kill command";
         case Code::CTRL_C_INTERRUPT: return "Service interrupted by Ctrl+C";
-        case Code::STATION_ERROR: return "Station error";
-        case Code::COMMAND_ERROR: return "Command error";
-        case Code::STREAM_ERROR: return "Stream error";
+        case Code::STATION_ERROR: return "Station communication error";
+        case Code::COMMAND_ERROR: return "Command channel communication error";
+        case Code::STREAM_ERROR: return "Stream channel error";
         default: return "Undefined MIAerConn Code";
         }
     }

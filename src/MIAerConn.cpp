@@ -1,6 +1,10 @@
 // MIAerConn.cpp : Defines the entry point for the application.
 //
 
+// Include the ScorpioAPI libraries 3h2cl5vTu8cg
+#include <StdAfx.h>
+#include <ScorpioAPIDll.h> 
+
 // Include the standard C++ headers
 #include <iostream>
 #include <thread>
@@ -20,22 +24,18 @@
 
 // Include the nlohmann JSON library
 #include <nlohmann/json.hpp>
-using json = nlohmann::json;
 
 // Include the spdlog library
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/sinks/basic_file_sink.h>
 
-// Include the ScorpioAPI libraries
-#include <StdAfx.h>
-#include <ScorpioAPIDll.h>
-
 // Include to solution specific libraries
 #include <messages.h>
 #include <MIAerConnCodes.hpp>
 
-// For convenience handling JSON data
+// For convenience
+using json = nlohmann::json;
 
 //
 // Global variables related to the application
@@ -50,10 +50,14 @@ spdlog::logger logger = spdlog::logger("MIAerConn");
 // Atomic flag to signal application error
 std::atomic<bool> running{ true }; // Atomic flag to control the thread loops
 
+// Atomic flag to signal application error code
 std::atomic<MCService::Code> interruptionCode{ MCService::Code::RUNNING }; // Code to represent the cause for not running
 
 // Vector used for the command queue
 std::vector<std::string> commandQueue;
+
+// Vector used for the data stream output
+std::vector<std::string> streamBuffer;
 
 // Mutex to protect the command queue
 std::mutex commandMutex;
@@ -109,13 +113,6 @@ void registerSignalHandlers() {
 	std::signal(SIGTERM, signalHandler); // Handles kill command
 }
 
-
-//
-// Convert a string to a wide string.
-//
-std::wstring stringToWString(const std::string& str) {
-	return std::wstring(str.begin(), str.end());
-}
 
 //
 // Start the logger
@@ -230,19 +227,38 @@ void handleCommandConnection(SOCKET clientSocket) {
 // Function to handle streaming data
 //
 void handleStreamConnection(SOCKET clientSocket) {
+
+	/* TODO: Implement a control code to activate the output stream. May allow for multiple clients. 
 	char buffer[1024];
 	int bytesRead = recv(clientSocket, buffer, sizeof(buffer), 0);
 	if (bytesRead > 0) {
 		std::string connectionCode(buffer, bytesRead);
-		std::cout << "Client connected with code: " << connectionCode << std::endl;
+		logger.info("Client connected with code: " + connectionCode);
+	}
+	*/
 
-		// Example streaming data (you would replace this with real data)
-		std::vector<std::string> streamData = { "Data1", "Data2", "Data3" };
-		for (const auto& data : streamData) {
+	while (running.load()) {
+		if (!streamBuffer.empty()) {
+			std::string data = streamBuffer.back();
+			streamBuffer.pop_back();
 			send(clientSocket, data.c_str(), static_cast<int>(data.length()), 0);
-			std::this_thread::sleep_for(std::chrono::seconds(1)); // Simulate delay between data packets
+		} else {
+			std::this_thread::sleep_for(std::chrono::milliseconds(config["service"]["stream_sleep"].get<int>()));
+
+			// Simulation of streaming data - to be replaced with data from the station
+			// random number of packages, from 0 to 4.
+			// Each package has 4096 bytes of data, which is 1024 floats of 32 bits
+			// The data is a binary sequency of about one cycle of a sine wave
+			for (int j = 0; rand() % 5; j++) {
+				float data[1024];
+				for (int i = 0; i < 1024; i++) {
+					data[i] = (float)((60.0 * sin(i * 0.006136)) - 80.0);
+				}
+				streamBuffer.push_back(std::string(reinterpret_cast<char*>(data), sizeof(data)));
+			}
 		}
 	}
+
 	closesocket(clientSocket);
 }
 
@@ -250,13 +266,13 @@ void handleStreamConnection(SOCKET clientSocket) {
 //
 // Function to listen on a specific port
 //
-void listenOnPort(	std::string name,
-					MCService::Code ServiceCode,
-					int port,
-					void (*connectionHandler)(SOCKET)) {
+void listenOnPort(std::string name,
+	MCService::Code ServiceCode,
+	int port,
+	void (*connectionHandler)(SOCKET)) {
 
 	SOCKET listenSocket = INVALID_SOCKET;
-	struct addrinfo* result = NULL;
+	struct addrinfo* result = nullptr;
 	struct addrinfo hints;
 
 	ZeroMemory(&hints, sizeof(hints));
@@ -285,7 +301,9 @@ void listenOnPort(	std::string name,
 		return;
 	}
 
-	iResult = bind(listenSocket, result->ai_addr, static_cast<int>(result->ai_addrlen));
+	using namespace std;
+
+	iResult = ::bind(listenSocket, result->ai_addr, static_cast<int>(result->ai_addrlen));
 	if (iResult == SOCKET_ERROR) {
 		logger.error("bind failed: " + std::to_string(WSAGetLastError()));
 		running.store(false);
@@ -308,12 +326,15 @@ void listenOnPort(	std::string name,
 		return;
 	}
 
-	logger.info(name + "is listening on port " + std::to_string(port));
+	logger.info(name + " is listening on port " + std::to_string(port));
 
 	while (running.load()) {
-		SOCKET clientSocket = accept(listenSocket, NULL, NULL);
+		SOCKET clientSocket = accept(listenSocket, nullptr, nullptr);
+
 		if (clientSocket != INVALID_SOCKET) {
-			std::thread(connectionHandler, clientSocket).detach();
+			std::thread([connectionHandler, clientSocket]() {
+				connectionHandler(clientSocket);
+				}).detach();
 		}
 	}
 
@@ -322,10 +343,17 @@ void listenOnPort(	std::string name,
 }
 
 //
+// Convert a string to a wide string. Used in messages from the station
+//
+std::wstring stringToWString(const std::string& str) {
+	return std::wstring(str.begin(), str.end());
+}
+
+
+//
 // Create a connection object to the station and connect to it.
 //
-void StationConnect(void)
-{
+void StationConnect(void) {
 	// Create a local copy of APIserverId. This is necessary because TCI methods update the APIserverId value to the next available ID.
 	// unsigned long NextServerId = APIserverId;
 
@@ -345,12 +373,11 @@ void StationConnect(void)
 
 	// Create the connection object
 	errCode = ScorpioAPICreate(
-		APIserverId,
-		station,
-		OnErrFunc,
-		OnDataFunc,
-		OnRealtimeDataFunc
-	);
+					APIserverId,
+					station,
+					OnErrFunc,
+					OnDataFunc,
+					OnRealtimeDataFunc);
 
 	// Error message string to be used in the logger
 	std::string message;
@@ -393,7 +420,7 @@ void StationConnect(void)
 //
 // Disconnect station and socket clients
 //
-void DisconnectAll(void)
+void StationDisconnect(void)
 {
 	ERetCode errCode;
 	std::string message;
@@ -427,35 +454,36 @@ int main() {
 
 	StartLogger();
 
-
 	int CommandPort = config["service"]["command_port"].get<int>();
 	int StreamPort = config["service"]["stream_port"].get<int>();
 	int timeout = config["service"]["timeout"].get<int>();
 
 	StationConnect();
 
+	// Start thread for the command channel socket service. This thread will listen for incoming commands and place then in the command queue
 	std::thread commandThread(listenOnPort,
-									"Control service",
-									MCService::Code::COMMAND_ERROR,
-									CommandPort,
-									handleCommandConnection);
+		"Control service",
+		MCService::Code::COMMAND_ERROR,
+		CommandPort,
+		handleCommandConnection);
 
+	// Start thread for the stream channel socket service. This thread will listen for incoming connections and stream data back to the client
 	std::thread streamThread(listenOnPort,
-									"Stream service",
-									MCService::Code::STREAM_ERROR,
-									StreamPort,
-									handleStreamConnection);
+		"Stream service",
+		MCService::Code::STREAM_ERROR,
+		StreamPort,
+		handleStreamConnection);
 
 	// Main loop to process commands
 	while (running.load()) {
-			std::lock_guard<std::mutex> lock(commandMutex);
+		std::lock_guard<std::mutex> lock(commandMutex);
 
-			if (!commandQueue.empty()) {
-				std::string command = commandQueue.back();
-				commandQueue.pop_back();
-				std::cout << "Processing command: " << command << std::endl;
-				// Process the command and possibly send responses back to clients
-			}
+		if (!commandQueue.empty()) {
+			std::string command = commandQueue.back();
+			commandQueue.pop_back();
+			logger.info("Processing command: " + command);
+			// Process the command and possibly send responses back to clients
+		}
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	}
@@ -469,9 +497,9 @@ int main() {
 	if (streamThread.joinable()) {
 		streamThread.join();
 	}
-	
+
 	// Close the connection
-	DisconnectAll();
+	StationDisconnect();
 
 	// Final flush before the application exits, save log to file.
 	logger.flush();
