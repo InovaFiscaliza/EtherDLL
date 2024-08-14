@@ -48,10 +48,16 @@ json config;
 spdlog::logger logger = spdlog::logger("MIAerConn");
 
 // Atomic flag to signal application error
-std::atomic<bool> running{ true }; // Atomic flag to control the thread loops
+std::atomic<bool> running{ true }; 
 
-// Atomic flag to signal application error code
-std::atomic<MCService::Code> interruptionCode{ MCService::Code::RUNNING }; // Code to represent the cause for not running
+// Atomic flag to signal that a client is connected to the command port
+std::atomic<bool> commandConnected{ false }; 
+
+// Atomic flag to signal application error
+std::atomic<bool> streamConnected{ false }; 
+
+// Code to represent the cause for not running
+std::atomic<MCService::Code> interruptionCode{ MCService::Code::RUNNING };
 
 // Vector used for the command queue
 std::vector<std::string> commandQueue;
@@ -78,9 +84,6 @@ SCapabilities StationCapabilities;
 ErrorCB OnErrFunc;
 DataCB OnDataFunc;
 RealTimeDataCB OnRealtimeDataFunc;
-
-// Return code for API functions
-ERetCode errCode;
 
 //
 // Signal handler function
@@ -204,23 +207,75 @@ void StartLogger(void) {
 	logger.info("Starting...");
 }
 
+//
+// Function to create simulated data
+// Data is a random number of packages, from 1 to 5.
+// Each package has 4096 bytes of data, which is 1024 floats of 32 bits
+// First 512 points describes a ramp from -100 to -20
+// Later 512 points describes cosine cycles with the same amplitude. The number of cycles varies with the package number.
+
+void generateSimData(void) {
+	
+	float data[1024];
+			
+	for (int j = 1; rand() % 6; j++) {
+		for (int i = 0; i < 512; i++) {
+			data[i] = (float)((40.0 * (((float)(i) / 256) - 1)) - 60.0);
+		}
+		for (int i = 512; i < 1024; i++) {
+			data[i] = (float)((60.0 * cos((i * 0.0184)*2*j)) - 80.0);
+		}
+		streamBuffer.push_back(std::string(reinterpret_cast<char*>(data), sizeof(data)));
+	}
+}
 
 //
 // Function to handle command connections
 //
 void handleCommandConnection(SOCKET clientSocket) {
 	char buffer[1024];
-	int bytesRead = recv(clientSocket, buffer, sizeof(buffer), 0);
-	if (bytesRead > 0) {
-		std::string command(buffer, bytesRead);
-		{
-			std::lock_guard<std::mutex> lock(commandMutex);
-			commandQueue.push_back(command);
+
+	int checkPeriod = 0;
+	int iResult = 0;
+	while (running.load()) {
+		int bytesRead = recv(clientSocket, buffer, sizeof(buffer), 0);
+		if (bytesRead > 0) {
+			std::string command(buffer, bytesRead);
+			{
+				std::lock_guard<std::mutex> lock(commandMutex);
+				commandQueue.push_back(command);
+			}
+			
+			std::string ack = "ACK." + std::to_string(commandQueue.size());
+			iResult = send(clientSocket, ack.c_str(), static_cast<int>(ack.length()), 0);
+			if (iResult == SOCKET_ERROR) {
+				logger.error("Command ACK send failed: " + std::to_string(WSAGetLastError()));
+				closesocket(clientSocket);
+				WSACleanup();
+				return;
+			}
 		}
-		std::string ack = "ACK";
-		send(clientSocket, ack.c_str(), static_cast<int>(ack.length()), 0);
+		else {
+			if (checkPeriod == 0) {
+				// test if the connection is still alive
+				iResult = send(clientSocket, "PING", 4, 0);
+				if (iResult == SOCKET_ERROR) {
+					logger.error("Command PING send failed: " + std::to_string(WSAGetLastError()));
+					closesocket(clientSocket);
+					WSACleanup();
+					return;
+				}
+
+				logger.info("Waiting for commands...");
+				checkPeriod = config["service"]["command"]["check_period"].get<int>();
+			}
+			else {
+				checkPeriod--;
+			}
+			std::this_thread::sleep_for(std::chrono::milliseconds(config["service"]["command"]["sleep_ms"].get<int>()));
+		}
+		
 	}
-	closesocket(clientSocket);
 }
 
 //
@@ -228,47 +283,53 @@ void handleCommandConnection(SOCKET clientSocket) {
 //
 void handleStreamConnection(SOCKET clientSocket) {
 
-	/* TODO: Implement a control code to activate the output stream. May allow for multiple clients. 
-	char buffer[1024];
-	int bytesRead = recv(clientSocket, buffer, sizeof(buffer), 0);
-	if (bytesRead > 0) {
-		std::string connectionCode(buffer, bytesRead);
-		logger.info("Client connected with code: " + connectionCode);
-	}
-	*/
-
+	int checkPeriod = 0;
+	int iResult = 0;
 	while (running.load()) {
 		if (!streamBuffer.empty()) {
 			std::string data = streamBuffer.back();
 			streamBuffer.pop_back();
-			send(clientSocket, data.c_str(), static_cast<int>(data.length()), 0);
-		} else {
-			std::this_thread::sleep_for(std::chrono::milliseconds(config["service"]["stream_sleep"].get<int>()));
-
-			// Simulation of streaming data - to be replaced with data from the station
-			// random number of packages, from 0 to 4.
-			// Each package has 4096 bytes of data, which is 1024 floats of 32 bits
-			// The data is a binary sequency of about one cycle of a sine wave
-			for (int j = 0; rand() % 5; j++) {
-				float data[1024];
-				for (int i = 0; i < 1024; i++) {
-					data[i] = (float)((60.0 * sin(i * 0.006136)) - 80.0);
-				}
-				streamBuffer.push_back(std::string(reinterpret_cast<char*>(data), sizeof(data)));
+			iResult = send(clientSocket, data.c_str(), static_cast<int>(data.length()), 0);
+			if (iResult == SOCKET_ERROR) {
+				logger.error("Stream data send failed: " + std::to_string(WSAGetLastError()));
+				closesocket(clientSocket);
+				WSACleanup();
+				return;
 			}
+		} else {
+			if (config["service"]["simulated"].get<bool>()) {
+				generateSimData();
+			}
+
+			if (checkPeriod == 0) {
+				// test if the connection is still alive
+				iResult = send(clientSocket, "PING", 4, 0);
+				if (iResult == SOCKET_ERROR) {
+					logger.error("Stream PING send failed: " + std::to_string(WSAGetLastError()));
+					closesocket(clientSocket);
+					WSACleanup();
+					return;
+				}
+
+				logger.info("Waiting for data to stream...");
+				checkPeriod = config["service"]["stream"]["check_period"].get<int>();
+			}
+			else {
+				checkPeriod--;
+			}
+			std::this_thread::sleep_for(std::chrono::milliseconds(config["service"]["stream"]["sleep_ms"].get<int>()));
 		}
 	}
-
-	closesocket(clientSocket);
 }
 
 
 //
 // Function to listen on a specific port
 //
-void listenOnPort(std::string name,
+void socketHandle(std::string name,
 	MCService::Code ServiceCode,
 	int port,
+	int timeout,
 	void (*connectionHandler)(SOCKET)) {
 
 	SOCKET listenSocket = INVALID_SOCKET;
@@ -293,7 +354,7 @@ void listenOnPort(std::string name,
 
 	listenSocket = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
 	if (listenSocket == INVALID_SOCKET) {
-		logger.error("Error at socket(): " + std::to_string(WSAGetLastError()));
+		logger.error("socket failed: " + std::to_string(WSAGetLastError()));
 		running.store(false);
 		interruptionCode.store(ServiceCode);
 		freeaddrinfo(result);
@@ -301,7 +362,18 @@ void listenOnPort(std::string name,
 		return;
 	}
 
-	using namespace std;
+	iResult = setsockopt(listenSocket, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout, sizeof(timeout));
+	if (iResult == SOCKET_ERROR) {
+		logger.error("setsockopt timeout failed: " + std::to_string(WSAGetLastError()));
+		running.store(false);
+		interruptionCode.store(ServiceCode);
+		freeaddrinfo(result);
+		closesocket(listenSocket);
+		WSACleanup();
+		return;
+	}
+
+	//using namespace std;
 
 	iResult = ::bind(listenSocket, result->ai_addr, static_cast<int>(result->ai_addrlen));
 	if (iResult == SOCKET_ERROR) {
@@ -318,7 +390,7 @@ void listenOnPort(std::string name,
 
 	iResult = listen(listenSocket, SOMAXCONN);
 	if (iResult == SOCKET_ERROR) {
-		logger.error("Listen failed: " + std::to_string(WSAGetLastError()));
+		logger.error("listen failed: " + std::to_string(WSAGetLastError()));
 		running.store(false);
 		interruptionCode.store(ServiceCode);
 		closesocket(listenSocket);
@@ -326,16 +398,25 @@ void listenOnPort(std::string name,
 		return;
 	}
 
-	logger.info(name + " is listening on port " + std::to_string(port));
+	// create variable to store the client address
+	struct sockaddr_in clientAddr;
+
+	// call the connection handler 
+	logger.info(name + " listening on port " + std::to_string(port));
 
 	while (running.load()) {
-		SOCKET clientSocket = accept(listenSocket, nullptr, nullptr);
-
-		if (clientSocket != INVALID_SOCKET) {
-			std::thread([connectionHandler, clientSocket]() {
-				connectionHandler(clientSocket);
-				}).detach();
+		SOCKET clientSocket = accept(listenSocket, (struct sockaddr*)&clientAddr, NULL);
+		if (clientSocket == INVALID_SOCKET) {
+			logger.error("accept failed: " + std::to_string(WSAGetLastError()));
+			running.store(false);
+			interruptionCode.store(ServiceCode);
+			closesocket(listenSocket);
+			WSACleanup();
+			return;
 		}
+		logger.info(name + " accepted connection from " + std::string(inet_ntoa(clientAddr.sin_addr)));
+
+		connectionHandler(clientSocket);
 	}
 
 	closesocket(listenSocket);
@@ -365,8 +446,8 @@ void StationConnect(void) {
 	std::string portStr = std::to_string(config["station"]["port"].get<int>());
 	station.port = stringToWString(portStr);
 
-	// Timeout as unsigned long, extracted from the JSON configuration file
-	station.sendTimeout = config["station"]["timeout"].get<unsigned long>();
+	// Timeout as unsigned long, extracted from the JSON configuration file in second and converted to miliseconds
+	station.sendTimeout = (unsigned long)(config["station"]["timeout_s"].get<int>())*1000;
 
 	// Error code using API ERetCode enum
 	ERetCode errCode;
@@ -399,12 +480,13 @@ void StationConnect(void) {
 	// NextServerId = APIserverId;
 
 	// Once the object was successfully created, test connection to the station
+
 	errCode = RequestCapabilities(APIserverId, StationCapabilities);
 
 	// Handle the error code from station connection
 	if (errCode != ERetCode::API_SUCCESS)
 	{
-		message = "Connection with " + hostNameStr + " not stablished: " + ERetCodeToString(errCode);
+		message = "Failed to connect to " + hostNameStr + ": " + ERetCodeToString(errCode);
 		logger.error(message);
 //		running.store(false);
 		interruptionCode.store(MCService::Code::STATION_ERROR);
@@ -412,7 +494,7 @@ void StationConnect(void) {
 	}
 	else
 	{
-		message = "Connection with " + hostNameStr + " stablished";
+		message = "Connected to station " + hostNameStr;
 		logger.info(message);
 	}
 }
@@ -426,9 +508,9 @@ void StationDisconnect(void)
 	std::string message;
 
 	// Create a local copy of APIserverId. This is necessary because TCI methods update the APIserverID value to the next available ID.
-	unsigned long NextServerId = APIserverId;
+	//unsigned long NextServerId = APIserverId;
 
-	errCode = Disconnect(NextServerId);
+	errCode = Disconnect(APIserverId);
 	
 	if (errCode != ERetCode::API_SUCCESS)
 	{
@@ -454,27 +536,25 @@ int main() {
 
 	StartLogger();
 
-	int CommandPort = config["service"]["command_port"].get<int>();
-	int StreamPort = config["service"]["stream_port"].get<int>();
-	int timeout = config["service"]["timeout"].get<int>();
-
 	StationConnect();
 
 	// Start thread for the command channel socket service. This thread will listen for incoming commands and place then in the command queue
-	std::thread commandThread(listenOnPort,
+	std::thread commandThread(socketHandle,
 		"Control service",
 		MCService::Code::COMMAND_ERROR,
-		CommandPort,
+		config["service"]["command"]["port"].get<int>(),
+		config["service"]["command"]["timeout_s"].get<int>(),
 		handleCommandConnection);
 
 	// Start thread for the stream channel socket service. This thread will listen for incoming connections and stream data back to the client
-	std::thread streamThread(listenOnPort,
+	std::thread streamThread(socketHandle,
 		"Stream service",
 		MCService::Code::STREAM_ERROR,
-		StreamPort,
+		config["service"]["stream"]["port"].get<int>(),
+		config["service"]["stream"]["timeout_s"].get<int>(),
 		handleStreamConnection);
 
-	// Main loop to process commands
+	// Main loop to process commands received
 	while (running.load()) {
 		std::lock_guard<std::mutex> lock(commandMutex);
 

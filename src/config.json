@@ -13,12 +13,21 @@
   "station": {
     "address": "166.139.112.178",
     "port": 3303,
-    "timeout": 10000
+    "timeout_s": 10
   },
   "service": {
-    "command_port": 3000,
-    "stream_port": 3001,
-    "stream_sleep": 500,
-    "timeout": 10000
+    "command": {
+      "port": 3000,
+      "timeout_s": 1000,
+      "sleep_ms": 100,
+      "check_period": 5
+    },
+    "stream": {
+      "port": 3001,
+      "timeout_s": 1000,
+      "sleep_ms": 500,
+      "check_period": 5
+    },    
+    "simulated": true
   }
 }
