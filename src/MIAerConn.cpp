@@ -31,7 +31,7 @@
 #include <spdlog/sinks/basic_file_sink.h>
 
 // Include to solution specific libraries
-#include <messages.h>
+#include <ExternalCodes.h>
 #include <MIAerConnCodes.hpp>
 
 // For convenience
@@ -49,12 +49,6 @@ spdlog::logger logger = spdlog::logger("MIAerConn");
 
 // Atomic flag to signal application error
 std::atomic<bool> running{ true }; 
-
-// Atomic flag to signal that a client is connected to the command port
-std::atomic<bool> commandConnected{ false }; 
-
-// Atomic flag to signal application error
-std::atomic<bool> streamConnected{ false }; 
 
 // Code to represent the cause for not running
 std::atomic<MCService::Code> interruptionCode{ MCService::Code::RUNNING };
@@ -246,8 +240,10 @@ void handleCommandConnection(SOCKET clientSocket) {
 				commandQueue.push_back(command);
 			}
 			
-			std::string ack = "ACK." + std::to_string(commandQueue.size());
-			iResult = send(clientSocket, ack.c_str(), static_cast<int>(ack.length()), 0);
+			std::string ack = MCService::toString(MCService::Form::ACK) +
+				std::to_string(commandQueue.size()) +
+				MCService::toString(MCService::Form::SEP);
+			iResult = send(clientSocket, ack.c_str(), (int)(ack.length()), 0);
 			if (iResult == SOCKET_ERROR) {
 				logger.error("Command ACK send failed: " + std::to_string(WSAGetLastError()));
 				closesocket(clientSocket);
@@ -258,7 +254,10 @@ void handleCommandConnection(SOCKET clientSocket) {
 		else {
 			if (checkPeriod == 0) {
 				// test if the connection is still alive
-				iResult = send(clientSocket, "PING", 4, 0);
+				iResult = send(clientSocket,
+					MCService::toString(MCService::Form::PING).c_str(),
+					static_cast<int>(MCService::toString(MCService::Form::PING).length()),
+					0);
 				if (iResult == SOCKET_ERROR) {
 					logger.error("Command PING send failed: " + std::to_string(WSAGetLastError()));
 					closesocket(clientSocket);
@@ -303,7 +302,10 @@ void handleStreamConnection(SOCKET clientSocket) {
 
 			if (checkPeriod == 0) {
 				// test if the connection is still alive
-				iResult = send(clientSocket, "PING", 4, 0);
+				iResult = send(	clientSocket,
+								MCService::toString(MCService::Form::PING).c_str(),
+								static_cast<int>(MCService::toString(MCService::Form::PING).length()),
+								0);
 				if (iResult == SOCKET_ERROR) {
 					logger.error("Stream PING send failed: " + std::to_string(WSAGetLastError()));
 					closesocket(clientSocket);

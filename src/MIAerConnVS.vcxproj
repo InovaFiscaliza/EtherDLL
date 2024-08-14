@@ -166,14 +166,14 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="MIAerConnCodes.hpp" />
-    <ClInclude Include="messages.h" />
+    <ClInclude Include="ExternalCodes.h" />
     <ClInclude Include="MoreEquipCtrlMsg.h" />
     <ClInclude Include="MIAerConn.h" />
     <ClInclude Include="OccupSpectConnect.h" />
     <ClInclude Include="StdAfx.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="messages.cpp" />
+    <ClCompile Include="ExternalCodes.cpp" />
     <ClCompile Include="MIAerConn.cpp" />
     <ClCompile Include="StdAfx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>

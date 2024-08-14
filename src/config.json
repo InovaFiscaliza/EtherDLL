@@ -18,15 +18,15 @@
   "service": {
     "command": {
       "port": 3000,
-      "timeout_s": 1000,
+      "timeout_s": 10000,
       "sleep_ms": 100,
-      "check_period": 5
+      "check_period": 10
     },
     "stream": {
       "port": 3001,
-      "timeout_s": 1000,
+      "timeout_s": 10000,
       "sleep_ms": 500,
-      "check_period": 5
+      "check_period": 200
     },    
     "simulated": true
   }

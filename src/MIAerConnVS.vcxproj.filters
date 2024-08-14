@@ -20,7 +20,7 @@
     <ClInclude Include="MoreEquipCtrlMsg.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="messages.h">
+    <ClInclude Include="ExternalCodes.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="MIAerConnCodes.hpp">
@@ -37,7 +37,7 @@
     <ClCompile Include="StdAfx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="messages.cpp">
+    <ClCompile Include="ExternalCodes.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

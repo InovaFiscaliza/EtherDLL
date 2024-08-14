@@ -24,6 +24,21 @@ namespace MCService {
         case Code::COMMAND_ERROR: return "Command channel communication error";
         case Code::STREAM_ERROR: return "Stream channel error";
         default: return "Undefined MIAerConn Code";
+        };
+    };
+
+    enum class Form {
+        SEP,
+        PING,
+        ACK
+    };
+
+    inline std::string toString(Form form) {
+        switch (form) {
+        case Form::SEP: return ",";
+        case Form::PING: return "PING,";
+        case Form::ACK: return "ACK:";
+        default: return "Undefined Form";
         }
     }
 }
