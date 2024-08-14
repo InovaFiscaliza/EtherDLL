@@ -205,21 +205,43 @@ void StartLogger(void) {
 // Function to create simulated data
 // Data is a random number of packages, from 1 to 5.
 // Each package has 4096 bytes of data, which is 1024 floats of 32 bits
-// First 512 points describes a ramp from -100 to -20
-// Later 512 points describes cosine cycles with the same amplitude. The number of cycles varies with the package number.
+// First 12 points are a sequency of 0, 1, 0, -1, repeated 3 times
+// Following 500 points describes a ramp from -100 to -20
+// Finally 512 points describes cosine cycles with the same amplitude. The number of cycles varies with the package number.
 
 void generateSimData(void) {
 	
 	float data[1024];
-			
-	for (int j = 1; rand() % 6; j++) {
-		for (int i = 0; i < 512; i++) {
-			data[i] = (float)((40.0 * (((float)(i) / 256) - 1)) - 60.0);
+	int j = 1;
+	std::string trace;
+	
+	for (j = 1; rand() % 6; j++) {
+		for (int i = 0; i < 12; i = i + 4) {
+			data[0+i] = (float)(0.0);
+			data[1+i] = (float)(1.0);
+			data[2+i] = (float)(0.0);
+			data[3+i] = (float)(-1.0);
+		}
+		for (int i = 12; i < 500; i++) {
+			data[i] = (float)((40.0 * (((float)(i) / 250) - 1)) - 60.0);
 		}
 		for (int i = 512; i < 1024; i++) {
 			data[i] = (float)((60.0 * cos((i * 0.0184)*2*j)) - 80.0);
 		}
-		streamBuffer.push_back(std::string(reinterpret_cast<char*>(data), sizeof(data)));
+		trace = std::string(reinterpret_cast<char*>(data), sizeof(data));
+		streamBuffer.push_back(trace);
+	}
+	
+
+	// logger.info("Simulated data generated " + std::to_string(j) + " traces with 1024 float points.");
+	if (sizeof(trace) > 48) {
+		std::string message = "Sample points: [";
+		// add the first 12 points as uint8 translation from the streamBuffer
+		for (int i = 0; i < 48; i++) {
+			message += std::to_string((unsigned char)trace[i]) + ", ";
+		}
+		message += "...]";
+		logger.info(message);
 	}
 }
 
@@ -245,9 +267,8 @@ void handleCommandConnection(SOCKET clientSocket) {
 				MCService::toString(MCService::Form::SEP);
 			iResult = send(clientSocket, ack.c_str(), (int)(ack.length()), 0);
 			if (iResult == SOCKET_ERROR) {
-				logger.error("Command ACK send failed: " + std::to_string(WSAGetLastError()));
-				closesocket(clientSocket);
-				WSACleanup();
+				logger.warn("Command service ACK send failed. EC:" + std::to_string(WSAGetLastError()));
+				logger.info("Command service connection with address" + std::to_string(clientSocket) + " lost.");
 				return;
 			}
 		}
@@ -259,9 +280,8 @@ void handleCommandConnection(SOCKET clientSocket) {
 					static_cast<int>(MCService::toString(MCService::Form::PING).length()),
 					0);
 				if (iResult == SOCKET_ERROR) {
-					logger.error("Command PING send failed: " + std::to_string(WSAGetLastError()));
-					closesocket(clientSocket);
-					WSACleanup();
+					logger.warn("Command service PING send failed. EC:" + std::to_string(WSAGetLastError()));
+					logger.info("Command service connection with address" + std::to_string(clientSocket) + " lost.");
 					return;
 				}
 
@@ -290,9 +310,7 @@ void handleStreamConnection(SOCKET clientSocket) {
 			streamBuffer.pop_back();
 			iResult = send(clientSocket, data.c_str(), static_cast<int>(data.length()), 0);
 			if (iResult == SOCKET_ERROR) {
-				logger.error("Stream data send failed: " + std::to_string(WSAGetLastError()));
-				closesocket(clientSocket);
-				WSACleanup();
+				logger.warn("Stream service data send failed. EC:" + std::to_string(WSAGetLastError()));
 				return;
 			}
 		} else {
@@ -307,9 +325,8 @@ void handleStreamConnection(SOCKET clientSocket) {
 								static_cast<int>(MCService::toString(MCService::Form::PING).length()),
 								0);
 				if (iResult == SOCKET_ERROR) {
-					logger.error("Stream PING send failed: " + std::to_string(WSAGetLastError()));
-					closesocket(clientSocket);
-					WSACleanup();
+					logger.warn("Stream service PING send failed. EC:" + std::to_string(WSAGetLastError()));
+					logger.info("Stream service connection with address" + std::to_string(clientSocket) + " lost.");
 					return;
 				}
 
@@ -347,7 +364,7 @@ void socketHandle(std::string name,
 	std::string portStr = std::to_string(port);
 	int iResult = getaddrinfo(NULL, portStr.c_str(), &hints, &result);
 	if (iResult != 0) {
-		logger.error("getaddrinfo failed: " + std::to_string(iResult));
+		logger.error(name + "socket getaddrinfo failed. EC:" + std::to_string(iResult));
 		running.store(false);
 		interruptionCode.store(ServiceCode);
 		WSACleanup();
@@ -356,7 +373,7 @@ void socketHandle(std::string name,
 
 	listenSocket = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
 	if (listenSocket == INVALID_SOCKET) {
-		logger.error("socket failed: " + std::to_string(WSAGetLastError()));
+		logger.error(name + "socket creation failed. EC:" + std::to_string(WSAGetLastError()));
 		running.store(false);
 		interruptionCode.store(ServiceCode);
 		freeaddrinfo(result);
@@ -366,7 +383,7 @@ void socketHandle(std::string name,
 
 	iResult = setsockopt(listenSocket, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout, sizeof(timeout));
 	if (iResult == SOCKET_ERROR) {
-		logger.error("setsockopt timeout failed: " + std::to_string(WSAGetLastError()));
+		logger.error(name + "socket setsockopt timeout failed. EC:" + std::to_string(WSAGetLastError()));
 		running.store(false);
 		interruptionCode.store(ServiceCode);
 		freeaddrinfo(result);
@@ -379,7 +396,7 @@ void socketHandle(std::string name,
 
 	iResult = ::bind(listenSocket, result->ai_addr, static_cast<int>(result->ai_addrlen));
 	if (iResult == SOCKET_ERROR) {
-		logger.error("bind failed: " + std::to_string(WSAGetLastError()));
+		logger.error(name + "socket bind failed. EC:" + std::to_string(WSAGetLastError()));
 		running.store(false);
 		interruptionCode.store(ServiceCode);
 		freeaddrinfo(result);
@@ -392,7 +409,7 @@ void socketHandle(std::string name,
 
 	iResult = listen(listenSocket, SOMAXCONN);
 	if (iResult == SOCKET_ERROR) {
-		logger.error("listen failed: " + std::to_string(WSAGetLastError()));
+		logger.error(name + "socket listen failed. EC:" + std::to_string(WSAGetLastError()));
 		running.store(false);
 		interruptionCode.store(ServiceCode);
 		closesocket(listenSocket);
@@ -403,25 +420,24 @@ void socketHandle(std::string name,
 	// create variable to store the client address
 	struct sockaddr_in clientAddr;
 
-	// call the connection handler 
-	logger.info(name + " listening on port " + std::to_string(port));
-
+	SOCKET clientSocket = INVALID_SOCKET;
 	while (running.load()) {
-		SOCKET clientSocket = accept(listenSocket, (struct sockaddr*)&clientAddr, NULL);
-		if (clientSocket == INVALID_SOCKET) {
-			logger.error("accept failed: " + std::to_string(WSAGetLastError()));
-			running.store(false);
-			interruptionCode.store(ServiceCode);
-			closesocket(listenSocket);
-			WSACleanup();
-			return;
-		}
-		logger.info(name + " accepted connection from " + std::string(inet_ntoa(clientAddr.sin_addr)));
+		// call the connection handler 
+		logger.info(name + " listening on port " + std::to_string(port));
 
-		connectionHandler(clientSocket);
+		clientSocket = accept(listenSocket, (struct sockaddr*)&clientAddr, NULL);
+		if (clientSocket == INVALID_SOCKET) {
+			logger.warn(name + "failed in accept operation with " + std::string(inet_ntoa(clientAddr.sin_addr)) + ". EC:" + std::to_string(WSAGetLastError()));
+		}
+		else {
+			logger.info(name + " accepted connection from " + std::string(inet_ntoa(clientAddr.sin_addr)));
+
+			connectionHandler(clientSocket);
+		}
 	}
 
 	closesocket(listenSocket);
+	WSACleanup();
 	logger.info(name + " stopped listening on port " + std::to_string(port));
 }
 
