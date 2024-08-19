@@ -6,13 +6,25 @@ The application is a Windows Service that may also be accessed as a desktop appl
 
 The API is not included in this repository and must be provided by the manufacturer, being dependent on the manufacturer's SDK and licensing.
 
+The main application is intended to be a single portable application (.exe) that may be installed as a Windows Service and accessed as a console application for debug.
+
+Output from the executable is in the form of log, that may be directed to file or the console.
+
+Configuration is done through a json file (config.json) that must be placed in the same folder as the executable.
+
+The JSON file is read at startup and stores not only the log format but also parameters used to connect to the monitoring station equipment and also that define the services provided.
+
+Additionally, a test client in matlab is provided, such as to enable testing of the service.
+
+A simulation mode is also provided, such as to enable testing of the service without the need of the manufacturer's equipment, although the execution will require the specific DLL files.
+
 ## Installation
 
 The application is installed as a Windows Service and must be installed with administrative privileges.
 
 The manufacturer's API must be installed in the system before running the service.
 
-The compiled appplication is composed of the following files:
+The compiled application is composed of the following files:
 
  - MIAerConn.exe, which is a windows console application
  - config.json, which stores the configuration parameteres, including the IP address and port of the MIAer Spectrum Monitoring Station
