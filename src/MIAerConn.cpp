@@ -20,7 +20,10 @@
 #include <chrono>
 #include <fstream>
 
-#pragma comment(lib, "Ws2_32.lib")
+#pragma comment (lib, "Ws2_32.lib")
+#pragma comment (lib, "Mswsock.lib")
+#pragma comment (lib, "ScorpioAPIDlld.lib")
+#pragma comment (lib, "AdvApi32.lib")
 
 // Include the nlohmann JSON library
 #include <nlohmann/json.hpp>
@@ -33,6 +36,7 @@
 // Include to solution specific libraries
 #include <ExternalCodes.h>
 #include <MIAerConnCodes.hpp>
+
 #include <MIAerConnUtils.h>
 
 // For convenience
@@ -634,32 +638,14 @@ int main() {
 			switch (cmd)
 			{
 			case ECSMSDllMsgType::GET_OCCUPANCY:
-			{
-				// TODO
-				//SOccupReqData* m_occReqMsg = (SOccupReqData*)malloc(sizeof(SOccupReqData));
-				//m_occReqMsg = convertStringToSOccupReqData(params[1]);
-				//logCommandExec(RequestOccupancy(APIserverId, m_occReqMsg, &requestID), "RequestOccupancy");
-				//free(m_occReqMsg);
+				logCommandExec(RequestOccupancy(APIserverId, stringToSOccupReqData(params[1]), &requestID), "RequestOccupancy");
 				break;
-			}
 			case ECSMSDllMsgType::GET_OCCUPANCYDF:
-			{
-				// TODO
-				//SOccDFReqData* m_occReqMsg = (SOccDFReqData*)malloc(sizeof(SOccDFReqData));
-				//m_occReqMsg = convertStringToSOccDFReqData(params[1]);
-				//logCommandExec(RequestOccupancyDF(APIserverId, m_occReqMsg, &requestID), "RequestOccupancyDF");
-				//free(m_occReqMsg);
+				logCommandExec(RequestOccupancyDF(APIserverId, stringToSOccDFReqData(params[1]), &requestID), "RequestOccupancyDF");
 				break;
-			}
 			case ECSMSDllMsgType::GET_AVD:
-			{
-				// TODO
-				//SAVDReqData* m_occReqMsg = (SAVDReqData*)malloc(sizeof(SAVDReqData));
-				//m_occReqMsg = convertStringToSAVDReqData(params[1]);
-				//logCommandExec(RequestAVD(APIserverId, m_occReqMsg, &requestID), "RequestAVD");
-				//free(m_occReqMsg);
+				logCommandExec(RequestAVD(APIserverId, stringToSAVDReqData(params[1]), &requestID), "RequestAVD");
 				break;
-			}
 			case ECSMSDllMsgType::GET_MEAS:
 			{
 				// TODO

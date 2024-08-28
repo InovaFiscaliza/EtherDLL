@@ -42,10 +42,10 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
-    <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
     <UseOfMfc>Dynamic</UseOfMfc>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -78,10 +78,9 @@
     <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
     <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
     <IgnoreImportLibrary>false</IgnoreImportLibrary>
-    <ReferencePath>$(VC_ReferencesPath_x86);</ReferencePath>
     <RunCodeAnalysis>true</RunCodeAnalysis>
     <CodeAnalysisRuleSet>C:\Projects\TCI\Scopio API Test Client\ScorpioAPITestClient.ruleset</CodeAnalysisRuleSet>
-    <LinkIncremental>true</LinkIncremental>
+    <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>true</LinkIncremental>
@@ -120,7 +119,6 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <WarningLevel>Level4</WarningLevel>
       <SDLCheck>
       </SDLCheck>
       <PreprocessorDefinitions>_DEBUG;WIN32;_WINDOWS;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -128,19 +126,20 @@
       <AdditionalIncludeDirectories>D:\PROJETOS\CLIENTES\ALBATROSS\ANATEL\REPOSITORIO_OFICIAL\MIAerConnVS\src\nlohmann;D:\PROJETOS\CLIENTES\ALBATROSS\ANATEL\REPOSITORIO_OFICIAL\MIAerConnVS\src;D:\PROJETOS\CLIENTES\ALBATROSS\ANATEL\REPOSITORIO_OFICIAL\MIAerConnVS\src\spdlog;C:\Program Files (x86)\TCI\Scorpio API\Release\Common;C:\Program Files (x86)\TCI\Scorpio API\Release\GShared\Monitoring System\Shared Include;C:\Program Files (x86)\TCI\Scorpio API\Release\GShared\IO;C:\Program Files (x86)\TCI\Scorpio API\Release\GShared\Primitives</AdditionalIncludeDirectories>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <AdditionalOptions>/F 65536 /analyze:stacksize 65536 %(AdditionalOptions)</AdditionalOptions>
-      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <SupportJustMyCode>false</SupportJustMyCode>
+      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <EnablePREfast>true</EnablePREfast>
-      <Optimization>Disabled</Optimization>
       <PrecompiledHeaderFile />
+      <WarningLevel>Level4</WarningLevel>
+      <WholeProgramOptimization>false</WholeProgramOptimization>
+      <Optimization>Disabled</Optimization>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>C:\Program Files (x86)\TCI\Scorpio API\Release\lib</AdditionalLibraryDirectories>
-      <AdditionalDependencies>ScorpioAPIDlld.lib;version.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:\Program Files %28x86%29\TCI\Scorpio API\Release\lib</AdditionalLibraryDirectories>
+      <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
       <EntryPointSymbol>mainCRTStartup</EntryPointSymbol>
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
