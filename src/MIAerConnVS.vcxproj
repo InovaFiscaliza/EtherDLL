@@ -125,7 +125,7 @@
       </SDLCheck>
       <PreprocessorDefinitions>_DEBUG;WIN32;_WINDOWS;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>Default</ConformanceMode>
-      <AdditionalIncludeDirectories>D:\Projects\MIAerConnVS\src\nlohmann;D:\Projects\MIAerConnVS\src;D:\Projects\MIAerConnVS\src\spdlog;C:\Program Files (x86)\TCI\Scorpio API\Release\Common;C:\Program Files (x86)\TCI\Scorpio API\Release\GShared\Monitoring System\Shared Include;C:\Program Files (x86)\TCI\Scorpio API\Release\GShared\IO;C:\Program Files (x86)\TCI\Scorpio API\Release\GShared\Primitives</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\PROJETOS\CLIENTES\ALBATROSS\ANATEL\REPOSITORIO_OFICIAL\MIAerConnVS\src\nlohmann;D:\PROJETOS\CLIENTES\ALBATROSS\ANATEL\REPOSITORIO_OFICIAL\MIAerConnVS\src;D:\PROJETOS\CLIENTES\ALBATROSS\ANATEL\REPOSITORIO_OFICIAL\MIAerConnVS\src\spdlog;C:\Program Files (x86)\TCI\Scorpio API\Release\Common;C:\Program Files (x86)\TCI\Scorpio API\Release\GShared\Monitoring System\Shared Include;C:\Program Files (x86)\TCI\Scorpio API\Release\GShared\IO;C:\Program Files (x86)\TCI\Scorpio API\Release\GShared\Primitives</AdditionalIncludeDirectories>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <AdditionalOptions>/F 65536 /analyze:stacksize 65536 %(AdditionalOptions)</AdditionalOptions>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
@@ -175,6 +175,7 @@
   <ItemGroup>
     <ClInclude Include="MIAerConnCodes.hpp" />
     <ClInclude Include="ExternalCodes.h" />
+    <ClInclude Include="MIAerConnUtils.h" />
     <ClInclude Include="MoreEquipCtrlMsg.h" />
     <ClInclude Include="MIAerConn.h" />
     <ClInclude Include="OccupSpectConnect.h" />
@@ -183,6 +184,7 @@
   <ItemGroup>
     <ClCompile Include="ExternalCodes.cpp" />
     <ClCompile Include="MIAerConn.cpp" />
+    <ClCompile Include="MIAerConnUtils.cpp" />
     <ClCompile Include="StdAfx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
     </ClCompile>

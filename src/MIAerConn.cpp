@@ -33,6 +33,7 @@
 // Include to solution specific libraries
 #include <ExternalCodes.h>
 #include <MIAerConnCodes.hpp>
+#include <MIAerConnUtils.h>
 
 // For convenience
 using json = nlohmann::json;
@@ -76,9 +77,64 @@ SScorpioAPIClient station;
 // Station capabilities
 SCapabilities StationCapabilities;
 
-ErrorCB OnErrFunc;
-DataCB OnDataFunc;
 RealTimeDataCB OnRealtimeDataFunc;
+
+//Socket connection for commands
+SOCKET clientSocketCommand = NULL;
+
+/*
+* Felipe Machado - 23/08/2024
+* Data callback for Scorpio API
+*/
+void OnDataFunc(_In_  unsigned long serverId, _In_ ECSMSDllMsgType respType, _In_ unsigned long sourceAddr, _In_ unsigned long desstAddr, _In_ SEquipCtrlMsg::UBody* data)
+{
+	std::string strData = std::string(reinterpret_cast<char*>(data), sizeof(data));
+	streamBuffer.push_back(strData);
+	logger.info("OnData received with type " + respType);
+	logger.info("OnData received destination address " + desstAddr);
+	logger.info("OnData received server ID " + serverId);
+}
+
+/*
+* Felipe Machado - 23/08/2024
+* Error callback for Scorpio API
+*/
+void OnErrorFunc(_In_  unsigned long serverId, _In_ const std::wstring& errorMsg)
+{
+	std::string str(errorMsg.begin(), errorMsg.end());
+	logger.error(str);
+	if (clientSocketCommand != NULL) {
+		int iResult = send(clientSocketCommand,
+			(str + "\n").c_str(),
+			static_cast<int>(strlen(str.c_str()) + 1),
+			0);
+		if (iResult == SOCKET_ERROR) {
+			logger.warn("Failed to send socket. EC:" + std::to_string(WSAGetLastError()));
+			logger.info("Connection with address" + std::to_string(clientSocketCommand) + " lost.");
+			return;
+		}
+	}
+	else {
+		logger.warn("Command socket connection not found");
+	}
+
+}
+
+/*
+* Felipe Machado - 23/08/2024
+* Check and log the code returned by the Scorpio API
+*/
+void logCommandExec(ERetCode errCode, std::string command) {
+	if (errCode != ERetCode::API_SUCCESS)
+	{
+		logger.error("[" + command + "] ERROR. " + ERetCodeToString(errCode));
+	}
+	else
+	{
+		logger.info("[" + command + "] command executed");
+	}
+}
+
 
 //
 // Signal handler function
@@ -251,6 +307,8 @@ void generateSimData(void) {
 // Function to handle command connections
 //
 void handleCommandConnection(SOCKET clientSocket, std::string name) {
+	clientSocketCommand = clientSocket;
+
 	char buffer[1024];
 
 	int checkPeriod = 0;
@@ -435,14 +493,6 @@ void socketHandle(	std::string name,
 }
 
 //
-// Convert a string to a wide string. Used in messages from the station
-//
-std::wstring stringToWString(const std::string& str) {
-	return std::wstring(str.begin(), str.end());
-}
-
-
-//
 // Create a connection object to the station and connect to it.
 //
 void StationConnect(void) {
@@ -467,7 +517,7 @@ void StationConnect(void) {
 	errCode = ScorpioAPICreate(
 					APIserverId,
 					station,
-					OnErrFunc,
+					OnErrorFunc,
 					OnDataFunc,
 					OnRealtimeDataFunc);
 
@@ -569,9 +619,127 @@ int main() {
 			std::lock_guard<std::mutex> lock(MCCommandMutex);
 			std::string command = commandQueue.back();
 			commandQueue.pop_back();
-
 			logger.info("Processing command: " + command);
-			// Process the command and possibly send responses back to clients
+			
+			/*
+			* Felipe Machado - 23/08/2024
+			* Exemplo pacote socket
+			* cmd|param01|param02|...
+			*/ 
+			unsigned long requestID = 0;
+			std::vector<std::string> params = split(command, "|");
+
+			int cmd = atoi(params[0].c_str());
+
+			switch (cmd)
+			{
+			case ECSMSDllMsgType::GET_OCCUPANCY:
+			{
+				// TODO
+				//SOccupReqData* m_occReqMsg = (SOccupReqData*)malloc(sizeof(SOccupReqData));
+				//m_occReqMsg = convertStringToSOccupReqData(params[1]);
+				//logCommandExec(RequestOccupancy(APIserverId, m_occReqMsg, &requestID), "RequestOccupancy");
+				//free(m_occReqMsg);
+				break;
+			}
+			case ECSMSDllMsgType::GET_OCCUPANCYDF:
+			{
+				// TODO
+				//SOccDFReqData* m_occReqMsg = (SOccDFReqData*)malloc(sizeof(SOccDFReqData));
+				//m_occReqMsg = convertStringToSOccDFReqData(params[1]);
+				//logCommandExec(RequestOccupancyDF(APIserverId, m_occReqMsg, &requestID), "RequestOccupancyDF");
+				//free(m_occReqMsg);
+				break;
+			}
+			case ECSMSDllMsgType::GET_AVD:
+			{
+				// TODO
+				//SAVDReqData* m_occReqMsg = (SAVDReqData*)malloc(sizeof(SAVDReqData));
+				//m_occReqMsg = convertStringToSAVDReqData(params[1]);
+				//logCommandExec(RequestAVD(APIserverId, m_occReqMsg, &requestID), "RequestAVD");
+				//free(m_occReqMsg);
+				break;
+			}
+			case ECSMSDllMsgType::GET_MEAS:
+			{
+				// TODO
+				/*SMeasReqData* m_measureReqMsg = (SMeasReqData*)malloc(sizeof(SMeasReqData));
+				if (m_measureReqMsg != nullptr)
+				{
+					//memcpy(m_measureReqMsg, &m_Request.body.getMeasCmd, sizeof(SMeasReqData));
+
+					logCommandExec(RequestMeasurement(APIserverId, m_measureReqMsg, &requestID), "RequestMeasurement");
+					free(m_measureReqMsg);
+				}*/
+				break;
+			}
+			case ECSMSDllMsgType::GET_TASK_STATUS:
+				logCommandExec(RequestTaskStatus(APIserverId, stringToUnsignedLong(params[1])), "RequestTaskStatus");
+				break;
+			case ECSMSDllMsgType::GET_TASK_STATE:
+				logCommandExec(RequestTaskState(APIserverId, (ECSMSDllMsgType)stringToUnsignedLong(params[1]), stringToUnsignedLong(params[2])), "RequestTaskState");
+				break;
+			case ECSMSDllMsgType::TASK_SUSPEND:
+				logCommandExec(SuspendTask(APIserverId, (ECSMSDllMsgType)stringToUnsignedLong(params[1]), stringToUnsignedLong(params[2])), "SuspendTask");
+				break;
+			case ECSMSDllMsgType::TASK_RESUME:
+				logCommandExec(ResumeTask(APIserverId, (ECSMSDllMsgType)stringToUnsignedLong(params[1]), stringToUnsignedLong(params[2])), "ResumeTask");
+				break;
+			case ECSMSDllMsgType::TASK_TERMINATE:
+				logCommandExec(TerminateTask(APIserverId, stringToUnsignedLong(params[1])), "TerminateTask");
+				break;
+			case ECSMSDllMsgType::GET_BIST:
+				logCommandExec(RequestBist(APIserverId, (EBistScope)atoi(params[1].c_str()), &requestID), "RequestBist");
+				break;
+			case ECSMSDllMsgType::SET_AUDIO_PARAMS:
+			{
+				// TODO
+					/*SAudioParams audioRequest;
+					audioRequest.anyChannel = convertToBool(params[1]);
+					audioRequest.bandwidth = Units::Frequency(convertToUnsignedLong(params[2])).GetRaw();
+					audioRequest.bfo = Units::Frequency(convertToUnsignedLong(params[3])).GetRaw();
+					audioRequest.channel = convertToUnsignedLong(params[4]);
+					audioRequest.detMode = (SEquipCtrlMsg::SRcvrCtrlCmd::EDetMode)atoi(params[5].c_str());
+					audioRequest.doAudio = convertToBool(params[6]);
+					audioRequest.doModRec = convertToBool(params[7]);
+					audioRequest.doRDS = convertToBool(params[8]);
+					audioRequest.doSigRec = convertToBool(params[9]);
+					audioRequest.freq = Units::Frequency(convertToUnsignedLong(params[10])).GetRaw();
+					strcpy_s(audioRequest.ipAddressRDSRadio, params[11].c_str());
+					audioRequest.streamID = convertToUnsignedLong(params[12]);
+					logCommandExec(SetAudio(APIserverId, audioRequest, &requestID), "SetAudio");*/
+					break;
+				}
+				case ECSMSDllMsgType::FREE_AUDIO_CHANNEL:
+					logCommandExec(FreeAudio(APIserverId, stringToUnsignedLong(params[1]), &requestID), "FreeAudio");
+					break;
+				case ECSMSDllMsgType::SET_PAN_PARAMS:
+				{
+					// TODO
+				/*SPanParams panParams;
+				panParams.antenna = (SEquipCtrlMsg::EAnt)convertToUnsignedLong(params[1]);
+				panParams.rcvr.freq = Units::Frequency(convertToUnsignedLong(params[2])).GetRaw();
+				panParams.rcvr.bandwidth = Units::Frequency(convertToUnsignedLong(params[3])).GetRaw();
+				panParams.rcvr.detMode = (SEquipCtrlMsg::SRcvrCtrlCmd::EDetMode)atoi(params[4].c_str());
+				panParams.rcvr.agcTime = convertToUnsignedLong(params[5]);
+				panParams.rcvr.bfo = Units::Frequency(convertToUnsignedLong(params[6])).GetRaw();
+				logCommandExec(SetPanParams(APIserverId, panParams, &requestID), "SetPanParams");*/
+				break;
+			}
+			case ECSMSDllMsgType::GET_PAN:
+			{
+				// TODO
+				/*SGetPanParams PanRequest;
+				PanRequest.freq = Units::Frequency(convertToUnsignedLong(params[1])).GetRaw();
+				PanRequest.bandwidth = Units::Frequency(convertToUnsignedLong(params[2])).GetRaw();
+				PanRequest.rcvrAtten = (unsigned char)params[3].c_str();
+				logCommandExec(RequestPan(APIserverId, PanRequest, &requestID), "RequestPan");*/
+				break;
+			}
+			default:
+				logger.error("command not recognized");
+				break;
+			}
 		}
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
