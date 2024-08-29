@@ -28,10 +28,14 @@
 * In debug and release the name of ScorpioAPI is different, so checking is necessary to know which one to call
 
 */
-#ifdef NDEBUG
-	#pragma comment (lib, "ScorpioAPIDll.lib") //RELEASE
+#ifdef _X86_
+	#pragma comment (lib, "ScorpioAPIDll.lib")
 #else
-	#pragma comment (lib, "ScorpioAPIDlld.lib") //DEBUG
+	#ifdef NDEBUG
+		#pragma comment (lib, "ScorpioAPIDll.lib") //RELEASE
+	#else
+		#pragma comment (lib, "ScorpioAPIDlld.lib") //DEBUG
+	#endif
 #endif
 
 #pragma comment (lib, "AdvApi32.lib")

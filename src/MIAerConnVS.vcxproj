@@ -32,6 +32,7 @@
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
+    <UseOfMfc>Dynamic</UseOfMfc>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -39,6 +40,7 @@
     <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
+    <UseOfMfc>Dynamic</UseOfMfc>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -85,36 +87,49 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>true</LinkIncremental>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <CopyCppRuntimeToOutputDir>false</CopyCppRuntimeToOutputDir>
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <CopyLocalDebugSymbols>false</CopyLocalDebugSymbols>
+    <CopyCppRuntimeToOutputDir>false</CopyCppRuntimeToOutputDir>
+  </PropertyGroup>
   <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <VcpkgConfiguration>Release</VcpkgConfiguration>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
-      <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <AdditionalIncludeDirectories>C:\Program Files %28x86%29\TCI\Scorpio API\Common;C:\Program Files %28x86%29\TCI\Scorpio API\GShared\IO;C:\Program Files %28x86%29\TCI\Scorpio API\GShared\Monitoring System\Shared Include;C:\Program Files %28x86%29\TCI\Scorpio API\GShared\Primitives;./;./nlohmann;./spdlog;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <SupportJustMyCode>false</SupportJustMyCode>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>C:\Program Files %28x86%29\TCI\Scorpio API\lib</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
+      <WarningLevel>Level4</WarningLevel>
       <FunctionLevelLinking>true</FunctionLevelLinking>
-      <IntrinsicFunctions>true</IntrinsicFunctions>
-      <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ConformanceMode>true</ConformanceMode>
+      <IntrinsicFunctions>false</IntrinsicFunctions>
+      <PreprocessorDefinitions>NDEBUG;WIN32;_WINDOWS;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>Default</ConformanceMode>
+      <AdditionalIncludeDirectories>C:\Program Files %28x86%29\TCI\Scorpio API\Common;C:\Program Files %28x86%29\TCI\Scorpio API\GShared\IO;C:\Program Files %28x86%29\TCI\Scorpio API\GShared\Monitoring System\Shared Include;C:\Program Files %28x86%29\TCI\Scorpio API\GShared\Primitives;./;./nlohmann;./spdlog;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <StringPooling>false</StringPooling>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
-      <EnableCOMDATFolding>true</EnableCOMDATFolding>
-      <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>C:\Program Files %28x86%29\TCI\Scorpio API\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>ScorpioAPIDll.lib;wsock32.lib;gpib-32.obj;ws2_32.lib;version.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -123,7 +138,7 @@
       </SDLCheck>
       <PreprocessorDefinitions>_DEBUG;WIN32;_WINDOWS;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>Default</ConformanceMode>
-      <AdditionalIncludeDirectories>D:\PROJETOS\CLIENTES\ALBATROSS\ANATEL\REPOSITORIO_OFICIAL\MIAerConnVS\src\nlohmann;D:\PROJETOS\CLIENTES\ALBATROSS\ANATEL\REPOSITORIO_OFICIAL\MIAerConnVS\src;D:\PROJETOS\CLIENTES\ALBATROSS\ANATEL\REPOSITORIO_OFICIAL\MIAerConnVS\src\spdlog;C:\Program Files (x86)\TCI\Scorpio API\Release\Common;C:\Program Files (x86)\TCI\Scorpio API\Release\GShared\Monitoring System\Shared Include;C:\Program Files (x86)\TCI\Scorpio API\Release\GShared\IO;C:\Program Files (x86)\TCI\Scorpio API\Release\GShared\Primitives</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>./nlohmann;./;./spdlog;C:\Program Files (x86)\TCI\Scorpio API\Release\Common;C:\Program Files (x86)\TCI\Scorpio API\Release\GShared\Monitoring System\Shared Include;C:\Program Files (x86)\TCI\Scorpio API\Release\GShared\IO;C:\Program Files (x86)\TCI\Scorpio API\Release\GShared\Primitives</AdditionalIncludeDirectories>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <AdditionalOptions>/F 65536 /analyze:stacksize 65536 %(AdditionalOptions)</AdditionalOptions>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
@@ -158,7 +173,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>D:\PROJETOS\CLIENTES\ALBATROSS\ANATEL\REPOSITORIO_OFICIAL\MIAerConnVS\src\nlohmann;D:\PROJETOS\CLIENTES\ALBATROSS\ANATEL\REPOSITORIO_OFICIAL\MIAerConnVS\src;D:\PROJETOS\CLIENTES\ALBATROSS\ANATEL\REPOSITORIO_OFICIAL\MIAerConnVS\src\spdlog;C:\Program Files (x86)\TCI\Scorpio API\Release\Common;C:\Program Files (x86)\TCI\Scorpio API\Release\GShared\Monitoring System\Shared Include;C:\Program Files (x86)\TCI\Scorpio API\Release\GShared\IO;C:\Program Files (x86)\TCI\Scorpio API\Release\GShared\Primitives</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>./nlohmann;./;./spdlog;C:\Program Files (x86)\TCI\Scorpio API\Release\Common;C:\Program Files (x86)\TCI\Scorpio API\Release\GShared\Monitoring System\Shared Include;C:\Program Files (x86)\TCI\Scorpio API\Release\GShared\IO;C:\Program Files (x86)\TCI\Scorpio API\Release\GShared\Primitives</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
