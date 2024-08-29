@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include <sstream>
+#include <fstream>
 #include <nlohmann/json.hpp>
 #include "ScorpioAPITypes.h"
 
@@ -10,3 +11,4 @@ SAVDReqData* stringToSAVDReqData(const std::string str);
 std::wstring stringToWString(const std::string& str);
 unsigned long stringToUnsignedLong(std::string str);
 bool stringToBool(std::string str);
+void newDefaultConfigFile();

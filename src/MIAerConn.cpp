@@ -22,7 +22,18 @@
 
 #pragma comment (lib, "Ws2_32.lib")
 #pragma comment (lib, "Mswsock.lib")
-#pragma comment (lib, "ScorpioAPIDlld.lib")
+
+/*
+* Felipe Machado - 29/08/2024
+* In debug and release the name of ScorpioAPI is different, so checking is necessary to know which one to call
+
+*/
+#ifdef NDEBUG
+	#pragma comment (lib, "ScorpioAPIDll.lib") //RELEASE
+#else
+	#pragma comment (lib, "ScorpioAPIDlld.lib") //DEBUG
+#endif
+
 #pragma comment (lib, "AdvApi32.lib")
 
 // Include the nlohmann JSON library
@@ -593,7 +604,19 @@ int main() {
 
 	// Read configuration from JSON file
 	std::ifstream config_file("config.json");
-	config = json::parse(config_file);
+	/*
+	  * Felipe Machado - 29/08/2024
+	  * checks if configuration file exists, if does not exist, a new file is generated with default values 
+	*/
+	if (config_file.fail()) {
+		newDefaultConfigFile();
+		std::ifstream config_file("config.json");
+		config = json::parse(config_file);
+	}
+	else {
+		config = json::parse(config_file);
+	}
+	
 
 	StartLogger();
 

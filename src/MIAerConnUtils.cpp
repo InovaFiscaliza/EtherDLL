@@ -1,5 +1,37 @@
 #include "MIAerConnUtils.h"
 
+void newDefaultConfigFile() {
+	using json = nlohmann::json;
+	json jsonObj;
+
+	jsonObj["log"]["console"]["enable"] = true;
+	jsonObj["log"]["console"]["level"] = "trace";
+
+	jsonObj["log"]["file"]["enable"] = true;
+	jsonObj["log"]["file"]["level"] = "trace";
+	jsonObj["log"]["file"]["path"] = "log.txt";
+
+	jsonObj["station"]["address"] = "166.139.112.178";
+	jsonObj["station"]["port"] = 3303;
+	jsonObj["station"]["timeout_s"] = 10;
+
+	jsonObj["service"]["command"]["port"] = 3000;
+	jsonObj["service"]["command"]["timeout_s"] = 10000;
+	jsonObj["service"]["command"]["sleep_ms"] = 100;
+	jsonObj["service"]["command"]["check_period"] = 10;
+
+	jsonObj["service"]["stream"]["port"] = 3001;
+	jsonObj["service"]["stream"]["timeout_s"] = 10000;
+	jsonObj["service"]["stream"]["sleep_ms"] = 500;
+	jsonObj["service"]["stream"]["check_period"] = 200;
+
+	jsonObj["service"]["simulated"] = true;
+
+	std::ofstream file("config.json");
+	file << jsonObj;
+
+}
+
 std::vector<std::string> split(std::string s, std::string delimiter) {
 	size_t pos_start = 0, pos_end, delim_len = delimiter.length();
 	std::string token;
@@ -16,11 +48,11 @@ std::vector<std::string> split(std::string s, std::string delimiter) {
 }
 
 SOccupReqData* stringToSOccupReqData(const std::string str) {
-	SOccupReqData* structSO;
+	SOccupReqData structSO;
 	using json = nlohmann::json;
 	json jsonObj = json::parse(str);
 
-	structSO->ant = jsonObj["ant"].is_null() == true ? (SEquipCtrlMsg::EAnt)NULL : jsonObj["ant"].get<SEquipCtrlMsg::EAnt>();
+	structSO.ant = jsonObj["ant"].is_null() == true ? (SEquipCtrlMsg::EAnt)NULL : jsonObj["ant"].get<SEquipCtrlMsg::EAnt>();
 	
 	SSmsMsg::SBandV4 band;
 
@@ -42,22 +74,22 @@ SOccupReqData* stringToSOccupReqData(const std::string str) {
 	band.sType.signalType.unused0 = jsonObj["band"]["sType"]["signalType"]["unused0"].is_null() == true ? NULL : jsonObj["band"]["sType"]["signalType"]["unused0"].get<unsigned long>();
 	band.sType.signalType.unused1 = jsonObj["band"]["sType"]["signalType"]["unused1"].is_null() == true ? NULL : jsonObj["band"]["sType"]["signalType"]["unused1"].get<unsigned long>();
 
-	structSO->band[0] = band;
-	structSO->confidenceLevel = jsonObj["confidenceLevel"].is_null() == true ? NULL : jsonObj["confidenceLevel"].get<unsigned char>();
-	structSO->desiredAccuracy = jsonObj["desiredAccuracy"].is_null() == true ? NULL : jsonObj["desiredAccuracy"].get<unsigned char>();
-	structSO->durationMethod = jsonObj["durationMethod"].is_null() == true ? (SEquipCtrlMsg::EDurationMethod)NULL : jsonObj["durationMethod"].get<SEquipCtrlMsg::EDurationMethod>();
-	structSO->measurementTime = jsonObj["measurementTime"].is_null() == true ? NULL : jsonObj["measurementTime"].get<unsigned long>();
-	structSO->numBands = jsonObj["numBands"].is_null() == true ? NULL : jsonObj["numBands"].get<unsigned long>();
-	structSO->occPrimaryThreshold[0] = jsonObj["occPrimaryThreshold"][0].is_null() == true ? NULL : jsonObj["occPrimaryThreshold"][0].get<short>();
-	structSO->occupancyMinGap = jsonObj["occupancyMinGap"].is_null() == true ? NULL : jsonObj["occupancyMinGap"].get<unsigned long>();
-	structSO->storageTime = jsonObj["storageTime"].is_null() == true ? NULL : jsonObj["storageTime"].get<unsigned long>();
-	structSO->thresholdMethod = jsonObj["thresholdMethod"].is_null() == true ? (SEquipCtrlMsg::EThresholdMethod)NULL : jsonObj["thresholdMethod"].get<SEquipCtrlMsg::EThresholdMethod>();
+	structSO.band[0] = band;
+	structSO.confidenceLevel = jsonObj["confidenceLevel"].is_null() == true ? NULL : jsonObj["confidenceLevel"].get<unsigned char>();
+	structSO.desiredAccuracy = jsonObj["desiredAccuracy"].is_null() == true ? NULL : jsonObj["desiredAccuracy"].get<unsigned char>();
+	structSO.durationMethod = jsonObj["durationMethod"].is_null() == true ? (SEquipCtrlMsg::EDurationMethod)NULL : jsonObj["durationMethod"].get<SEquipCtrlMsg::EDurationMethod>();
+	structSO.measurementTime = jsonObj["measurementTime"].is_null() == true ? NULL : jsonObj["measurementTime"].get<unsigned long>();
+	structSO.numBands = jsonObj["numBands"].is_null() == true ? NULL : jsonObj["numBands"].get<unsigned long>();
+	structSO.occPrimaryThreshold[0] = jsonObj["occPrimaryThreshold"][0].is_null() == true ? NULL : jsonObj["occPrimaryThreshold"][0].get<short>();
+	structSO.occupancyMinGap = jsonObj["occupancyMinGap"].is_null() == true ? NULL : jsonObj["occupancyMinGap"].get<unsigned long>();
+	structSO.storageTime = jsonObj["storageTime"].is_null() == true ? NULL : jsonObj["storageTime"].get<unsigned long>();
+	structSO.thresholdMethod = jsonObj["thresholdMethod"].is_null() == true ? (SEquipCtrlMsg::EThresholdMethod)NULL : jsonObj["thresholdMethod"].get<SEquipCtrlMsg::EThresholdMethod>();
 	
-	return structSO;
+	return &structSO;
 }
 
 SOccDFReqData* stringToSOccDFReqData(const std::string str) {
-	SOccDFReqData* structSO;
+	SOccDFReqData structSO;
 	using json = nlohmann::json;
 	json jsonObj = json::parse(str);
 
@@ -82,28 +114,27 @@ SOccDFReqData* stringToSOccDFReqData(const std::string str) {
 	band.signalType.narrow = jsonObj["band"]["signalType"]["narrow"].is_null() == true ? NULL : jsonObj["band"]["signalType"]["narrow"].get<unsigned char>();
 	band.signalType.unused = jsonObj["band"]["signalType"]["unused"].is_null() == true ? NULL : jsonObj["band"]["signalType"]["unused"].get<unsigned char>();
 
-	//TODO
-	//structSO->band[0] = band;
+	structSO.band[0] = band;
 	
-	structSO->storageTime = jsonObj["storageTime"].is_null() == true ? NULL : jsonObj["storageTime"].get<unsigned long>();
-	structSO->measurementTime = jsonObj["measurementTime"].is_null() == true ? NULL : jsonObj["measurementTime"].get<unsigned long>();
-	structSO->numAzimuths = jsonObj["numAzimuths"].is_null() == true ? NULL :jsonObj["numAzimuths"].get<unsigned long>();
-	structSO->confidence = jsonObj["confidence"].is_null() == true ? NULL : jsonObj["confidence"].get<unsigned long>();
-	structSO->recordHoldoff = jsonObj["recordHoldoff"].is_null() == true ? NULL : jsonObj["recordHoldoff"].get<unsigned long>();
-	structSO->scanDfThreshold = jsonObj["scanDfThreshold"].is_null() == true ? NULL : jsonObj["scanDfThreshold"].get<unsigned char>();
-	structSO->recordAudioDf = jsonObj["recordAudioDf"].is_null() == true ? NULL : jsonObj["recordAudioDf"].get<bool>();
-	structSO->numBands = jsonObj["numBands"].is_null() == true ? NULL : jsonObj["numBands"].get<unsigned short>();
+	structSO.storageTime = jsonObj["storageTime"].is_null() == true ? NULL : jsonObj["storageTime"].get<unsigned long>();
+	structSO.measurementTime = jsonObj["measurementTime"].is_null() == true ? NULL : jsonObj["measurementTime"].get<unsigned long>();
+	structSO.numAzimuths = jsonObj["numAzimuths"].is_null() == true ? NULL :jsonObj["numAzimuths"].get<unsigned long>();
+	structSO.confidence = jsonObj["confidence"].is_null() == true ? NULL : jsonObj["confidence"].get<unsigned long>();
+	structSO.recordHoldoff = jsonObj["recordHoldoff"].is_null() == true ? NULL : jsonObj["recordHoldoff"].get<unsigned long>();
+	structSO.scanDfThreshold = jsonObj["scanDfThreshold"].is_null() == true ? NULL : jsonObj["scanDfThreshold"].get<unsigned char>();
+	structSO.recordAudioDf = jsonObj["recordAudioDf"].is_null() == true ? NULL : jsonObj["recordAudioDf"].get<bool>();
+	structSO.numBands = jsonObj["numBands"].is_null() == true ? NULL : jsonObj["numBands"].get<unsigned short>();
 
-	return structSO;
+	return &structSO;
 }
 
 SAVDReqData* stringToSAVDReqData(const std::string str) {
-	SAVDReqData* structSO;
+	SAVDReqData structSO;
 	using json = nlohmann::json;
 	json jsonObj = json::parse(str);
 
-	structSO->ant = jsonObj["ant"].is_null() == true ? (SEquipCtrlMsg::EAnt)NULL : jsonObj["ant"].get<SEquipCtrlMsg::EAnt>();
-	structSO->avdThreshold = jsonObj["avdThreshold"].is_null() == true ? NULL : jsonObj["avdThreshold"].get<unsigned char>();
+	structSO.ant = jsonObj["ant"].is_null() == true ? (SEquipCtrlMsg::EAnt)NULL : jsonObj["ant"].get<SEquipCtrlMsg::EAnt>();
+	structSO.avdThreshold = jsonObj["avdThreshold"].is_null() == true ? NULL : jsonObj["avdThreshold"].get<unsigned char>();
 
 	SSmsMsg::SBandV4 band;
 
@@ -126,14 +157,14 @@ SAVDReqData* stringToSAVDReqData(const std::string str) {
 	band.sType.signalType.unused0 = jsonObj["band"]["sType"]["signalType"]["unused0"].is_null() == true ? NULL : jsonObj["band"]["sType"]["signalType"]["unused0"].get<unsigned long>();
 	band.sType.signalType.unused1 = jsonObj["band"]["sType"]["signalType"]["unused1"].is_null() == true ? NULL : jsonObj["band"]["sType"]["signalType"]["unused1"].get<unsigned long>();
 
-	structSO->band[0] = band;
+	structSO.band[0] = band;
 
-	structSO->measurementRate = jsonObj["measurementRate"].is_null() == true ? (SEquipCtrlMsg::EAvdRate)NULL : jsonObj["measurementRate"].get<SEquipCtrlMsg::EAvdRate>();
-	structSO->measurementTime = jsonObj["measurementTime"].is_null() == true ? NULL : jsonObj["measurementTime"].get<unsigned long>();
-	structSO->numBands = jsonObj["numBands"].is_null() == true ? NULL : jsonObj["numBands"].get<unsigned long>();
-	structSO->storageTime = jsonObj["storageTime"].is_null() == true ? NULL : jsonObj["storageTime"].get<unsigned long>();
+	structSO.measurementRate = jsonObj["measurementRate"].is_null() == true ? (SEquipCtrlMsg::EAvdRate)NULL : jsonObj["measurementRate"].get<SEquipCtrlMsg::EAvdRate>();
+	structSO.measurementTime = jsonObj["measurementTime"].is_null() == true ? NULL : jsonObj["measurementTime"].get<unsigned long>();
+	structSO.numBands = jsonObj["numBands"].is_null() == true ? NULL : jsonObj["numBands"].get<unsigned long>();
+	structSO.storageTime = jsonObj["storageTime"].is_null() == true ? NULL : jsonObj["storageTime"].get<unsigned long>();
 
-	return structSO;
+	return &structSO;
 }
 
 std::wstring stringToWString(const std::string& str) {
