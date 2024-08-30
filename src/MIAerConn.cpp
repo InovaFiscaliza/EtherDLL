@@ -20,6 +20,19 @@
 #include <chrono>
 #include <fstream>
 
+// Include the nlohmann JSON library
+#include <nlohmann/json.hpp>
+
+// Include the spdlog library
+#include <spdlog/spdlog.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
+#include <spdlog/sinks/basic_file_sink.h>
+
+// Include to solution specific libraries
+#include <ExternalCodes.h>
+#include <MIAerConnCodes.hpp>
+#include <MIAerConnUtils.h>
+
 #pragma comment (lib, "Ws2_32.lib")
 #pragma comment (lib, "Mswsock.lib")
 
@@ -39,20 +52,6 @@
 #endif
 
 #pragma comment (lib, "AdvApi32.lib")
-
-// Include the nlohmann JSON library
-#include <nlohmann/json.hpp>
-
-// Include the spdlog library
-#include <spdlog/spdlog.h>
-#include <spdlog/sinks/stdout_color_sinks.h>
-#include <spdlog/sinks/basic_file_sink.h>
-
-// Include to solution specific libraries
-#include <ExternalCodes.h>
-#include <MIAerConnCodes.hpp>
-
-#include <MIAerConnUtils.h>
 
 // For convenience
 using json = nlohmann::json;
@@ -147,6 +146,17 @@ void logCommandExec(ERetCode errCode, std::string command) {
 	if (errCode != ERetCode::API_SUCCESS)
 	{
 		logger.error("[" + command + "] ERROR. " + ERetCodeToString(errCode));
+		if (clientSocketCommand != NULL) {
+			int iResult = send(clientSocketCommand,
+				(ERetCodeToString(errCode) + "\n").c_str(),
+				static_cast<int>(strlen(ERetCodeToString(errCode).c_str()) + 1),
+				0);
+			if (iResult == SOCKET_ERROR) {
+				logger.warn("Failed to send socket. EC:" + std::to_string(WSAGetLastError()));
+				logger.info("Connection with address" + std::to_string(clientSocketCommand) + " lost.");
+				return;
+			}
+		}
 	}
 	else
 	{
@@ -308,7 +318,6 @@ void generateSimData(void) {
 		streamBuffer.push_back(trace);
 	}
 	
-
 	// logger.info("Simulated data generated " + std::to_string(j) + " traces with 1024 float points.");
 	if (sizeof(trace) > 48) {
 		std::string message = "Sample points: [";
@@ -548,7 +557,7 @@ void StationConnect(void) {
 	{
 		message = "Object associated with station not created: " + ERetCodeToString(errCode);
 		logger.error(message);
-		running.store(false);
+		//running.store(false);
 		interruptionCode.store(mcs::Code::STATION_ERROR);
 		return;
 	}
@@ -619,11 +628,9 @@ int main() {
 	}
 	else {
 		config = json::parse(config_file);
-	}
-	
+	}	
 
 	StartLogger();
-
 	StationConnect();
 
 	// Start thread for the command channel socket service. This thread will listen for incoming commands and place then in the command queue
@@ -641,7 +648,7 @@ int main() {
 		config["service"]["stream"]["port"].get<int>(),
 		config["service"]["stream"]["timeout_s"].get<int>(),
 		handleStreamConnection);
-
+		
 	// Main loop to process commands received
 	while (running.load()) {
 
@@ -664,94 +671,94 @@ int main() {
 
 			switch (cmd)
 			{
-			case ECSMSDllMsgType::GET_OCCUPANCY:
-				logCommandExec(RequestOccupancy(APIserverId, stringToSOccupReqData(params[1]), &requestID), "RequestOccupancy");
-				break;
-			case ECSMSDllMsgType::GET_OCCUPANCYDF:
-				logCommandExec(RequestOccupancyDF(APIserverId, stringToSOccDFReqData(params[1]), &requestID), "RequestOccupancyDF");
-				break;
-			case ECSMSDllMsgType::GET_AVD:
-				logCommandExec(RequestAVD(APIserverId, stringToSAVDReqData(params[1]), &requestID), "RequestAVD");
-				break;
-			case ECSMSDllMsgType::GET_MEAS:
-			{
-				// TODO
-				/*SMeasReqData* m_measureReqMsg = (SMeasReqData*)malloc(sizeof(SMeasReqData));
-				if (m_measureReqMsg != nullptr)
-				{
-					//memcpy(m_measureReqMsg, &m_Request.body.getMeasCmd, sizeof(SMeasReqData));
-
-					logCommandExec(RequestMeasurement(APIserverId, m_measureReqMsg, &requestID), "RequestMeasurement");
-					free(m_measureReqMsg);
-				}*/
-				break;
-			}
-			case ECSMSDllMsgType::GET_TASK_STATUS:
-				logCommandExec(RequestTaskStatus(APIserverId, stringToUnsignedLong(params[1])), "RequestTaskStatus");
-				break;
-			case ECSMSDllMsgType::GET_TASK_STATE:
-				logCommandExec(RequestTaskState(APIserverId, (ECSMSDllMsgType)stringToUnsignedLong(params[1]), stringToUnsignedLong(params[2])), "RequestTaskState");
-				break;
-			case ECSMSDllMsgType::TASK_SUSPEND:
-				logCommandExec(SuspendTask(APIserverId, (ECSMSDllMsgType)stringToUnsignedLong(params[1]), stringToUnsignedLong(params[2])), "SuspendTask");
-				break;
-			case ECSMSDllMsgType::TASK_RESUME:
-				logCommandExec(ResumeTask(APIserverId, (ECSMSDllMsgType)stringToUnsignedLong(params[1]), stringToUnsignedLong(params[2])), "ResumeTask");
-				break;
-			case ECSMSDllMsgType::TASK_TERMINATE:
-				logCommandExec(TerminateTask(APIserverId, stringToUnsignedLong(params[1])), "TerminateTask");
-				break;
-			case ECSMSDllMsgType::GET_BIST:
-				logCommandExec(RequestBist(APIserverId, (EBistScope)atoi(params[1].c_str()), &requestID), "RequestBist");
-				break;
-			case ECSMSDllMsgType::SET_AUDIO_PARAMS:
-			{
-				// TODO
-					/*SAudioParams audioRequest;
-					audioRequest.anyChannel = convertToBool(params[1]);
-					audioRequest.bandwidth = Units::Frequency(convertToUnsignedLong(params[2])).GetRaw();
-					audioRequest.bfo = Units::Frequency(convertToUnsignedLong(params[3])).GetRaw();
-					audioRequest.channel = convertToUnsignedLong(params[4]);
-					audioRequest.detMode = (SEquipCtrlMsg::SRcvrCtrlCmd::EDetMode)atoi(params[5].c_str());
-					audioRequest.doAudio = convertToBool(params[6]);
-					audioRequest.doModRec = convertToBool(params[7]);
-					audioRequest.doRDS = convertToBool(params[8]);
-					audioRequest.doSigRec = convertToBool(params[9]);
-					audioRequest.freq = Units::Frequency(convertToUnsignedLong(params[10])).GetRaw();
-					strcpy_s(audioRequest.ipAddressRDSRadio, params[11].c_str());
-					audioRequest.streamID = convertToUnsignedLong(params[12]);
-					logCommandExec(SetAudio(APIserverId, audioRequest, &requestID), "SetAudio");*/
+				case ECSMSDllMsgType::GET_OCCUPANCY:
+					logCommandExec(RequestOccupancy(APIserverId, stringToSOccupReqData(params[1]), &requestID), "RequestOccupancy");
 					break;
-				}
-				case ECSMSDllMsgType::FREE_AUDIO_CHANNEL:
-					logCommandExec(FreeAudio(APIserverId, stringToUnsignedLong(params[1]), &requestID), "FreeAudio");
+				case ECSMSDllMsgType::GET_OCCUPANCYDF:
+					logCommandExec(RequestOccupancyDF(APIserverId, stringToSOccDFReqData(params[1]), &requestID), "RequestOccupancyDF");
 					break;
-				case ECSMSDllMsgType::SET_PAN_PARAMS:
+				case ECSMSDllMsgType::GET_AVD:
+					logCommandExec(RequestAVD(APIserverId, stringToSAVDReqData(params[1]), &requestID), "RequestAVD");
+					break;
+				case ECSMSDllMsgType::GET_MEAS:
 				{
 					// TODO
-				/*SPanParams panParams;
-				panParams.antenna = (SEquipCtrlMsg::EAnt)convertToUnsignedLong(params[1]);
-				panParams.rcvr.freq = Units::Frequency(convertToUnsignedLong(params[2])).GetRaw();
-				panParams.rcvr.bandwidth = Units::Frequency(convertToUnsignedLong(params[3])).GetRaw();
-				panParams.rcvr.detMode = (SEquipCtrlMsg::SRcvrCtrlCmd::EDetMode)atoi(params[4].c_str());
-				panParams.rcvr.agcTime = convertToUnsignedLong(params[5]);
-				panParams.rcvr.bfo = Units::Frequency(convertToUnsignedLong(params[6])).GetRaw();
-				logCommandExec(SetPanParams(APIserverId, panParams, &requestID), "SetPanParams");*/
-				break;
-			}
-			case ECSMSDllMsgType::GET_PAN:
-			{
-				// TODO
-				/*SGetPanParams PanRequest;
-				PanRequest.freq = Units::Frequency(convertToUnsignedLong(params[1])).GetRaw();
-				PanRequest.bandwidth = Units::Frequency(convertToUnsignedLong(params[2])).GetRaw();
-				PanRequest.rcvrAtten = (unsigned char)params[3].c_str();
-				logCommandExec(RequestPan(APIserverId, PanRequest, &requestID), "RequestPan");*/
-				break;
-			}
-			default:
-				logger.error("command not recognized");
-				break;
+					/*SMeasReqData* m_measureReqMsg = (SMeasReqData*)malloc(sizeof(SMeasReqData));
+					if (m_measureReqMsg != nullptr)
+					{
+						//memcpy(m_measureReqMsg, &m_Request.body.getMeasCmd, sizeof(SMeasReqData));
+
+						logCommandExec(RequestMeasurement(APIserverId, m_measureReqMsg, &requestID), "RequestMeasurement");
+						free(m_measureReqMsg);
+					}*/
+					break;
+				}
+				case ECSMSDllMsgType::GET_TASK_STATUS:
+					logCommandExec(RequestTaskStatus(APIserverId, stringToUnsignedLong(params[1])), "RequestTaskStatus");
+					break;
+				case ECSMSDllMsgType::GET_TASK_STATE:
+					logCommandExec(RequestTaskState(APIserverId, (ECSMSDllMsgType)stringToUnsignedLong(params[1]), stringToUnsignedLong(params[2])), "RequestTaskState");
+					break;
+				case ECSMSDllMsgType::TASK_SUSPEND:
+					logCommandExec(SuspendTask(APIserverId, (ECSMSDllMsgType)stringToUnsignedLong(params[1]), stringToUnsignedLong(params[2])), "SuspendTask");
+					break;
+				case ECSMSDllMsgType::TASK_RESUME:
+					logCommandExec(ResumeTask(APIserverId, (ECSMSDllMsgType)stringToUnsignedLong(params[1]), stringToUnsignedLong(params[2])), "ResumeTask");
+					break;
+				case ECSMSDllMsgType::TASK_TERMINATE:
+					logCommandExec(TerminateTask(APIserverId, stringToUnsignedLong(params[1])), "TerminateTask");
+					break;
+				case ECSMSDllMsgType::GET_BIST:
+					logCommandExec(RequestBist(APIserverId, (EBistScope)atoi(params[1].c_str()), &requestID), "RequestBist");
+					break;
+				case ECSMSDllMsgType::SET_AUDIO_PARAMS:
+				{
+					// TODO
+						/*SAudioParams audioRequest;
+						audioRequest.anyChannel = convertToBool(params[1]);
+						audioRequest.bandwidth = Units::Frequency(convertToUnsignedLong(params[2])).GetRaw();
+						audioRequest.bfo = Units::Frequency(convertToUnsignedLong(params[3])).GetRaw();
+						audioRequest.channel = convertToUnsignedLong(params[4]);
+						audioRequest.detMode = (SEquipCtrlMsg::SRcvrCtrlCmd::EDetMode)atoi(params[5].c_str());
+						audioRequest.doAudio = convertToBool(params[6]);
+						audioRequest.doModRec = convertToBool(params[7]);
+						audioRequest.doRDS = convertToBool(params[8]);
+						audioRequest.doSigRec = convertToBool(params[9]);
+						audioRequest.freq = Units::Frequency(convertToUnsignedLong(params[10])).GetRaw();
+						strcpy_s(audioRequest.ipAddressRDSRadio, params[11].c_str());
+						audioRequest.streamID = convertToUnsignedLong(params[12]);
+						logCommandExec(SetAudio(APIserverId, audioRequest, &requestID), "SetAudio");*/
+						break;
+					}
+					case ECSMSDllMsgType::FREE_AUDIO_CHANNEL:
+						logCommandExec(FreeAudio(APIserverId, stringToUnsignedLong(params[1]), &requestID), "FreeAudio");
+						break;
+					case ECSMSDllMsgType::SET_PAN_PARAMS:
+					{
+						// TODO
+					/*SPanParams panParams;
+					panParams.antenna = (SEquipCtrlMsg::EAnt)convertToUnsignedLong(params[1]);
+					panParams.rcvr.freq = Units::Frequency(convertToUnsignedLong(params[2])).GetRaw();
+					panParams.rcvr.bandwidth = Units::Frequency(convertToUnsignedLong(params[3])).GetRaw();
+					panParams.rcvr.detMode = (SEquipCtrlMsg::SRcvrCtrlCmd::EDetMode)atoi(params[4].c_str());
+					panParams.rcvr.agcTime = convertToUnsignedLong(params[5]);
+					panParams.rcvr.bfo = Units::Frequency(convertToUnsignedLong(params[6])).GetRaw();
+					logCommandExec(SetPanParams(APIserverId, panParams, &requestID), "SetPanParams");*/
+					break;
+				}
+				case ECSMSDllMsgType::GET_PAN:
+				{
+					// TODO
+					/*SGetPanParams PanRequest;
+					PanRequest.freq = Units::Frequency(convertToUnsignedLong(params[1])).GetRaw();
+					PanRequest.bandwidth = Units::Frequency(convertToUnsignedLong(params[2])).GetRaw();
+					PanRequest.rcvrAtten = (unsigned char)params[3].c_str();
+					logCommandExec(RequestPan(APIserverId, PanRequest, &requestID), "RequestPan");*/
+					break;
+				}
+				default:
+					logger.error("command not recognized");
+					break;
 			}
 		}
 
