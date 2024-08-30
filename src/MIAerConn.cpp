@@ -23,15 +23,11 @@
 // Include the nlohmann JSON library
 #include <nlohmann/json.hpp>
 
-// Include the spdlog library
-#include <spdlog/spdlog.h>
-#include <spdlog/sinks/stdout_color_sinks.h>
-#include <spdlog/sinks/basic_file_sink.h>
-
 // Include to solution specific libraries
 #include <ExternalCodes.h>
 #include <MIAerConnCodes.hpp>
 #include <MIAerConnUtils.h>
+#include "MIAerLog.h"
 
 #pragma comment (lib, "Ws2_32.lib")
 #pragma comment (lib, "Mswsock.lib")
@@ -62,9 +58,6 @@ using json = nlohmann::json;
 
 // JSON configuration object
 json config;
-
-// Logger object
-spdlog::logger logger = spdlog::logger("MIAerConn");
 
 // Atomic flag to signal application error
 std::atomic<bool> running{ true }; 
@@ -100,6 +93,8 @@ RealTimeDataCB OnRealtimeDataFunc;
 //Socket connection for commands
 SOCKET clientSocketCommand = NULL;
 
+MIAerLog logMIAer;
+
 /*
 * Felipe Machado - 23/08/2024
 * Data callback for Scorpio API
@@ -108,9 +103,9 @@ void OnDataFunc(_In_  unsigned long serverId, _In_ ECSMSDllMsgType respType, _In
 {
 	std::string strData = std::string(reinterpret_cast<char*>(data), sizeof(data));
 	streamBuffer.push_back(strData);
-	logger.info("OnData received with type " + respType);
-	logger.info("OnData received destination address " + desstAddr);
-	logger.info("OnData received server ID " + serverId);
+	logMIAer.info("OnData received with type " + respType);
+	logMIAer.info("OnData received destination address " + desstAddr);
+	logMIAer.info("OnData received server ID " + serverId);
 }
 
 /*
@@ -120,50 +115,23 @@ void OnDataFunc(_In_  unsigned long serverId, _In_ ECSMSDllMsgType respType, _In
 void OnErrorFunc(_In_  unsigned long serverId, _In_ const std::wstring& errorMsg)
 {
 	std::string str(errorMsg.begin(), errorMsg.end());
-	logger.error(str);
+	logMIAer.error(str);
 	if (clientSocketCommand != NULL) {
 		int iResult = send(clientSocketCommand,
 			(str + "\n").c_str(),
 			static_cast<int>(strlen(str.c_str()) + 1),
 			0);
 		if (iResult == SOCKET_ERROR) {
-			logger.warn("Failed to send socket. EC:" + std::to_string(WSAGetLastError()));
-			logger.info("Connection with address" + std::to_string(clientSocketCommand) + " lost.");
+			logMIAer.warn("Failed to send socket. EC:" + std::to_string(WSAGetLastError()));
+			logMIAer.info("Connection with address" + std::to_string(clientSocketCommand) + " lost.");
 			return;
 		}
 	}
 	else {
-		logger.warn("Command socket connection not found");
+		logMIAer.warn("Command socket connection not found");
 	}
 
 }
-
-/*
-* Felipe Machado - 23/08/2024
-* Check and log the code returned by the Scorpio API
-*/
-void logCommandExec(ERetCode errCode, std::string command) {
-	if (errCode != ERetCode::API_SUCCESS)
-	{
-		logger.error("[" + command + "] ERROR. " + ERetCodeToString(errCode));
-		if (clientSocketCommand != NULL) {
-			int iResult = send(clientSocketCommand,
-				(ERetCodeToString(errCode) + "\n").c_str(),
-				static_cast<int>(strlen(ERetCodeToString(errCode).c_str()) + 1),
-				0);
-			if (iResult == SOCKET_ERROR) {
-				logger.warn("Failed to send socket. EC:" + std::to_string(WSAGetLastError()));
-				logger.info("Connection with address" + std::to_string(clientSocketCommand) + " lost.");
-				return;
-			}
-		}
-	}
-	else
-	{
-		logger.info("[" + command + "] command executed");
-	}
-}
-
 
 //
 // Signal handler function
@@ -174,17 +142,17 @@ void signalHandler(int signal) {
 	{
 		running.store(false);
 		interruptionCode.store(mcs::Code::CTRL_C_INTERRUPT);
-		logger.warn("Received interruption signal (ctrl+C)");
+		logMIAer.warn("Received interruption signal (ctrl+C)");
 	}
 	else if (signal == SIGTERM)
 	{
 		running.store(false);
 		interruptionCode.store(mcs::Code::KILL_INTERRUPT);
-		logger.warn("Received termination signal (kill)");
+		logMIAer.warn("Received termination signal (kill)");
 	}
 	else 	{
 		std::string message = "Received unknown signal. #LttOS: " + std::to_string(signal);
-		logger.warn(message);
+		logMIAer.warn(message);
 	}
 }
 
@@ -194,97 +162,6 @@ void signalHandler(int signal) {
 void registerSignalHandlers() {
 	std::signal(SIGINT, signalHandler);  // Handles Ctrl+C
 	std::signal(SIGTERM, signalHandler); // Handles kill command
-}
-
-
-//
-// Start the logger
-//
-void StartLogger(void) {
-
-	bool console_sink_enabled = config["log"]["console"]["enable"].get<bool>();
-
-	// Clear all the sinks from the logger
-	logger.sinks().clear();
-
-	if (console_sink_enabled) {
-		// Create a logger sink to write to the console
-		auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
-
-		// Get the console log levels from the configuration file
-		std::string console_log_level = config["log"]["console"]["level"].get<std::string>();
-
-		// Set the log levels for the console and file sinks
-		switch (console_log_level[0]) {
-		case 't':
-			console_sink->set_level(spdlog::level::trace);
-			break;
-		case 'd':
-			console_sink->set_level(spdlog::level::debug);
-			break;
-		case 'i':
-			console_sink->set_level(spdlog::level::info);
-			break;
-		case 'w':
-			console_sink->set_level(spdlog::level::warn);
-			break;
-		case 'e':
-			console_sink->set_level(spdlog::level::err);
-			break;
-		case 'c':
-			console_sink->set_level(spdlog::level::critical);
-			break;
-		default:
-			console_sink->set_level(spdlog::level::info);
-			break;
-		}
-
-		// Add the console sink to the logger
-		logger.sinks().push_back(console_sink);
-	}
-
-	bool file_sink_enabled = config["log"]["file"]["enable"].get<bool>();
-
-	if (file_sink_enabled) {
-		// Get the log filename from the configuration file
-		std::string log_filename = std::string(config["log"]["file"]["path"].get<std::string>());
-
-		// Create a logger sink that writes to a file
-		auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(log_filename, true);
-
-		// Get the file log levels from the configuration file
-		std::string file_log_level = config["log"]["file"]["level"].get<std::string>();
-
-		// Set the log levels for the console and file sinks
-		switch (file_log_level[0]) {
-		case 't':
-			file_sink->set_level(spdlog::level::trace);
-			break;
-		case 'd':
-			file_sink->set_level(spdlog::level::debug);
-			break;
-		case 'i':
-			file_sink->set_level(spdlog::level::info);
-			break;
-		case 'w':
-			file_sink->set_level(spdlog::level::warn);
-			break;
-		case 'e':
-			file_sink->set_level(spdlog::level::err);
-			break;
-		case 'c':
-			file_sink->set_level(spdlog::level::critical);
-			break;
-		default:
-			file_sink->set_level(spdlog::level::info);
-			break;
-		}
-
-		// Add the file sink to the logger
-		logger.sinks().push_back(file_sink);
-	}	
-
-	logger.info("Starting...");
 }
 
 //
@@ -326,7 +203,7 @@ void generateSimData(void) {
 			message += std::to_string((unsigned char)trace[i]) + ", ";
 		}
 		message += "...]";
-		logger.info(message);
+		logMIAer.info(message);
 	}
 	//
 }
@@ -355,8 +232,8 @@ void handleCommandConnection(SOCKET clientSocket, std::string name) {
 				mcs::Form::SEP;
 			iResult = send(clientSocket, ack.c_str(), (int)(ack.length()), 0);
 			if (iResult == SOCKET_ERROR) {
-				logger.warn(name + " ACK send failed. EC:" + std::to_string(WSAGetLastError()));
-				logger.info(name + " connection with address" + std::to_string(clientSocket) + " lost.");
+				logMIAer.warn(name + " ACK send failed. EC:" + std::to_string(WSAGetLastError()));
+				logMIAer.info(name + " connection with address" + std::to_string(clientSocket) + " lost.");
 				return;
 			}
 		}
@@ -368,12 +245,12 @@ void handleCommandConnection(SOCKET clientSocket, std::string name) {
 					static_cast<int>(strlen(mcs::Form::PING)),
 					0);
 				if (iResult == SOCKET_ERROR) {
-					logger.warn(name + " PING send failed. EC:" + std::to_string(WSAGetLastError()));
-					logger.info(name + " connection with address" + std::to_string(clientSocket) + " lost.");
+					logMIAer.warn(name + " PING send failed. EC:" + std::to_string(WSAGetLastError()));
+					logMIAer.info(name + " connection with address" + std::to_string(clientSocket) + " lost.");
 					return;
 				}
 
-				logger.info(name + " waiting for commands from client...");
+				logMIAer.info(name + " waiting for commands from client...");
 				checkPeriod = config["service"]["command"]["check_period"].get<int>();
 			}
 			else {
@@ -398,17 +275,17 @@ void handleStreamConnection(SOCKET clientSocket, std::string name) {
 			streamBuffer.pop_back();
 			iResult = send(clientSocket, data.c_str(), static_cast<int>(data.length()), 0);
 			if (iResult == SOCKET_ERROR) {
-				logger.warn(name + " data send failed. EC:" + std::to_string(WSAGetLastError()));
+				logMIAer.warn(name + " data send failed. EC:" + std::to_string(WSAGetLastError()));
 				return;
 			}
 		} else {
 			if (checkPeriod == 0) {
 				if (config["service"]["simulated"].get<bool>()) {
 					generateSimData();
-					logger.info(name + " generated sim data. Nothing from the station.");
+					logMIAer.info(name + " generated sim data. Nothing from the station.");
 				}
 				else {
-					logger.info(name + " waiting for data from station to send...");
+					logMIAer.info(name + " waiting for data from station to send...");
 				}
 				checkPeriod = config["service"]["stream"]["check_period"].get<int>();
 			}
@@ -443,7 +320,7 @@ void socketHandle(	std::string name,
 	std::string portStr = std::to_string(port);
 	int iResult = getaddrinfo(NULL, portStr.c_str(), &hints, &result);
 	if (iResult != 0) {
-		logger.error(name + " socket getaddrinfo failed. EC:" + std::to_string(iResult));
+		logMIAer.error(name + " socket getaddrinfo failed. EC:" + std::to_string(iResult));
 		running.store(false);
 		interruptionCode.store(ServiceCode);
 		WSACleanup();
@@ -452,7 +329,7 @@ void socketHandle(	std::string name,
 
 	listenSocket = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
 	if (listenSocket == INVALID_SOCKET) {
-		logger.error(name + " socket creation failed. EC:" + std::to_string(WSAGetLastError()));
+		logMIAer.error(name + " socket creation failed. EC:" + std::to_string(WSAGetLastError()));
 		running.store(false);
 		interruptionCode.store(ServiceCode);
 		freeaddrinfo(result);
@@ -462,7 +339,7 @@ void socketHandle(	std::string name,
 
 	iResult = setsockopt(listenSocket, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout, sizeof(timeout));
 	if (iResult == SOCKET_ERROR) {
-		logger.error(name + " socket setsockopt timeout failed. EC:" + std::to_string(WSAGetLastError()));
+		logMIAer.error(name + " socket setsockopt timeout failed. EC:" + std::to_string(WSAGetLastError()));
 		running.store(false);
 		interruptionCode.store(ServiceCode);
 		freeaddrinfo(result);
@@ -475,7 +352,7 @@ void socketHandle(	std::string name,
 
 	iResult = ::bind(listenSocket, result->ai_addr, static_cast<int>(result->ai_addrlen));
 	if (iResult == SOCKET_ERROR) {
-		logger.error(name + " socket bind failed. EC:" + std::to_string(WSAGetLastError()));
+		logMIAer.error(name + " socket bind failed. EC:" + std::to_string(WSAGetLastError()));
 		running.store(false);
 		interruptionCode.store(ServiceCode);
 		freeaddrinfo(result);
@@ -488,7 +365,7 @@ void socketHandle(	std::string name,
 
 	iResult = listen(listenSocket, SOMAXCONN);
 	if (iResult == SOCKET_ERROR) {
-		logger.error(name + " socket listen failed. EC:" + std::to_string(WSAGetLastError()));
+		logMIAer.error(name + " socket listen failed. EC:" + std::to_string(WSAGetLastError()));
 		running.store(false);
 		interruptionCode.store(ServiceCode);
 		closesocket(listenSocket);
@@ -502,14 +379,14 @@ void socketHandle(	std::string name,
 	SOCKET clientSocket = INVALID_SOCKET;
 	while (running.load()) {
 		// call the connection handler 
-		logger.info(name + " listening on port " + std::to_string(port));
+		logMIAer.info(name + " listening on port " + std::to_string(port));
 
 		clientSocket = accept(listenSocket, (struct sockaddr*)&clientAddr, NULL);
 		if (clientSocket == INVALID_SOCKET) {
-			logger.warn(name + " failed in accept operation with " + std::string(inet_ntoa(clientAddr.sin_addr)) + ". EC:" + std::to_string(WSAGetLastError()));
+			logMIAer.warn(name + " failed in accept operation with " + std::string(inet_ntoa(clientAddr.sin_addr)) + ". EC:" + std::to_string(WSAGetLastError()));
 		}
 		else {
-			logger.info(name + " accepted connection from " + std::string(inet_ntoa(clientAddr.sin_addr)));
+			logMIAer.info(name + " accepted connection from " + std::string(inet_ntoa(clientAddr.sin_addr)));
 
 			connectionHandler(clientSocket, name);
 		}
@@ -517,7 +394,7 @@ void socketHandle(	std::string name,
 
 	closesocket(listenSocket);
 	WSACleanup();
-	logger.info(name + " stopped listening on port " + std::to_string(port));
+	logMIAer.info(name + " stopped listening on port " + std::to_string(port));
 }
 
 //
@@ -556,14 +433,14 @@ void StationConnect(void) {
 	if (errCode != ERetCode::API_SUCCESS)
 	{
 		message = "Object associated with station not created: " + ERetCodeToString(errCode);
-		logger.error(message);
+		logMIAer.error(message);
 		//running.store(false);
 		interruptionCode.store(mcs::Code::STATION_ERROR);
 		return;
 	}
 	else
 	{
-		logger.info("Object creation successful");
+		logMIAer.info("Object creation successful");
 	}
 
 	// NextServerId = APIserverId;
@@ -576,7 +453,7 @@ void StationConnect(void) {
 	if (errCode != ERetCode::API_SUCCESS)
 	{
 		message = "Failed to connect to " + hostNameStr + ": " + ERetCodeToString(errCode);
-		logger.error(message);
+		logMIAer.error(message);
 //		running.store(false);
 		interruptionCode.store(mcs::Code::STATION_ERROR);
 		return;
@@ -584,7 +461,7 @@ void StationConnect(void) {
 	else
 	{
 		message = "Connected to station " + hostNameStr;
-		logger.info(message);
+		logMIAer.info(message);
 	}
 }
 
@@ -595,7 +472,7 @@ void StationDisconnect(void)
 {
 
 	ERetCode errCode = Disconnect(APIserverId);
-	logger.warn("Disconnecting station returned:" + ERetCodeToString(errCode));
+	logMIAer.warn("Disconnecting station returned:" + ERetCodeToString(errCode));
 	
 	/* DLL function not returning API_SUCCESS - Need to investigate
 	if (errCode != ERetCode::API_SUCCESS)
@@ -630,7 +507,7 @@ int main() {
 		config = json::parse(config_file);
 	}	
 
-	StartLogger();
+	logMIAer.start("MIAerConn", config["log"]["console"]["enable"].get<bool>(), config["log"]["file"]["enable"].get<bool>(), config["log"]["console"]["level"].get<std::string>(), config["log"]["file"]["path"].get<std::string>(), config["log"]["file"]["level"].get<std::string>());
 	StationConnect();
 
 	// Start thread for the command channel socket service. This thread will listen for incoming commands and place then in the command queue
@@ -657,7 +534,7 @@ int main() {
 			std::lock_guard<std::mutex> lock(MCCommandMutex);
 			std::string command = commandQueue.back();
 			commandQueue.pop_back();
-			logger.info("Processing command: " + command);
+			logMIAer.info("Processing command: " + command);
 			
 			/*
 			* Felipe Machado - 23/08/2024
@@ -672,49 +549,49 @@ int main() {
 			switch (cmd)
 			{
 				case ECSMSDllMsgType::GET_OCCUPANCY:
-					logCommandExec(RequestOccupancy(APIserverId, stringToSOccupReqData(params[1]), &requestID), "RequestOccupancy");
+					logMIAer.logCommandExec(RequestOccupancy(APIserverId, stringToSOccupReqData(params[1]), &requestID), "RequestOccupancy");
 					break;
 				case ECSMSDllMsgType::GET_OCCUPANCYDF:
-					logCommandExec(RequestOccupancyDF(APIserverId, stringToSOccDFReqData(params[1]), &requestID), "RequestOccupancyDF");
+					logMIAer.logCommandExec(RequestOccupancyDF(APIserverId, stringToSOccDFReqData(params[1]), &requestID), "RequestOccupancyDF");
 					break;
 				case ECSMSDllMsgType::GET_AVD:
-					logCommandExec(RequestAVD(APIserverId, stringToSAVDReqData(params[1]), &requestID), "RequestAVD");
+					logMIAer.logCommandExec(RequestAVD(APIserverId, stringToSAVDReqData(params[1]), &requestID), "RequestAVD");
 					break;
 				case ECSMSDllMsgType::GET_MEAS:
-					logCommandExec(RequestMeasurement(APIserverId, stringToSMeasReqData(params[1]), &requestID), "RequestMeasurement");
+					logMIAer.logCommandExec(RequestMeasurement(APIserverId, stringToSMeasReqData(params[1]), &requestID), "RequestMeasurement");
 					break;
 				case ECSMSDllMsgType::GET_TASK_STATUS:
-					logCommandExec(RequestTaskStatus(APIserverId, stringToUnsignedLong(params[1])), "RequestTaskStatus");
+					logMIAer.logCommandExec(RequestTaskStatus(APIserverId, stringToUnsignedLong(params[1])), "RequestTaskStatus");
 					break;
 				case ECSMSDllMsgType::GET_TASK_STATE:
-					logCommandExec(RequestTaskState(APIserverId, (ECSMSDllMsgType)stringToUnsignedLong(params[1]), stringToUnsignedLong(params[2])), "RequestTaskState");
+					logMIAer.logCommandExec(RequestTaskState(APIserverId, (ECSMSDllMsgType)stringToUnsignedLong(params[1]), stringToUnsignedLong(params[2])), "RequestTaskState");
 					break;
 				case ECSMSDllMsgType::TASK_SUSPEND:
-					logCommandExec(SuspendTask(APIserverId, (ECSMSDllMsgType)stringToUnsignedLong(params[1]), stringToUnsignedLong(params[2])), "SuspendTask");
+					logMIAer.logCommandExec(SuspendTask(APIserverId, (ECSMSDllMsgType)stringToUnsignedLong(params[1]), stringToUnsignedLong(params[2])), "SuspendTask");
 					break;
 				case ECSMSDllMsgType::TASK_RESUME:
-					logCommandExec(ResumeTask(APIserverId, (ECSMSDllMsgType)stringToUnsignedLong(params[1]), stringToUnsignedLong(params[2])), "ResumeTask");
+					logMIAer.logCommandExec(ResumeTask(APIserverId, (ECSMSDllMsgType)stringToUnsignedLong(params[1]), stringToUnsignedLong(params[2])), "ResumeTask");
 					break;
 				case ECSMSDllMsgType::TASK_TERMINATE:
-					logCommandExec(TerminateTask(APIserverId, stringToUnsignedLong(params[1])), "TerminateTask");
+					logMIAer.logCommandExec(TerminateTask(APIserverId, stringToUnsignedLong(params[1])), "TerminateTask");
 					break;
 				case ECSMSDllMsgType::GET_BIST:
-					logCommandExec(RequestBist(APIserverId, (EBistScope)atoi(params[1].c_str()), &requestID), "RequestBist");
+					logMIAer.logCommandExec(RequestBist(APIserverId, (EBistScope)atoi(params[1].c_str()), &requestID), "RequestBist");
 					break;
 				case ECSMSDllMsgType::SET_AUDIO_PARAMS:
-					logCommandExec(SetAudio(APIserverId, stringToSAudioParams(params[1]), &requestID), "SetAudio");
+					logMIAer.logCommandExec(SetAudio(APIserverId, stringToSAudioParams(params[1]), &requestID), "SetAudio");
 					break;
 				case ECSMSDllMsgType::FREE_AUDIO_CHANNEL:
-					logCommandExec(FreeAudio(APIserverId, stringToUnsignedLong(params[1]), &requestID), "FreeAudio");
+					logMIAer.logCommandExec(FreeAudio(APIserverId, stringToUnsignedLong(params[1]), &requestID), "FreeAudio");
 					break;
 				case ECSMSDllMsgType::SET_PAN_PARAMS:
-					logCommandExec(SetPanParams(APIserverId, stringToSPanParams(params[1]), &requestID), "SetPanParams");
+					logMIAer.logCommandExec(SetPanParams(APIserverId, stringToSPanParams(params[1]), &requestID), "SetPanParams");
 					break;
 				case ECSMSDllMsgType::GET_PAN:
-					logCommandExec(RequestPan(APIserverId, stringToSGetPanParams(params[1]), &requestID), "RequestPan");
+					logMIAer.logCommandExec(RequestPan(APIserverId, stringToSGetPanParams(params[1]), &requestID), "RequestPan");
 					break;
 				default:
-					logger.error("command not recognized");
+					logMIAer.error("command not recognized");
 					break;
 			}
 		}
@@ -722,7 +599,7 @@ int main() {
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	}
 
-	logger.info("Service will shutdown...");
+	logMIAer.info("Service will shutdown...");
 
 	// Join threads before exiting
 	if (commandThread.joinable()) {
@@ -734,9 +611,7 @@ int main() {
 
 	// Close the connection
 	StationDisconnect();
-
-	// Final flush before the application exits, save log to file.
-	logger.flush();
+	logMIAer.~MIAerLog();
 
 	return static_cast<int>(interruptionCode.load());
 }

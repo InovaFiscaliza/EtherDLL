@@ -1,0 +1,16 @@
+[2024-08-30 19:05:23.503] [MIAerConn] [info] Starting...
+[2024-08-30 19:05:23.528] [MIAerConn] [info] Object creation successful
+[2024-08-30 19:05:43.609] [MIAerConn] [error] Failed to connect to 166.139.112.178: Command sent error
+[2024-08-30 19:05:43.612] [MIAerConn] [info] Control service listening on port 3000
+[2024-08-30 19:05:43.612] [MIAerConn] [info] Stream service listening on port 3001
+[2024-08-30 19:05:45.635] [MIAerConn] [info] Control service accepted connection from 0.0.0.0
+[2024-08-30 19:05:47.033] [MIAerConn] [info] Processing command: 14|{"ant": 1,"confidenceLevel": 5, "band": {"channelBandwidth": 2, "exclude": true}}|
+[2024-08-30 19:05:47.034] [MIAerConn] [error] Failed License Check!
+[2024-08-30 19:05:47.035] [MIAerConn] [info] [RequestOccupancyDF] command executed
+[2024-08-30 19:05:48.947] [MIAerConn] [info] Processing command: 14|{"ant": 1,"confidenceLevel": 5, "band": {"channelBandwidth": 2, "exclude": true}}|
+[2024-08-30 19:05:48.948] [MIAerConn] [error] Failed License Check!
+[2024-08-30 19:05:48.949] [MIAerConn] [info] [RequestOccupancyDF] command executed
+[2024-08-30 19:05:50.717] [MIAerConn] [info] Control service waiting for commands from client...
+[2024-08-30 19:05:51.845] [MIAerConn] [warning] Control service PING send failed. EC:10053
+[2024-08-30 19:05:51.846] [MIAerConn] [info] Control service connection with address736 lost.
+[2024-08-30 19:05:51.846] [MIAerConn] [info] Control service listening on port 3000

@@ -197,6 +197,7 @@
   <ItemGroup>
     <ClInclude Include="MIAerConnCodes.hpp" />
     <ClInclude Include="ExternalCodes.h" />
+    <ClInclude Include="MIAerLog.h" />
     <ClInclude Include="MIAerConnUtils.h" />
     <ClInclude Include="MoreEquipCtrlMsg.h" />
     <ClInclude Include="MIAerConn.h" />
@@ -207,6 +208,7 @@
     <ClCompile Include="ExternalCodes.cpp" />
     <ClCompile Include="MIAerConn.cpp" />
     <ClCompile Include="MIAerConnUtils.cpp" />
+    <ClCompile Include="MIAerLog.cpp" />
     <ClCompile Include="StdAfx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
     </ClCompile>
