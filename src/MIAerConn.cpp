@@ -681,18 +681,8 @@ int main() {
 					logCommandExec(RequestAVD(APIserverId, stringToSAVDReqData(params[1]), &requestID), "RequestAVD");
 					break;
 				case ECSMSDllMsgType::GET_MEAS:
-				{
-					// TODO
-					/*SMeasReqData* m_measureReqMsg = (SMeasReqData*)malloc(sizeof(SMeasReqData));
-					if (m_measureReqMsg != nullptr)
-					{
-						//memcpy(m_measureReqMsg, &m_Request.body.getMeasCmd, sizeof(SMeasReqData));
-
-						logCommandExec(RequestMeasurement(APIserverId, m_measureReqMsg, &requestID), "RequestMeasurement");
-						free(m_measureReqMsg);
-					}*/
+					logCommandExec(RequestMeasurement(APIserverId, stringToSMeasReqData(params[1]), &requestID), "RequestMeasurement");
 					break;
-				}
 				case ECSMSDllMsgType::GET_TASK_STATUS:
 					logCommandExec(RequestTaskStatus(APIserverId, stringToUnsignedLong(params[1])), "RequestTaskStatus");
 					break;
@@ -712,50 +702,17 @@ int main() {
 					logCommandExec(RequestBist(APIserverId, (EBistScope)atoi(params[1].c_str()), &requestID), "RequestBist");
 					break;
 				case ECSMSDllMsgType::SET_AUDIO_PARAMS:
-				{
-					// TODO
-						/*SAudioParams audioRequest;
-						audioRequest.anyChannel = convertToBool(params[1]);
-						audioRequest.bandwidth = Units::Frequency(convertToUnsignedLong(params[2])).GetRaw();
-						audioRequest.bfo = Units::Frequency(convertToUnsignedLong(params[3])).GetRaw();
-						audioRequest.channel = convertToUnsignedLong(params[4]);
-						audioRequest.detMode = (SEquipCtrlMsg::SRcvrCtrlCmd::EDetMode)atoi(params[5].c_str());
-						audioRequest.doAudio = convertToBool(params[6]);
-						audioRequest.doModRec = convertToBool(params[7]);
-						audioRequest.doRDS = convertToBool(params[8]);
-						audioRequest.doSigRec = convertToBool(params[9]);
-						audioRequest.freq = Units::Frequency(convertToUnsignedLong(params[10])).GetRaw();
-						strcpy_s(audioRequest.ipAddressRDSRadio, params[11].c_str());
-						audioRequest.streamID = convertToUnsignedLong(params[12]);
-						logCommandExec(SetAudio(APIserverId, audioRequest, &requestID), "SetAudio");*/
-						break;
-					}
-					case ECSMSDllMsgType::FREE_AUDIO_CHANNEL:
-						logCommandExec(FreeAudio(APIserverId, stringToUnsignedLong(params[1]), &requestID), "FreeAudio");
-						break;
-					case ECSMSDllMsgType::SET_PAN_PARAMS:
-					{
-						// TODO
-					/*SPanParams panParams;
-					panParams.antenna = (SEquipCtrlMsg::EAnt)convertToUnsignedLong(params[1]);
-					panParams.rcvr.freq = Units::Frequency(convertToUnsignedLong(params[2])).GetRaw();
-					panParams.rcvr.bandwidth = Units::Frequency(convertToUnsignedLong(params[3])).GetRaw();
-					panParams.rcvr.detMode = (SEquipCtrlMsg::SRcvrCtrlCmd::EDetMode)atoi(params[4].c_str());
-					panParams.rcvr.agcTime = convertToUnsignedLong(params[5]);
-					panParams.rcvr.bfo = Units::Frequency(convertToUnsignedLong(params[6])).GetRaw();
-					logCommandExec(SetPanParams(APIserverId, panParams, &requestID), "SetPanParams");*/
+					logCommandExec(SetAudio(APIserverId, stringToSAudioParams(params[1]), &requestID), "SetAudio");
 					break;
-				}
+				case ECSMSDllMsgType::FREE_AUDIO_CHANNEL:
+					logCommandExec(FreeAudio(APIserverId, stringToUnsignedLong(params[1]), &requestID), "FreeAudio");
+					break;
+				case ECSMSDllMsgType::SET_PAN_PARAMS:
+					logCommandExec(SetPanParams(APIserverId, stringToSPanParams(params[1]), &requestID), "SetPanParams");
+					break;
 				case ECSMSDllMsgType::GET_PAN:
-				{
-					// TODO
-					/*SGetPanParams PanRequest;
-					PanRequest.freq = Units::Frequency(convertToUnsignedLong(params[1])).GetRaw();
-					PanRequest.bandwidth = Units::Frequency(convertToUnsignedLong(params[2])).GetRaw();
-					PanRequest.rcvrAtten = (unsigned char)params[3].c_str();
-					logCommandExec(RequestPan(APIserverId, PanRequest, &requestID), "RequestPan");*/
+					logCommandExec(RequestPan(APIserverId, stringToSGetPanParams(params[1]), &requestID), "RequestPan");
 					break;
-				}
 				default:
 					logger.error("command not recognized");
 					break;
