@@ -71,6 +71,12 @@ std::vector<std::string> commandQueue;
 // Vector used for the data stream output
 std::vector<std::string> streamBuffer;
 
+// Vector used for the data error output
+std::vector<std::string> errorBuffer;
+
+// Vector used for the real time output
+std::vector<std::string> realtimeBuffer;
+
 // Mutex to protect the command queue
 std::mutex MCCommandMutex;
 std::mutex MCstreamMutex;
@@ -87,8 +93,6 @@ SScorpioAPIClient station;
 
 // Station capabilities
 SCapabilities StationCapabilities;
-
-RealTimeDataCB OnRealtimeDataFunc;
 
 //Socket connection for commands
 SOCKET clientSocketCommand = NULL;
@@ -116,21 +120,24 @@ void OnErrorFunc(_In_  unsigned long serverId, _In_ const std::wstring& errorMsg
 {
 	std::string str(errorMsg.begin(), errorMsg.end());
 	logMIAer.error(str);
-	if (clientSocketCommand != NULL) {
-		int iResult = send(clientSocketCommand,
-			(str + "\n").c_str(),
-			static_cast<int>(strlen(str.c_str()) + 1),
-			0);
-		if (iResult == SOCKET_ERROR) {
-			logMIAer.warn("Failed to send socket. EC:" + std::to_string(WSAGetLastError()));
-			logMIAer.info("Connection with address" + std::to_string(clientSocketCommand) + " lost.");
-			return;
-		}
-	}
-	else {
-		logMIAer.warn("Command socket connection not found");
-	}
+	std::string strData = "{\"serverId\":"+ std::to_string(serverId) + ", \"errorMsg\":\"" + str + "\"}";
+	errorBuffer.push_back(strData);
+	logMIAer.info("OnErrorFunc received error message: " + str);
+	logMIAer.info("OnErrorFunc received server ID: " + serverId);
 
+}
+
+/*
+* Felipe Machado - 02/09/2024
+* Realtime callback for Scorpio API
+*/
+void OnRealTimeDataFunc(_In_  unsigned long serverId, _In_ ECSMSDllMsgType respType, _In_ SSmsRealtimeMsg::UBody* data)
+{
+	std::string strData = std::string(reinterpret_cast<char*>(data), sizeof(data));
+	std::string strJson = "{\"serverId\":" + std::to_string(serverId) + ", \"respType\":\"" + std::to_string(respType) + "\", \"data\":\""+strData+"\"}";
+	realtimeBuffer.push_back(strData);
+	logMIAer.info("OnData received with type " + respType);
+	logMIAer.info("OnData received server ID " + serverId);
 }
 
 //
@@ -278,7 +285,8 @@ void handleStreamConnection(SOCKET clientSocket, std::string name) {
 				logMIAer.warn(name + " data send failed. EC:" + std::to_string(WSAGetLastError()));
 				return;
 			}
-		} else {
+		}
+		else {
 			if (checkPeriod == 0) {
 				if (config["service"]["simulated"].get<bool>()) {
 					generateSimData();
@@ -297,6 +305,64 @@ void handleStreamConnection(SOCKET clientSocket, std::string name) {
 	}
 }
 
+//
+// Function to handle error data
+//
+void handleErrorConnection(SOCKET clientSocket, std::string name) {
+
+	int checkPeriod = 0;
+	int iResult = 0;
+	while (running.load()) {
+		if (!errorBuffer.empty()) {
+			std::string data = errorBuffer.back() + mcs::Form::BLOCK_END;
+			errorBuffer.pop_back();
+			iResult = send(clientSocket, data.c_str(), static_cast<int>(data.length()), 0);
+			if (iResult == SOCKET_ERROR) {
+				logMIAer.warn(name + " data send failed. EC:" + std::to_string(WSAGetLastError()));
+				return;
+			}
+		} else {
+			if (checkPeriod == 0) {
+				logMIAer.info(name + " waiting for data from station to send...");
+				checkPeriod = config["service"]["error"]["check_period"].get<int>();
+			}
+			else {
+				checkPeriod--;
+			}
+			std::this_thread::sleep_for(std::chrono::milliseconds(config["service"]["error"]["sleep_ms"].get<int>()));
+		}
+	}
+}
+
+//
+// Function to handle real time data
+//
+void handleRealTimeConnection(SOCKET clientSocket, std::string name) {
+
+	int checkPeriod = 0;
+	int iResult = 0;
+	while (running.load()) {
+		if (!realtimeBuffer.empty()) {
+			std::string data = realtimeBuffer.back() + mcs::Form::BLOCK_END;
+			realtimeBuffer.pop_back();
+			iResult = send(clientSocket, data.c_str(), static_cast<int>(data.length()), 0);
+			if (iResult == SOCKET_ERROR) {
+				logMIAer.warn(name + " data send failed. EC:" + std::to_string(WSAGetLastError()));
+				return;
+			}
+		}
+		else {
+			if (checkPeriod == 0) {
+				logMIAer.info(name + " waiting for data from station to send...");
+				checkPeriod = config["service"]["realtime"]["check_period"].get<int>();
+			}
+			else {
+				checkPeriod--;
+			}
+			std::this_thread::sleep_for(std::chrono::milliseconds(config["service"]["realtime"]["sleep_ms"].get<int>()));
+		}
+	}
+}
 
 //
 // Function to listen on a specific port
@@ -347,8 +413,6 @@ void socketHandle(	std::string name,
 		WSACleanup();
 		return;
 	}
-
-	//using namespace std;
 
 	iResult = ::bind(listenSocket, result->ai_addr, static_cast<int>(result->ai_addrlen));
 	if (iResult == SOCKET_ERROR) {
@@ -424,7 +488,7 @@ void StationConnect(void) {
 					station,
 					OnErrorFunc,
 					OnDataFunc,
-					OnRealtimeDataFunc);
+					OnRealTimeDataFunc);
 
 	// Error message string to be used in the logger
 	std::string message;
@@ -525,6 +589,28 @@ int main() {
 		config["service"]["stream"]["port"].get<int>(),
 		config["service"]["stream"]["timeout_s"].get<int>(),
 		handleStreamConnection);
+
+	/*
+	  * Felipe Machado - 02/09/2024
+	*/
+	// Start thread for the stream channel socket service. This thread will stream error back to the client
+	std::thread errorThread(socketHandle,
+		"Error service",
+		mcs::Code::STREAM_ERROR,
+		config["service"]["error"]["port"].get<int>(),
+		config["service"]["error"]["timeout_s"].get<int>(),
+		handleErrorConnection);
+
+	/*
+	  * Felipe Machado - 02/09/2024
+	*/
+	// Start thread for the stream channel socket service. This thread will stream real time data to the client
+	std::thread realtimeThread(socketHandle,
+		"Real time service",
+		mcs::Code::STREAM_ERROR,
+		config["service"]["realtime"]["port"].get<int>(),
+		config["service"]["realtime"]["timeout_s"].get<int>(),
+		handleRealTimeConnection);
 		
 	// Main loop to process commands received
 	while (running.load()) {
@@ -539,56 +625,57 @@ int main() {
 			/*
 			* Felipe Machado - 23/08/2024
 			* Exemplo pacote socket
-			* cmd|param01|param02|...
+			* {commandCode: 1, commandStruct: struct, taskType: , reqID: ,  }
 			*/ 
 			unsigned long requestID = 0;
-			std::vector<std::string> params = split(command, "|");
+			using json = nlohmann::json;
+			json jsonObj = json::parse(command);
 
-			int cmd = atoi(params[0].c_str());
+			int cmd = jsonObj["commandCode"].get<int>();
 
 			switch (cmd)
 			{
 				case ECSMSDllMsgType::GET_OCCUPANCY:
-					logMIAer.logCommandExec(RequestOccupancy(APIserverId, stringToSOccupReqData(params[1]), &requestID), "RequestOccupancy");
+					logMIAer.logCommandExec(RequestOccupancy(APIserverId, jsonToSOccupReqData(jsonObj["occupancyParams"]), &requestID), "RequestOccupancy");
 					break;
 				case ECSMSDllMsgType::GET_OCCUPANCYDF:
-					logMIAer.logCommandExec(RequestOccupancyDF(APIserverId, stringToSOccDFReqData(params[1]), &requestID), "RequestOccupancyDF");
+					logMIAer.logCommandExec(RequestOccupancyDF(APIserverId, jsonToSOccDFReqData(jsonObj["occupancyParams"]), &requestID), "RequestOccupancyDF");
 					break;
 				case ECSMSDllMsgType::GET_AVD:
-					logMIAer.logCommandExec(RequestAVD(APIserverId, stringToSAVDReqData(params[1]), &requestID), "RequestAVD");
+					logMIAer.logCommandExec(RequestAVD(APIserverId, jsonToSAVDReqData(jsonObj["acdParams"]), &requestID), "RequestAVD");
 					break;
 				case ECSMSDllMsgType::GET_MEAS:
-					logMIAer.logCommandExec(RequestMeasurement(APIserverId, stringToSMeasReqData(params[1]), &requestID), "RequestMeasurement");
+					logMIAer.logCommandExec(RequestMeasurement(APIserverId, jsonToSMeasReqData(jsonObj["measParams"]), &requestID), "RequestMeasurement");
 					break;
 				case ECSMSDllMsgType::GET_TASK_STATUS:
-					logMIAer.logCommandExec(RequestTaskStatus(APIserverId, stringToUnsignedLong(params[1])), "RequestTaskStatus");
+					logMIAer.logCommandExec(RequestTaskStatus(APIserverId, jsonObj["reqId"].get<unsigned long>()), "RequestTaskStatus");
 					break;
 				case ECSMSDllMsgType::GET_TASK_STATE:
-					logMIAer.logCommandExec(RequestTaskState(APIserverId, (ECSMSDllMsgType)stringToUnsignedLong(params[1]), stringToUnsignedLong(params[2])), "RequestTaskState");
+					logMIAer.logCommandExec(RequestTaskState(APIserverId, (ECSMSDllMsgType)jsonObj["taskType"].get<unsigned long>(), jsonObj["reqId"].get<unsigned long>()), "RequestTaskState");
 					break;
 				case ECSMSDllMsgType::TASK_SUSPEND:
-					logMIAer.logCommandExec(SuspendTask(APIserverId, (ECSMSDllMsgType)stringToUnsignedLong(params[1]), stringToUnsignedLong(params[2])), "SuspendTask");
+					logMIAer.logCommandExec(SuspendTask(APIserverId, (ECSMSDllMsgType)jsonObj["taskType"].get<unsigned long>(), jsonObj["reqId"].get<unsigned long>()), "SuspendTask");
 					break;
 				case ECSMSDllMsgType::TASK_RESUME:
-					logMIAer.logCommandExec(ResumeTask(APIserverId, (ECSMSDllMsgType)stringToUnsignedLong(params[1]), stringToUnsignedLong(params[2])), "ResumeTask");
+					logMIAer.logCommandExec(ResumeTask(APIserverId, (ECSMSDllMsgType)jsonObj["taskType"].get<unsigned long>(), jsonObj["reqId"].get<unsigned long>()), "ResumeTask");
 					break;
 				case ECSMSDllMsgType::TASK_TERMINATE:
-					logMIAer.logCommandExec(TerminateTask(APIserverId, stringToUnsignedLong(params[1])), "TerminateTask");
+					logMIAer.logCommandExec(TerminateTask(APIserverId, jsonObj["reqId"].get<unsigned long>()), "TerminateTask");
 					break;
 				case ECSMSDllMsgType::GET_BIST:
-					logMIAer.logCommandExec(RequestBist(APIserverId, (EBistScope)atoi(params[1].c_str()), &requestID), "RequestBist");
+					logMIAer.logCommandExec(RequestBist(APIserverId, (EBistScope)jsonObj["scope"].get<int>(), &requestID), "RequestBist");
 					break;
 				case ECSMSDllMsgType::SET_AUDIO_PARAMS:
-					logMIAer.logCommandExec(SetAudio(APIserverId, stringToSAudioParams(params[1]), &requestID), "SetAudio");
+					logMIAer.logCommandExec(SetAudio(APIserverId, jsonToSAudioParams(jsonObj["audioParams"]), &requestID), "SetAudio");
 					break;
 				case ECSMSDllMsgType::FREE_AUDIO_CHANNEL:
-					logMIAer.logCommandExec(FreeAudio(APIserverId, stringToUnsignedLong(params[1]), &requestID), "FreeAudio");
+					logMIAer.logCommandExec(FreeAudio(APIserverId, jsonObj["channel"].get<unsigned long>(), &requestID), "FreeAudio");
 					break;
 				case ECSMSDllMsgType::SET_PAN_PARAMS:
-					logMIAer.logCommandExec(SetPanParams(APIserverId, stringToSPanParams(params[1]), &requestID), "SetPanParams");
+					logMIAer.logCommandExec(SetPanParams(APIserverId, jsonToSPanParams(jsonObj["panParams"]), &requestID), "SetPanParams");
 					break;
 				case ECSMSDllMsgType::GET_PAN:
-					logMIAer.logCommandExec(RequestPan(APIserverId, stringToSGetPanParams(params[1]), &requestID), "RequestPan");
+					logMIAer.logCommandExec(RequestPan(APIserverId, jsonToSGetPanParams(jsonObj["panParams"]), &requestID), "RequestPan");
 					break;
 				default:
 					logMIAer.error("command not recognized");
@@ -607,6 +694,12 @@ int main() {
 	}
 	if (streamThread.joinable()) {
 		streamThread.join();
+	}
+	if (errorThread.joinable()) {
+		errorThread.join();
+	}
+	if (realtimeThread.joinable()) {
+		realtimeThread.join();
 	}
 
 	// Close the connection

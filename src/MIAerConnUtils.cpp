@@ -25,6 +25,16 @@ void newDefaultConfigFile() {
 	jsonObj["service"]["stream"]["sleep_ms"] = 500;
 	jsonObj["service"]["stream"]["check_period"] = 200;
 
+	jsonObj["service"]["error"]["port"] = 3002;
+	jsonObj["service"]["error"]["timeout_s"] = 10000;
+	jsonObj["service"]["error"]["sleep_ms"] = 500;
+	jsonObj["service"]["error"]["check_period"] = 200;
+
+	jsonObj["service"]["realtime"]["port"] = 3002;
+	jsonObj["service"]["realtime"]["timeout_s"] = 10000;
+	jsonObj["service"]["realtime"]["sleep_ms"] = 500;
+	jsonObj["service"]["realtime"]["check_period"] = 200;
+
 	jsonObj["service"]["simulated"] = true;
 
 	std::ofstream file("config.json");
@@ -47,10 +57,8 @@ std::vector<std::string> split(std::string s, std::string delimiter) {
 	return res;
 }
 
-SAudioParams stringToSAudioParams(const std::string str) {
+SAudioParams jsonToSAudioParams(nlohmann::json jsonObj) {
 	SAudioParams structSO;
-	using json = nlohmann::json;
-	json jsonObj = json::parse(str);
 
 	structSO.anyChannel = jsonObj["anyChannel"].is_null() == true ? NULL : jsonObj["anyChannel"].get<bool>();
 	if (jsonObj["bandwidth"].is_null() == false) {
@@ -74,10 +82,8 @@ SAudioParams stringToSAudioParams(const std::string str) {
 	return structSO;
 }
 
-SGetPanParams stringToSGetPanParams(const std::string str) {
+SGetPanParams jsonToSGetPanParams(nlohmann::json jsonObj) {
 	SGetPanParams structSO;
-	using json = nlohmann::json;
-	json jsonObj = json::parse(str);
 
 	if (jsonObj["bandwidth"].is_null() == false) {
 		structSO.bandwidth = Units::Frequency(jsonObj["bandwidth"].get<unsigned long>()).GetRaw();
@@ -90,10 +96,8 @@ SGetPanParams stringToSGetPanParams(const std::string str) {
 	return structSO;
 }
 
-SPanParams stringToSPanParams(const std::string str) {
+SPanParams jsonToSPanParams(nlohmann::json jsonObj) {
 	SPanParams structSO;
-	using json = nlohmann::json;
-	json jsonObj = json::parse(str);
 
 	structSO.antenna = jsonObj["antenna"].is_null() == true ? (SEquipCtrlMsg::EAnt)NULL : jsonObj["antenna"].get<SEquipCtrlMsg::EAnt>();
 	
@@ -114,11 +118,9 @@ SPanParams stringToSPanParams(const std::string str) {
 	return structSO;
 }
 
-SMeasReqData* stringToSMeasReqData(const std::string str) {
+SMeasReqData* jsonToSMeasReqData(nlohmann::json jsonObj) {
 	SMeasReqData structSO;
-	using json = nlohmann::json;
-	json jsonObj = json::parse(str);
-
+	
 	if (jsonObj["freq"].is_null() == false) {
 		structSO.freq = Units::Frequency(jsonObj["freq"].get<unsigned long>()).GetRaw();
 	}
@@ -189,11 +191,8 @@ SMeasReqData* stringToSMeasReqData(const std::string str) {
 	return &structSO;
 }
 
-SOccupReqData* stringToSOccupReqData(const std::string str) {
+SOccupReqData* jsonToSOccupReqData(nlohmann::json jsonObj) {
 	SOccupReqData structSO;
-	using json = nlohmann::json;
-	json jsonObj = json::parse(str);
-
 	structSO.ant = jsonObj["ant"].is_null() == true ? (SEquipCtrlMsg::EAnt)NULL : jsonObj["ant"].get<SEquipCtrlMsg::EAnt>();
 	
 	SSmsMsg::SBandV4 band;
@@ -230,11 +229,8 @@ SOccupReqData* stringToSOccupReqData(const std::string str) {
 	return &structSO;
 }
 
-SOccDFReqData* stringToSOccDFReqData(const std::string str) {
+SOccDFReqData* jsonToSOccDFReqData(nlohmann::json jsonObj) {
 	SOccDFReqData structSO;
-	using json = nlohmann::json;
-	json jsonObj = json::parse(str);
-
 	SSmsMsg::SGetScanDfCmdV1::SBand band;
 
 	if (jsonObj["band"]["channelBandwidth"].is_null() == false) {
@@ -270,11 +266,9 @@ SOccDFReqData* stringToSOccDFReqData(const std::string str) {
 	return &structSO;
 }
 
-SAVDReqData* stringToSAVDReqData(const std::string str) {
+SAVDReqData* jsonToSAVDReqData(nlohmann::json jsonObj) {
 	SAVDReqData structSO;
-	using json = nlohmann::json;
-	json jsonObj = json::parse(str);
-
+	
 	structSO.ant = jsonObj["ant"].is_null() == true ? (SEquipCtrlMsg::EAnt)NULL : jsonObj["ant"].get<SEquipCtrlMsg::EAnt>();
 	structSO.avdThreshold = jsonObj["avdThreshold"].is_null() == true ? NULL : jsonObj["avdThreshold"].get<unsigned char>();
 

@@ -5,14 +5,14 @@
 #include "ScorpioAPITypes.h"
 
 std::vector<std::string> split(std::string s, std::string delimiter);
-SOccupReqData* stringToSOccupReqData(const std::string str);
-SOccDFReqData* stringToSOccDFReqData(const std::string str);
-SGetPanParams stringToSGetPanParams(const std::string str);
-SMeasReqData* stringToSMeasReqData(const std::string str);
-SAudioParams stringToSAudioParams(const std::string str);
-SAVDReqData* stringToSAVDReqData(const std::string str);
+SOccupReqData* jsonToSOccupReqData(nlohmann::json jsonObj);
+SOccDFReqData* jsonToSOccDFReqData(nlohmann::json jsonObj);
+SGetPanParams jsonToSGetPanParams(nlohmann::json jsonObj);
+SMeasReqData* jsonToSMeasReqData(nlohmann::json jsonObj);
+SAudioParams jsonToSAudioParams(nlohmann::json jsonObj);
+SAVDReqData* jsonToSAVDReqData(nlohmann::json jsonObj);
 std::wstring stringToWString(const std::string& str);
-SPanParams stringToSPanParams(const std::string str);
+SPanParams jsonToSPanParams(nlohmann::json jsonObj);
 unsigned long stringToUnsignedLong(std::string str);
 bool stringToBool(std::string str);
 void newDefaultConfigFile();
