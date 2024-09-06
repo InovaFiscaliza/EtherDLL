@@ -99,14 +99,400 @@ SOCKET clientSocketCommand = NULL;
 
 MIAerLog logMIAer;
 
+//TODO refactor
+void processBITEResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody* respdata)
+{
+	CString respMsg;
+	static bool first = true;
+
+	if (respType == ECSMSDllMsgType::GET_BIST ||
+		respType == ECSMSDllMsgType::GET_BIST_RESULT)
+	{
+		SEquipCtrlMsg::SGetBistResp* BITEResponse = (SEquipCtrlMsg::SGetBistResp*)respdata;
+		
+	}
+	else if (respType == ECSMSDllMsgType::GET_DIAGNOSTICS)
+	{
+		SEquipCtrlMsg::SGetBistResp* BITEResponse = (SEquipCtrlMsg::SGetBistResp*)respdata;
+		
+	}
+	else
+	{
+	}
+
+}
+void ProcessAntListResponse(_In_ SEquipCtrlMsg::UBody* data)
+{
+	SEquipCtrlMsg::SAntInfoListResp* antListResponse = (SEquipCtrlMsg::SAntInfoListResp*)data;
+}
+void processAutoViolateResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody* data)
+{
+	CString tempstr;
+	SEquipCtrlMsg::SOccupancyHeader* pOccHdr = nullptr;
+
+	if (respType == ECSMSDllMsgType::AVD_STATE_RESPONSE ||
+		respType == ECSMSDllMsgType::AVD_SOLICIT_STATE_RESPONSE)
+	{
+		CString stateType;
+		if (respType == ECSMSDllMsgType::AVD_STATE_RESPONSE)
+			stateType = _T("(Unsolicited)");
+		else
+			stateType = _T("(Solicited)");
+		SEquipCtrlMsg::SStateResp* Response = (SEquipCtrlMsg::SStateResp*)data;
+		
+	}
+	else if (respType == ECSMSDllMsgType::AVD_FREQ_VS_CHANNEL)
+	{
+		SEquipCtrlMsg::SFrequencyVsChannelResp* Response = (SEquipCtrlMsg::SFrequencyVsChannelResp*)data;
+	}
+	else if (respType == ECSMSDllMsgType::AVD_FREQ_MEAS)
+	{
+		SEquipCtrlMsg::SAvdMeasureResult* Response = (SEquipCtrlMsg::SAvdMeasureResult*)data;
+	}
+	else if (respType == ECSMSDllMsgType::AVD_BW_MEAS)
+	{
+		SEquipCtrlMsg::SAvdMeasureResult* Response = (SEquipCtrlMsg::SAvdMeasureResult*)data;
+	}
+	else if (respType == ECSMSDllMsgType::AVD_STATUS)
+	{
+		SEquipCtrlMsg::SEquipTaskStatusResp* Response = (SEquipCtrlMsg::SEquipTaskStatusResp*)data;
+	}
+	else if (respType == ECSMSDllMsgType::AVD_OCC_CHANNEL_RESULT)
+	{
+		SEquipCtrlMsg::SOccResult* Response = (SEquipCtrlMsg::SOccResult*)data;
+	}
+	else	// not AUTOVIOLATE_RESPONSE
+	{
+		tempstr.Format(_T("unexpected AVD message %u"),
+			respType);
+	}
+
+	if (pOccHdr)
+	{
+		if (pOccHdr->status == ErrorCodes::SUCCESS ||
+			pOccHdr->status == ErrorCodes::NOERROR_SIMULATE ||
+			pOccHdr->status == 10000)
+		{
+			COleDateTime temp;
+			temp.m_dt = pOccHdr->gpsResponse.dateTime;
+			CString avdStr;
+			avdStr.Format(_T("AVD %u "), respType);
+			tempstr.Format(_T("  %lu %lu %lu %lu %ld"),
+				pOccHdr->numTotalChannels, pOccHdr->firstChannel,
+				pOccHdr->numChannels, pOccHdr->numTimeOfDays,
+				pOccHdr->status);
+			tempstr = avdStr + temp.Format() + tempstr;
+		}
+		else
+		{
+			tempstr.Format(_T("AVD response status %ld"),
+				pOccHdr->status);
+		}
+	}
+
+}
+void processMeasResponse(_In_ ECSMSDllMsgType respType, _In_ unsigned long sourceAddr, _In_ SEquipCtrlMsg::UBody* data)
+{
+	CString tempstr;
+
+	if (respType == ECSMSDllMsgType::VALIDATE_MEAS)
+	{
+		SEquipCtrlMsg::SValidateMeasurementResp* DwellResponse = (SEquipCtrlMsg::SValidateMeasurementResp*)data;
+		
+	}
+	else if (respType == ECSMSDllMsgType::GET_MEAS)
+	{
+		SEquipCtrlMsg::SGetMeasResp* MeasResponse = (SEquipCtrlMsg::SGetMeasResp*)data;
+	}
+}
+void processDemodCtrlResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody* data)
+{
+	CString tempstr;
+
+	if (respType == ECSMSDllMsgType::SET_RCVR)
+	{
+		SEquipCtrlMsg::SGenericResp* RcvrResponse = (SEquipCtrlMsg::SGenericResp*)data;
+
+		tempstr.Format(_T("Receiver Control Status: %ld"), RcvrResponse->status);
+	}
+	else if (respType == ECSMSDllMsgType::SET_PAN_PARAMS)
+	{
+		SEquipCtrlMsg::SGenericResp* PanParaResponse = (SEquipCtrlMsg::SGenericResp*)data;
+
+		tempstr.Format(_T("Pan Para Status: %ld"), PanParaResponse->status);
+	}
+	else if (respType == ECSMSDllMsgType::SET_AUDIO_PARAMS)
+	{
+		SEquipCtrlMsg::SAudioParamsResp* AudioResponse = (SEquipCtrlMsg::SAudioParamsResp*)data;
+
+		tempstr.Format(_T("Audio Params Status: %ld channel: %lu"), AudioResponse->status, AudioResponse->channel);
+	}
+	else if (respType == ECSMSDllMsgType::FREE_AUDIO_CHANNEL)
+	{
+		SEquipCtrlMsg::SGenericResp* FreeAudioResponse = (SEquipCtrlMsg::SGenericResp*)data;
+
+		tempstr.Format(_T("Free Audio Channel Status: %ld"), FreeAudioResponse->status);
+	}
+	else
+	{
+		//tempstr.Format(_T("unexpected Demod Control message subType %lu"),
+		//	m_Response.hdr.msgSubType);
+	}
+}
+void processPanResponse(_In_ SEquipCtrlMsg::UBody* data)
+{
+	//error codes:
+	// 0 = no error
+	// 1 = server timeout
+	// 2 = Carrier signal not detected
+
+	SEquipCtrlMsg::SGetPanResp* PanResponse = (SEquipCtrlMsg::SGetPanResp*)data;
+	if (PanResponse->status == ErrorCodes::SUCCESS ||
+		PanResponse->status == ErrorCodes::NOERROR_SIMULATE)
+	{
+		std::string strPanResp = "{\"PanResponse\":{}}";
+		streamBuffer.push_back(strPanResp);
+	}
+	else
+	{
+		std::string strPanResp = "{\"PanResponse\":{\"status\": \"error\"}}";
+		streamBuffer.push_back(strPanResp);
+		CString tempstr;
+		tempstr.Format(_T("pan response status %ld"),
+			PanResponse->status);
+
+	}
+}
+void processOccupancyResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody* data)
+{
+	CString tempstr;
+
+	if (respType == ECSMSDllMsgType::OCC_MSGLEN_DIST_RESPONSE)
+	{
+		SEquipCtrlMsg::SMsgLengthDistributionResp* Response = (SEquipCtrlMsg::SMsgLengthDistributionResp*)data;
+	}
+	else if (respType == ECSMSDllMsgType::OCC_SPECTRUM_RESPONSE)
+	{
+		SEquipCtrlMsg::SOccResult* Response = (SEquipCtrlMsg::SOccResult*)data;
+		
+	}
+	else if (respType == ECSMSDllMsgType::OCC_STATE_RESPONSE ||
+		respType == ECSMSDllMsgType::OCC_SOLICIT_STATE_RESPONSE)
+	{
+		SEquipCtrlMsg::SStateResp* Response = (SEquipCtrlMsg::SStateResp*)data;
+		
+	}
+	else if (respType == ECSMSDllMsgType::OCC_FREQ_VS_CHANNEL)
+	{
+		SEquipCtrlMsg::SFrequencyVsChannelResp* Response = (SEquipCtrlMsg::SFrequencyVsChannelResp*)data;
+	}
+	else if (respType == ECSMSDllMsgType::OCC_CHANNEL_RESULT)
+	{
+		SEquipCtrlMsg::SOccResult* Response = (SEquipCtrlMsg::SOccResult*)data;
+	}
+	else if (respType == ECSMSDllMsgType::OCC_EFLD_CHANNEL_RESULT)
+	{
+		SEquipCtrlMsg::SOccResult* Response = (SEquipCtrlMsg::SOccResult*)data;
+	}
+	else if (respType == ECSMSDllMsgType::OCC_TIMEOFDAY_RESULT)
+	{
+		SEquipCtrlMsg::SOccResult* Response = (SEquipCtrlMsg::SOccResult*)data;
+	}
+	else if (respType == ECSMSDllMsgType::OCC_MSGLEN_CHANNEL_RESULT)
+	{
+		SEquipCtrlMsg::SOccResult* Response = (SEquipCtrlMsg::SOccResult*)data;
+	}
+	else if (respType == ECSMSDllMsgType::OCC_EFLD_TIMEOFDAY_RESULT)
+	{
+		SEquipCtrlMsg::SOccResult* Response = (SEquipCtrlMsg::SOccResult*)data;
+	}
+	else if (respType == ECSMSDllMsgType::OCC_STATUS)
+	{
+		SEquipCtrlMsg::SEquipTaskStatusResp* Response = (SEquipCtrlMsg::SEquipTaskStatusResp*)data;
+	}
+	else if (respType == ECSMSDllMsgType::VALIDATE_OCCUPANCY)
+	{
+		SEquipCtrlMsg::SValidateOccupancyResp* Response = (SEquipCtrlMsg::SValidateOccupancyResp*)data;
+	}
+	else	// not OCCUPANCY_RESPONSE
+	{
+		tempstr.Format(_T("unexpected occupancy message %u"),
+			respType);
+	}
+}
+void processOccupancyDFResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody* data)
+{
+	using json = nlohmann::json;
+	json jsonObj;
+	jsonObj["respType"] = std::to_string(respType);
+
+	if (respType == ECSMSDllMsgType::OCCDF_STATE_RESPONSE ||
+		respType == ECSMSDllMsgType::OCCDF_SOLICIT_STATE_RESPONSE)
+	{
+		SEquipCtrlMsg::SStateResp* Response = (SEquipCtrlMsg::SStateResp*)data;
+		jsonObj["SStateResp"]["completionTime"] = Response->completionTime;
+		jsonObj["SStateResp"]["state"] = Response->state;
+	}
+	else if (respType == ECSMSDllMsgType::OCCDF_FREQ_VS_CHANNEL)
+	{
+		SEquipCtrlMsg::SFrequencyVsChannelResp* Response = (SEquipCtrlMsg::SFrequencyVsChannelResp*)data;
+		jsonObj["SFrequencyVsChannelResp"]["frequencies"]["internal"] = Response->frequencies->internal;
+		
+		jsonObj["SFrequencyVsChannelResp"]["hostName"] = Response->hostName;
+		jsonObj["SFrequencyVsChannelResp"]["numBands"] = Response->numBands;
+		jsonObj["SFrequencyVsChannelResp"]["numChannels"] = Response->numChannels;
+		jsonObj["SFrequencyVsChannelResp"]["occHdr"]["firstChannel"] = Response->occHdr.firstChannel;
+		jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["dateTime"] = Response->occHdr.gpsResponse.dateTime;
+		jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["latitude"] = Response->occHdr.gpsResponse.latitude;
+		jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["longitude"] = Response->occHdr.gpsResponse.longitude;
+		jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["accuracy"] = (unsigned long)Response->occHdr.gpsResponse.status.accuracy;
+		jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["antenna"] = (unsigned long)Response->occHdr.gpsResponse.status.antenna;
+		jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["batVolt"] = (unsigned long)Response->occHdr.gpsResponse.status.batVolt;
+		jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["lockHist"] = (unsigned long)Response->occHdr.gpsResponse.status.lockHist;
+		jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["mode"] = (unsigned long)Response->occHdr.gpsResponse.status.mode;
+		jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["noGps"] = (unsigned long)Response->occHdr.gpsResponse.status.noGps;
+		jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["notTested"] = (unsigned long)Response->occHdr.gpsResponse.status.notTested;
+		jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["numSats"] = (unsigned long)Response->occHdr.gpsResponse.status.numSats;
+		jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["nvRam"] = (unsigned long)Response->occHdr.gpsResponse.status.nvRam;
+		jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["oscVolt"] = (unsigned long)Response->occHdr.gpsResponse.status.oscVolt;
+		jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["pllSynth"] = (unsigned long)Response->occHdr.gpsResponse.status.pllSynth;
+		jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["receiver"] = (unsigned long)Response->occHdr.gpsResponse.status.receiver;
+		jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["satLock"] = (unsigned long)Response->occHdr.gpsResponse.status.satLock;
+		jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["timErr1"] = (unsigned long)Response->occHdr.gpsResponse.status.timErr1;
+		jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["timErr2"] = (unsigned long)Response->occHdr.gpsResponse.status.timErr2;
+		jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["timSrce"] = (unsigned long)Response->occHdr.gpsResponse.status.timSrce;
+		jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["tracking"] = (unsigned long)Response->occHdr.gpsResponse.status.tracking;
+		jsonObj["SFrequencyVsChannelResp"]["occHdr"]["numChannels"] = Response->occHdr.numChannels;
+		jsonObj["SFrequencyVsChannelResp"]["occHdr"]["numTimeOfDays"] = Response->occHdr.numTimeOfDays;
+		jsonObj["SFrequencyVsChannelResp"]["occHdr"]["numTotalChannels"] = Response->occHdr.numTotalChannels;
+		jsonObj["SFrequencyVsChannelResp"]["occHdr"]["status"] = Response->occHdr.status;
+		jsonObj["SFrequencyVsChannelResp"]["occPrimaryThreshold"] = Response->occPrimaryThreshold;
+		jsonObj["SFrequencyVsChannelResp"]["occSecondaryThreshold"] = Response->occSecondaryThreshold;
+		jsonObj["SFrequencyVsChannelResp"]["saveIntermediateData"] = Response->saveIntermediateData;
+		jsonObj["SFrequencyVsChannelResp"]["selectedAntenna"] = Response->selectedAntenna;
+		jsonObj["SFrequencyVsChannelResp"]["useSecondaryThreshold"] = Response->useSecondaryThreshold;
+	}
+	else if (respType == ECSMSDllMsgType::OCCDF_SCANDF_VS_CHANNEL)
+	{
+		SEquipCtrlMsg::SScanDfVsChannelResp* Response = (SEquipCtrlMsg::SScanDfVsChannelResp*)data;
+		jsonObj["SScanDfVsChannelResp"]["aveFldStr"] = Response->aveFldStr;
+		jsonObj["SScanDfVsChannelResp"]["aveRange"] = Response->aveRange;
+		jsonObj["SScanDfVsChannelResp"]["numAzimuths"] = Response->numAzimuths;
+		jsonObj["SScanDfVsChannelResp"]["numChannels"] = Response->numChannels;
+		jsonObj["SScanDfVsChannelResp"]["occHdr"]["firstChannel"] = Response->occHdr.firstChannel;
+		jsonObj["SScanDfVsChannelResp"]["occHdr"]["gpsResponse"]["dateTime"] = Response->occHdr.gpsResponse.dateTime;
+		jsonObj["SScanDfVsChannelResp"]["occHdr"]["gpsResponse"]["latitude"] = Response->occHdr.gpsResponse.latitude;
+		jsonObj["SScanDfVsChannelResp"]["occHdr"]["gpsResponse"]["longitude"] = Response->occHdr.gpsResponse.longitude;
+		jsonObj["SScanDfVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["accuracy"] = (unsigned long)Response->occHdr.gpsResponse.status.accuracy;
+		jsonObj["SScanDfVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["antenna"] = (unsigned long)Response->occHdr.gpsResponse.status.antenna;
+		jsonObj["SScanDfVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["batVolt"] = (unsigned long)Response->occHdr.gpsResponse.status.batVolt;
+		jsonObj["SScanDfVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["lockHist"] = (unsigned long)Response->occHdr.gpsResponse.status.lockHist;
+		jsonObj["SScanDfVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["mode"] = (unsigned long)Response->occHdr.gpsResponse.status.mode;
+		jsonObj["SScanDfVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["noGps"] = (unsigned long)Response->occHdr.gpsResponse.status.noGps;
+		jsonObj["SScanDfVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["notTested"] = (unsigned long)Response->occHdr.gpsResponse.status.notTested;
+		jsonObj["SScanDfVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["numSats"] = (unsigned long)Response->occHdr.gpsResponse.status.numSats;
+		jsonObj["SScanDfVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["nvRam"] = (unsigned long)Response->occHdr.gpsResponse.status.nvRam;
+		jsonObj["SScanDfVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["oscVolt"] = (unsigned long)Response->occHdr.gpsResponse.status.oscVolt;
+		jsonObj["SScanDfVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["pllSynth"] = (unsigned long)Response->occHdr.gpsResponse.status.pllSynth;
+		jsonObj["SScanDfVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["receiver"] = (unsigned long)Response->occHdr.gpsResponse.status.receiver;
+		jsonObj["SScanDfVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["satLock"] = (unsigned long)Response->occHdr.gpsResponse.status.satLock;
+		jsonObj["SScanDfVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["timErr1"] = (unsigned long)Response->occHdr.gpsResponse.status.timErr1;
+		jsonObj["SScanDfVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["timErr2"] = (unsigned long)Response->occHdr.gpsResponse.status.timErr2;
+		jsonObj["SScanDfVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["timSrce"] = (unsigned long)Response->occHdr.gpsResponse.status.timSrce;
+		jsonObj["SScanDfVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["tracking"] = (unsigned long)Response->occHdr.gpsResponse.status.tracking;
+		jsonObj["SScanDfVsChannelResp"]["occHdr"]["numChannels"] = Response->occHdr.numChannels;
+		jsonObj["SScanDfVsChannelResp"]["occHdr"]["numTimeOfDays"] = Response->occHdr.numTimeOfDays;
+		jsonObj["SScanDfVsChannelResp"]["occHdr"]["numTotalChannels"] = Response->occHdr.numTotalChannels;
+		jsonObj["SScanDfVsChannelResp"]["occHdr"]["status"] = Response->occHdr.status;
+		jsonObj["SScanDfVsChannelResp"]["scanDfData"] = Response->scanDfData;
+	}
+	else if (respType == ECSMSDllMsgType::OCCDF_STATUS)
+	{
+		SEquipCtrlMsg::SEquipTaskStatusResp* Response = (SEquipCtrlMsg::SEquipTaskStatusResp*)data;
+		jsonObj["SEquipTaskStatusResp"]["dateTime"] = Response->dateTime;
+		jsonObj["SEquipTaskStatusResp"]["key"] = Response->key;
+		jsonObj["SEquipTaskStatusResp"]["status"] = Response->status;
+		jsonObj["SEquipTaskStatusResp"]["taskId"] = Response->taskId;
+	}
+	else	// not OCCUPANCYDF_RESPONSE
+	{
+		//tempstr.Format(_T("unexpected occupancyDF message %u"),
+		//	respType);
+	}
+	streamBuffer.push_back(jsonObj.dump());
+
+}
+void OnData(_In_ ECSMSDllMsgType respType, _In_ unsigned long sourceAddr, _In_ unsigned long destAddr, _In_ SEquipCtrlMsg::UBody* data)
+{
+	switch (respType)
+	{
+		case ECSMSDllMsgType::GET_BIST:
+		case ECSMSDllMsgType::GET_BIST_RESULT:
+		case ECSMSDllMsgType::GET_DIAGNOSTICS:
+			processBITEResponse(respType, data);
+			break;
+		case ECSMSDllMsgType::GET_ANT_LIST_INFO:
+			ProcessAntListResponse(data);
+			break;
+		case ECSMSDllMsgType::OCC_MSGLEN_DIST_RESPONSE:
+		case ECSMSDllMsgType::OCC_FREQ_VS_CHANNEL:
+		case ECSMSDllMsgType::OCC_CHANNEL_RESULT:
+		case ECSMSDllMsgType::OCC_STATUS:
+		case ECSMSDllMsgType::OCC_STATE_RESPONSE:
+		case ECSMSDllMsgType::OCC_SOLICIT_STATE_RESPONSE:
+		case ECSMSDllMsgType::OCC_SPECTRUM_RESPONSE:
+		case ECSMSDllMsgType::OCC_TIMEOFDAY_RESULT:
+		case ECSMSDllMsgType::OCC_EFLD_CHANNEL_RESULT:
+		case ECSMSDllMsgType::OCC_MSGLEN_CHANNEL_RESULT:
+		case ECSMSDllMsgType::OCC_EFLD_TIMEOFDAY_RESULT:
+			processOccupancyResponse(respType, data);
+			break;
+		case ECSMSDllMsgType::OCCDF_FREQ_VS_CHANNEL:
+		case ECSMSDllMsgType::OCCDF_SCANDF_VS_CHANNEL:
+		case ECSMSDllMsgType::OCCDF_STATUS:
+		case ECSMSDllMsgType::OCCDF_STATE_RESPONSE:
+		case ECSMSDllMsgType::OCCDF_SOLICIT_STATE_RESPONSE:
+			processOccupancyDFResponse(respType, data);
+			break;
+		case ECSMSDllMsgType::AVD_FREQ_VS_CHANNEL:
+		case ECSMSDllMsgType::AVD_OCC_CHANNEL_RESULT:
+		case ECSMSDllMsgType::AVD_FREQ_MEAS:
+		case ECSMSDllMsgType::AVD_BW_MEAS:
+		case ECSMSDllMsgType::AVD_SOLICIT_STATE_RESPONSE:
+		case ECSMSDllMsgType::AVD_STATE_RESPONSE:
+		case ECSMSDllMsgType::AVD_STATUS:
+			processAutoViolateResponse(respType, data);
+			break;
+		case ECSMSDllMsgType::GET_MEAS:
+		case ECSMSDllMsgType::VALIDATE_MEAS:
+			processMeasResponse(respType, sourceAddr, data);
+			break;
+		case ECSMSDllMsgType::SET_PAN_PARAMS:
+		case ECSMSDllMsgType::SET_AUDIO_PARAMS:
+		case ECSMSDllMsgType::FREE_AUDIO_CHANNEL:
+			processDemodCtrlResponse(respType, data);
+			break;
+		case ECSMSDllMsgType::GET_PAN:
+			processPanResponse(data);
+			break;
+		case ECSMSDllMsgType::GET_DM:
+
+			//m_taskType = ECSMSDllMsgType::GET_DM; // TODO should be in DM_STATUS reponse instead
+			break;
+		default:
+			break;
+	}
+	return;
+}
+
 /*
 * Felipe Machado - 23/08/2024
 * Data callback for Scorpio API
 */
 void OnDataFunc(_In_  unsigned long serverId, _In_ ECSMSDllMsgType respType, _In_ unsigned long sourceAddr, _In_ unsigned long desstAddr, _In_ SEquipCtrlMsg::UBody* data)
 {
-	std::string strData = std::string(reinterpret_cast<char*>(data), sizeof(data));
-	streamBuffer.push_back(strData);
+	OnData(respType, sourceAddr, desstAddr, data);
+	//streamBuffer.push_back(strData);
 	logMIAer.info("OnData received with type " + respType);
 	logMIAer.info("OnData received destination address " + desstAddr);
 	logMIAer.info("OnData received server ID " + serverId);

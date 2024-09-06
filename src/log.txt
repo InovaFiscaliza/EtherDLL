@@ -1,0 +1,7 @@
+[2024-09-06 18:36:24.303] [MIAerConn] [info] Starting...
+[2024-09-06 18:36:24.326] [MIAerConn] [info] Object creation successful
+[2024-09-06 18:36:44.440] [MIAerConn] [error] Failed to connect to 166.139.112.178: Command sent error
+[2024-09-06 18:36:44.447] [MIAerConn] [info] Stream service listening on port 3001
+[2024-09-06 18:36:44.447] [MIAerConn] [info] Control service listening on port 3000
+[2024-09-06 18:36:44.447] [MIAerConn] [info] Real time service listening on port 3003
+[2024-09-06 18:36:44.447] [MIAerConn] [info] Error service listening on port 3002

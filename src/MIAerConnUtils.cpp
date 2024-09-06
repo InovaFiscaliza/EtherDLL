@@ -263,7 +263,30 @@ SOccDFReqData* jsonToSOccDFReqData(nlohmann::json jsonObj) {
 	structSO.recordAudioDf = jsonObj["recordAudioDf"].is_null() == true ? NULL : jsonObj["recordAudioDf"].get<bool>();
 	structSO.numBands = jsonObj["numBands"].is_null() == true ? NULL : jsonObj["numBands"].get<unsigned short>();
 
-	return &structSO;
+	SEquipCtrlMsg::SRcvrCtrlCmd rcvrCtrl;
+	rcvrCtrl.agcTime = jsonObj["rcvrCtrl"]["agcTime"].is_null() == true ? NULL : jsonObj["rcvrCtrl"]["agcTime"].get<unsigned long>();
+	if (jsonObj["rcvrCtrl"]["bandwidth"].is_null() == false) {
+		rcvrCtrl.bandwidth = Units::Frequency(jsonObj["rcvrCtrl"]["bandwidth"].get<unsigned long>()).GetRaw();
+	}
+	if (jsonObj["rcvrCtrl"]["bfo"].is_null() == false) {
+		rcvrCtrl.bfo = Units::Frequency(jsonObj["rcvrCtrl"]["bfo"].get<unsigned long>()).GetRaw();
+	}
+	rcvrCtrl.detMode = jsonObj["rcvrCtrl"]["detMode"].is_null() == true ? (SSmsMsg::SRcvrCtrlCmdV1::EDetMode)NULL : jsonObj["rcvrCtrl"]["detMode"].get<SSmsMsg::SRcvrCtrlCmdV1::EDetMode>();
+	if (jsonObj["rcvrCtrl"]["freq"].is_null() == false) {
+		rcvrCtrl.freq = Units::Frequency(jsonObj["rcvrCtrl"]["freq"].get<unsigned long>()).GetRaw();
+	}
+
+	structSO.rcvrCtrl = rcvrCtrl;
+
+	auto occupDFbodySize = offsetof(SOccDFReqData, band) + jsonObj["numBands"].get<unsigned short>() * sizeof(SSmsMsg::SGetScanDfCmdV1::SBand);
+	SOccDFReqData* occDFReqMsg;
+	occDFReqMsg = (SOccDFReqData*)malloc(occupDFbodySize);
+	if (occDFReqMsg != nullptr)
+	{
+		memcpy(occDFReqMsg, &structSO, occupDFbodySize);
+	}
+
+	return occDFReqMsg;
 }
 
 SAVDReqData* jsonToSAVDReqData(nlohmann::json jsonObj) {
