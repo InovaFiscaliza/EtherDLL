@@ -188,7 +188,9 @@ SMeasReqData* jsonToSMeasReqData(nlohmann::json jsonObj) {
 
 	structSO.modulationCmd = modulationCmd;
 		
-	return &structSO;
+	SMeasReqData* m_measureReqMsg = (SMeasReqData*)malloc(sizeof(SMeasReqData));
+	memcpy(m_measureReqMsg, &structSO, sizeof(SMeasReqData));
+	return m_measureReqMsg;
 }
 
 SOccupReqData* jsonToSOccupReqData(nlohmann::json jsonObj) {
@@ -226,7 +228,11 @@ SOccupReqData* jsonToSOccupReqData(nlohmann::json jsonObj) {
 	structSO.storageTime = jsonObj["storageTime"].is_null() == true ? NULL : jsonObj["storageTime"].get<unsigned long>();
 	structSO.thresholdMethod = jsonObj["thresholdMethod"].is_null() == true ? (SEquipCtrlMsg::EThresholdMethod)NULL : jsonObj["thresholdMethod"].get<SEquipCtrlMsg::EThresholdMethod>();
 	
-	return &structSO;
+	auto occupbodySize = offsetof(SOccupReqData, band) + structSO.numBands * sizeof(SEquipCtrlMsg::SBandV4);
+	SOccupReqData* m_occReqMsg = (SOccupReqData*)malloc(occupbodySize);
+	memcpy(m_occReqMsg, &structSO, occupbodySize);
+	
+	return m_occReqMsg;
 }
 
 SOccDFReqData* jsonToSOccDFReqData(nlohmann::json jsonObj) {
@@ -323,7 +329,12 @@ SAVDReqData* jsonToSAVDReqData(nlohmann::json jsonObj) {
 	structSO.numBands = jsonObj["numBands"].is_null() == true ? NULL : jsonObj["numBands"].get<unsigned short>();
 	structSO.storageTime = jsonObj["storageTime"].is_null() == true ? NULL : jsonObj["storageTime"].get<unsigned long>();
 
-	return &structSO;
+	auto avdbodySize = offsetof(SAVDReqData, band) + structSO.numBands * sizeof(SEquipCtrlMsg::SBandV4);
+	SAVDReqData* avdReqMsg;
+	avdReqMsg = (SAVDReqData*)malloc(avdbodySize);
+	memcpy(avdReqMsg, &structSO, avdbodySize);
+
+	return avdReqMsg;
 }
 
 std::wstring stringToWString(const std::string& str) {
