@@ -1,43 +1,7 @@
-[2024-08-15 12:08:22.641] [MIAerConn] [info] Starting...
-[2024-08-15 12:08:22.687] [MIAerConn] [info] Object creation successful
-[2024-08-15 12:08:24.211] [MIAerConn] [info] Connected to station 166.139.112.178
-[2024-08-15 12:08:24.215] [MIAerConn] [info] Stream service listening on port 3001
-[2024-08-15 12:08:24.215] [MIAerConn] [info] Control service listening on port 3000
-[2024-08-15 12:08:26.995] [MIAerConn] [info] Stream service accepted connection from 0.0.0.0
-[2024-08-15 12:08:26.996] [MIAerConn] [info] Stream service generated sim data. Nothing from the station.
-[2024-08-15 12:10:09.726] [MIAerConn] [info] Stream service generated sim data. Nothing from the station.
-[2024-08-15 12:11:52.513] [MIAerConn] [info] Stream service generated sim data. Nothing from the station.
-[2024-08-15 12:13:35.392] [MIAerConn] [info] Stream service generated sim data. Nothing from the station.
-[2024-08-15 12:15:18.135] [MIAerConn] [info] Stream service generated sim data. Nothing from the station.
-[2024-08-15 12:15:18.646] [MIAerConn] [warning] Stream service data send failed. EC:10053
-[2024-08-15 12:15:18.646] [MIAerConn] [info] Stream service listening on port 3001
-[2024-08-15 12:15:18.647] [MIAerConn] [info] Stream service accepted connection from 0.0.0.0
-[2024-08-15 12:15:18.648] [MIAerConn] [info] Stream service generated sim data. Nothing from the station.
-[2024-08-15 12:15:50.817] [MIAerConn] [info] Control service accepted connection from 0.0.0.0
-[2024-08-15 12:15:52.835] [MIAerConn] [info] Processing command: {"setadd":"166.182.234.000"}
-[2024-08-15 12:16:02.750] [MIAerConn] [info] Control service waiting for commands from client...
-[2024-08-15 12:17:01.441] [MIAerConn] [info] Stream service generated sim data. Nothing from the station.
-[2024-08-15 12:17:54.073] [MIAerConn] [info] Control service waiting for commands from client...
-[2024-08-15 12:18:44.174] [MIAerConn] [info] Stream service generated sim data. Nothing from the station.
-[2024-08-15 12:19:45.331] [MIAerConn] [info] Control service waiting for commands from client...
-[2024-08-15 12:20:03.733] [MIAerConn] [info] Control service waiting for commands from client...
-[2024-08-15 12:20:04.931] [MIAerConn] [warning] Control service PING send failed. EC:10053
-[2024-08-15 12:20:04.933] [MIAerConn] [info] Control service connection with address664 lost.
-[2024-08-15 12:20:04.934] [MIAerConn] [info] Control service listening on port 3000
-[2024-08-15 12:20:04.934] [MIAerConn] [info] Control service accepted connection from 0.0.0.0
-[2024-08-15 12:20:05.008] [MIAerConn] [info] Processing command: {"setadd":"166.182.234.000"}
-[2024-08-15 12:20:14.944] [MIAerConn] [info] Control service waiting for commands from client...
-[2024-08-15 12:20:27.040] [MIAerConn] [info] Stream service generated sim data. Nothing from the station.
-[2024-08-15 12:22:06.226] [MIAerConn] [info] Control service waiting for commands from client...
-[2024-08-15 12:22:09.787] [MIAerConn] [info] Stream service generated sim data. Nothing from the station.
-[2024-08-15 12:22:10.301] [MIAerConn] [warning] Stream service data send failed. EC:10053
-[2024-08-15 12:22:10.302] [MIAerConn] [info] Stream service listening on port 3001
-[2024-08-15 12:22:10.302] [MIAerConn] [info] Stream service accepted connection from 0.0.0.0
-[2024-08-15 12:22:10.304] [MIAerConn] [info] Stream service generated sim data. Nothing from the station.
-[2024-08-15 12:23:53.100] [MIAerConn] [info] Stream service generated sim data. Nothing from the station.
-[2024-08-15 12:23:57.502] [MIAerConn] [info] Control service waiting for commands from client...
-[2024-08-15 12:25:35.812] [MIAerConn] [info] Stream service generated sim data. Nothing from the station.
-[2024-08-15 12:25:48.770] [MIAerConn] [info] Control service waiting for commands from client...
-[2024-08-15 12:27:18.681] [MIAerConn] [info] Stream service generated sim data. Nothing from the station.
-[2024-08-15 12:27:40.061] [MIAerConn] [info] Control service waiting for commands from client...
-[2024-08-15 12:29:01.397] [MIAerConn] [info] Stre
+[2024-09-06 18:36:24.303] [MIAerConn] [info] Starting...
+[2024-09-06 18:36:24.326] [MIAerConn] [info] Object creation successful
+[2024-09-06 18:36:44.440] [MIAerConn] [error] Failed to connect to 166.139.112.178: Command sent error
+[2024-09-06 18:36:44.447] [MIAerConn] [info] Stream service listening on port 3001
+[2024-09-06 18:36:44.447] [MIAerConn] [info] Control service listening on port 3000
+[2024-09-06 18:36:44.447] [MIAerConn] [info] Real time service listening on port 3003
+[2024-09-06 18:36:44.447] [MIAerConn] [info] Error service listening on port 3002

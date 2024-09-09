@@ -29,6 +29,12 @@
     <ClInclude Include="OccupSpectConnect.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="MIAerConnUtils.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MIAerLog.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MIAerConn.cpp">
@@ -38,6 +44,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="ExternalCodes.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MIAerConnUtils.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MIAerLog.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

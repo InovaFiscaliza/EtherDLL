@@ -27,7 +27,19 @@
       "timeout_s": 10000,
       "sleep_ms": 500,
       "check_period": 200
-    },    
+    },
+	"error": {
+      "port": 3002,
+      "timeout_s": 10000,
+      "sleep_ms": 500,
+      "check_period": 200
+    },
+	"realtime": {
+      "port": 3003,
+      "timeout_s": 10000,
+      "sleep_ms": 500,
+      "check_period": 200
+    },
     "simulated": true
   }
 }
