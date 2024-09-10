@@ -1,0 +1,20 @@
+{
+    "commandCode": 12,
+    "occupancyParams": {
+        "ant": 1,
+        "numBands": 1,
+        "storageTime": 15,
+        "measurementTime": 300,
+        "numAzimuths": 360,
+        "confidence": 75,
+        "recordHoldoff": 5,
+        "scanDfThreshold": 10,
+        "recordAudioDf": false,
+        "band": {
+            "channelBandwidth": 25000,
+            "exclude": false,
+            "highFrequency": 99975000,
+            "lowFrequency": 90000000
+        }
+    }
+}
