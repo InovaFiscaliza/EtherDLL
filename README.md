@@ -1,6 +1,32 @@
+<!-- Improved compatibility of back to top link: See: https://github.com/othneildrew/Best-README-Template/pull/73 -->
+<a name="indexerd-md-top"></a>
+
+<!-- PROJECT SHIELDS -->
+<!--
+*** based on https://github.com/othneildrew/Best-README-Template
+*** Reference links are enclosed in brackets [ ] instead of parentheses ( ).
+*** See the bottom of this document for the declaration of the reference variables
+*** for contributors-url, forks-url, etc. This is an optional, concise syntax you may use.
+*** https://www.markdownguide.org/basic-syntax/#reference-style-links
+-->
 # MIAerConn
 
-## Description
+<!-- TABLE OF CONTENTS -->
+<details>
+  <summary>Table of Contents</summary>
+  <ol>
+    <li><a href="#about">About MIAerConn</a></li>
+    <li><a href="#installation">Instalation</a></li>
+    <li><a href="#detailed-description">Detailed Description</a></li>
+    <li><a href="#getting-started">Getting Started</a></li>
+    <li><a href="#contributing">Contributing</a></li>
+    <li><a href="#license">License</a></li>
+    <li><a href="#additional-references">Additional References</a></li>
+  </ol>
+</details>
+
+<!-- ABOUT THE PROJECT -->
+# About
 
 The application is a Windows Service that may also be accessed as a desktop application for debug and provides a socket interface for the MIAer Spectrum Monitoring Stations through the manufactures specific API.
 
@@ -22,7 +48,10 @@ A simulation mode is also provided, such as to enable testing of the service wit
 
 Activation or deactivation of the simulation mode is done through the configuration file.
 
-## Installation
+<p align="right">(<a href="#indexerd-md-top">back to top</a>)</p>
+
+<!-- Installation -->
+# Installation
 
 The application is installed as a Windows Service and must be installed with administrative privileges.
 
@@ -56,18 +85,10 @@ sc delete MIAerConn
 
 To completely remove the service, the executable and configuration file must be deleted.
 
-## Dev Environment
+<p align="right">(<a href="#indexerd-md-top">back to top</a>)</p>
 
-This project was created using Visual Studio Community 2022 and the project files are included in the repository.
-
-This repository includes libraries from other repositories, which are included as submodules. Namely: 
-
-- [spdlog](https://github.com/gabime/spdlog) used for logging.
-- [nlohmann json](https://github.com/nlohmann/json) used to read configuration data and handle json format.
-
-The solution includes references to header files and libraries from the manufacturer's API, which are not included in this repository and must be provided by the manufacturer under their licensing terms.
-
-## Detailed Description
+<!-- Detailed Description -->
+# Detailed Description
 
 The application provides the communication to clients through socket connections, using multiple ports for different services, simplifying client parsing of the data.
 
@@ -79,3 +100,62 @@ Command, Data and Error channels use JSON format for data serialization.
 
 Stream channel uses binary format for data serialization using the sequence of bytes '[39 10 13 39]' as the end of each message block, for client synchronization.
 
+<p align="right">(<a href="#indexerd-md-top">back to top</a>)</p>
+
+<!-- GETTING STARTED -->
+# Getting Started
+
+This project was created using Visual Studio Community 2022 and the project files are included in the repository.
+
+This repository includes libraries from other repositories, which are included as submodules. Namely:
+
+- [spdlog](https://github.com/gabime/spdlog) used for logging.
+- [nlohmann json](https://github.com/nlohmann/json) used to read configuration data and handle json format.
+
+The solution includes references to header files and libraries from the manufacturer's API, which are not included in this repository and must be provided by the manufacturer under their licensing terms. Namely these are:
+- MoreEquipCtrlMsg.h
+- OccupSpectConnect.h
+- StdAfx.h
+- StdAfx.cpp
+
+These files should be copied to the src folder of the project from the demo project provided by the manufacturer.
+
+<p align="right">(<a href="#indexerd-md-top">back to top</a>)</p>
+
+<!-- CONTRIBUTING -->
+# Contributing
+
+Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
+
+If you have a suggestion that would make this better, please fork the repo and create a pull request. You can also simply open an issue with the tag "enhancement".
+Don't forget to give the project a star! Thanks again!
+
+1. Fork the Project
+2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the Branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+<p align="right">(<a href="#indexerd-md-top">back to top</a>)</p>
+
+<!-- LICENSE -->
+# License
+
+Distributed under the GNU General Public License (GPL), version 3. See [`LICENSE.txt`](.\LICENSE) for more information.
+
+For additional information, please check <https://www.gnu.org/licenses/quick-guide-gplv3.html>
+
+This license model was selected with the idea of enabling collaboration of anyone interested in projects listed within this group.
+
+It is in line with the Brazilian Public Software directives, as published at: <https://softwarepublico.gov.br/social/articles/0004/5936/Manual_do_Ofertante_Temporario_04.10.2016.pdf>
+
+Further reading material can be found at:
+- <http://copyfree.org/policy/copyleft>
+- <https://opensource.stackexchange.com/questions/9805/can-i-license-my-project-with-an-open-source-license-but-disallow-commercial-use>
+- <https://opensource.stackexchange.com/questions/21/whats-the-difference-between-permissive-and-copyleft-licenses/42#42>
+
+<p align="right">(<a href="#indexerd-md-top">back to top</a>)</p>
+
+# Additional References
+
+<p align="right">(<a href="#indexerd-md-top">back to top</a>)</p>
