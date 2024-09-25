@@ -39,6 +39,10 @@ bld/
 [Ll]og/
 [Ll]ogs/
 
+# Matlab auto-generated files
+*.asv
+.resources/
+
 # Visual Studio 2015/2017 cache/options directory
 .vs/
 # Uncomment if you have tasks that create the project's static files in wwwroot
@@ -367,3 +371,31 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+test/resources/project/uuid-c71dc442-1d04-4e61-8840-9484483d19ff.xml
+test/resources/project/EEtUlUb-dLAdf0KpMVivaUlztwA/tgo9KOcHNDsF0aKV389ek7YHY_Qd.xml
+test/resources/project/EEtUlUb-dLAdf0KpMVivaUlztwA/tgo9KOcHNDsF0aKV389ek7YHY_Qp.xml
+test/resources/project/fjRQtWiSIy7hIlj-Kmk87M7s21k/NjSPEMsIuLUyIpr2u1Js5bVPsOsd.xml
+test/resources/project/fjRQtWiSIy7hIlj-Kmk87M7s21k/NjSPEMsIuLUyIpr2u1Js5bVPsOsp.xml
+test/resources/project/NjSPEMsIuLUyIpr2u1Js5bVPsOs/2kj09UetkV_lru3gvSPXnY6-nM4d.xml
+test/resources/project/NjSPEMsIuLUyIpr2u1Js5bVPsOs/2kj09UetkV_lru3gvSPXnY6-nM4p.xml
+test/resources/project/NjSPEMsIuLUyIpr2u1Js5bVPsOs/aEHSZBIY-yve10yGis12Zr5DLZod.xml
+test/resources/project/NjSPEMsIuLUyIpr2u1Js5bVPsOs/aEHSZBIY-yve10yGis12Zr5DLZop.xml
+test/resources/project/NjSPEMsIuLUyIpr2u1Js5bVPsOs/j4xwF_j8iFTVayUMfxLgMnTbencd.xml
+test/resources/project/NjSPEMsIuLUyIpr2u1Js5bVPsOs/j4xwF_j8iFTVayUMfxLgMnTbencp.xml
+test/resources/project/NjSPEMsIuLUyIpr2u1Js5bVPsOs/KKyDJtbdIBOlaeHmIZd5VX6vqx8d.xml
+test/resources/project/NjSPEMsIuLUyIpr2u1Js5bVPsOs/KKyDJtbdIBOlaeHmIZd5VX6vqx8p.xml
+test/resources/project/NjSPEMsIuLUyIpr2u1Js5bVPsOs/QWNDYJD5mGW1bWYvPx9DtKnxzw4d.xml
+test/resources/project/NjSPEMsIuLUyIpr2u1Js5bVPsOs/QWNDYJD5mGW1bWYvPx9DtKnxzw4p.xml
+test/resources/project/NjSPEMsIuLUyIpr2u1Js5bVPsOs/R1RggVhA72agIvELiuhWPRS8F0Id.xml
+test/resources/project/NjSPEMsIuLUyIpr2u1Js5bVPsOs/R1RggVhA72agIvELiuhWPRS8F0Ip.xml
+test/resources/project/NjSPEMsIuLUyIpr2u1Js5bVPsOs/r8LR4nLmg9ai3oHrW1r_-KocQzkd.xml
+test/resources/project/NjSPEMsIuLUyIpr2u1Js5bVPsOs/r8LR4nLmg9ai3oHrW1r_-KocQzkp.xml
+test/resources/project/qaw0eS1zuuY1ar9TdPn1GMfrjbQ/R_XU6XO0AqAX0FrOwf-U0f8Z_eQd.xml
+test/resources/project/qaw0eS1zuuY1ar9TdPn1GMfrjbQ/R_XU6XO0AqAX0FrOwf-U0f8Z_eQp.xml
+test/resources/project/qaw0eS1zuuY1ar9TdPn1GMfrjbQ/xMZXc9bjupW6Xz8VLAvlKeftTQId.xml
+test/resources/project/qaw0eS1zuuY1ar9TdPn1GMfrjbQ/xMZXc9bjupW6Xz8VLAvlKeftTQIp.xml
+test/resources/project/root/EEtUlUb-dLAdf0KpMVivaUlztwAp.xml
+test/resources/project/root/fjRQtWiSIy7hIlj-Kmk87M7s21kp.xml
+test/resources/project/root/GiiBklLgTxteCEmomM8RCvWT0nQd.xml
+test/resources/project/root/GiiBklLgTxteCEmomM8RCvWT0nQp.xml
+test/resources/project/root/qaw0eS1zuuY1ar9TdPn1GMfrjbQp.xml
