@@ -1,0 +1,45 @@
+{
+    "log": {
+        "file": {
+            "enable": true,
+            "level": "trace",
+            "path": "log.txt"
+        }
+    },
+    "proxy": {
+        "address": "localhost",
+        "timeout_s": 10
+    },
+    "service": {
+        "command": {
+            "port": 3000,
+            "timeout_s": 10000,
+            "sleep_ms": 100,
+            "check_period": 10
+        },
+        "data": {
+            "port": 3001,
+            "timeout_s": 10000,
+            "sleep_ms": 500,
+            "check_period": 200
+        },
+        "error": {
+            "port": 3002,
+            "timeout_s": 10000,
+            "sleep_ms": 500,
+            "check_period": 200
+        },
+        "realtime": {
+            "port": 3003,
+            "timeout_s": 10000,
+            "sleep_ms": 500,
+            "check_period": 200
+        },
+        "sound": {
+            "port": 5060,
+            "timeout_s": 10000,
+            "sleep_ms": 500,
+            "check_period": 200
+        }
+    }
+}
