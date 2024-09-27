@@ -38,25 +38,78 @@ classdef appTestMiaer_exported < matlab.apps.AppBase
     end
 
     
+    %-----------------------------------------------------------------%
     properties (Constant)
+        CHANNEL_NAME = {'Command','Data Callback','Real Time Data','Error','Sound'}
+        
         RED_LAMP = [0.64,0.08,0.18]
         GREEN_LAMP = [0.47,0.67,0.19]
         BLUE_LAMP = [0.30,0.75,0.93]
         YELLOW_LAMP = [0.93,0.69,0.13]
-
-        CHANNEL_NAME = {'Command','Data Callback','Real Time Data','Error','Sound'}
-
-
     end
+
+    %-----------------------------------------------------------------%
     properties (Access = public)
         config; % Store configuration structure read from json file at startup
-        connection % Store command channel socket connection
+        connection = cell(5,1)% Store command channel socket connection
     end
     
-    methods (Access = private)
+    %-----------------------------------------------------------------%
+    methods (Access = public)
         
+        %-----------------------------------------------------------------%
+        function loadConf(app)
+        %LOADCONF load app configuration from json file
+        %   Use a default json file to define constants that control the
+        %   application and further load command examples in json format to populate the command list.
 
+            try
+                % try to read the json file
+                app.config = jsondecode(fileread('appConfig.json'));
+            catch
+                % use default values if the file is not found
+                warning('Failed to read configuration from file appConfig.json');
+                app.config = struct('log', struct('file', struct('enable', true, 'level', 'trace', 'path', 'log.txt')), ...
+                                                'proxy', struct('address', 'localhost', 'timeout_s', 10), ...
+                                                'service', struct('command', struct('port', 3000, 'timeout_s', 10000, 'sleep_ms', 100, 'check_period', 10,'path','D:/Documents/Anatel/Aplicativos/GitHub/MIAerConnVS/test'), ...
+                                                                    'stream', struct('port', 3001, 'timeout_s', 10000, 'sleep_ms', 500, 'check_period', 200), ...
+                                                                    'error', struct('port', 3002, 'timeout_s', 10000, 'sleep_ms', 500, 'check_period', 200), ...
+                                                                    'realtime', struct('port', 3003, 'timeout_s', 10000, 'sleep_ms', 500, 'check_period', 200)));
+            end
+        
+            % list json files present in the app folder
+            cd (app.config.service.command.path);
+            files = dir('cmd*.json');
+        
+            % load the command list from the json files
+            items_size = length(files)+1;
+            cmd_items{items_size} = [];
+            cmd_values{items_size} = [];
+            
+            cmd_items{1} =  '<select a command>';
+            cmd_values{1} = '';
+        
+            for i = 2:items_size
+                try
+                    % create a command name by removing the initial lettes 'cmd' and the extension '.json' from the file name
+                    filename = files(i-1).name;
+                    cmd_items{i} = filename(4:end-5);
+                    cmd_values{i} = fileread(filename);
+                catch
+                    % skip the file if it is not in json format
+                    warning('Failed to read command list from file %s', filename);
+                    continue;
+                end
+            end
+
+            app.CommandDropDown.Items = cmd_items;
+            app.CommandDropDown.ItemsData = cmd_values;
+        
+        end
+        
+        %-----------------------------------------------------------------%
         function lamp_switch(app,lamp,colour)
+            % Change lamp colour according to index and value
             switch lamp
                 case 1
                     app.CMDLamp.Color = colour;
@@ -71,9 +124,13 @@ classdef appTestMiaer_exported < matlab.apps.AppBase
             end
         end
 
+        %-----------------------------------------------------------------%
         function connect(app)
+            % Connect the various socket interfaces desginated as channels
+            % and set corresponding lamp indication in the UI
+
             try
-                app.connection{1} = tcpclient(conf.proxy.address, conf.service.command.port, 'Timeout', conf.service.command.timeout_s, 'ConnectTimeout', conf.service.command.timeout_s, 'Tag', 'cmd');
+                app.connection{1} = tcpclient(app.config.proxy.address, app.config.service.command.port, 'Timeout', app.config.service.command.timeout_s, 'ConnectTimeout', app.config.service.command.timeout_s, 'Tag', 'cmd');
                 app.lamp_switch(1,app.GREEN_LAMP);
             catch
                 warning('Failed to connect to the command channel');
@@ -82,7 +139,7 @@ classdef appTestMiaer_exported < matlab.apps.AppBase
             end
         
             try
-                app.connection{2} = tcpclient(conf.proxy.address, conf.service.data.port, 'Timeout', conf.service.data.timeout_s, 'ConnectTimeout', conf.service.data.timeout_s, 'Tag', 'dcb');
+                app.connection{2} = tcpclient(app.config.proxy.address,app.config.service.data.port, 'Timeout',app.config.service.data.timeout_s, 'ConnectTimeout',app.config.service.data.timeout_s, 'Tag', 'dcb');
                 app.lamp_switch(2,app.GREEN_LAMP);
             catch
                 warning('Failed to connect to the data channel');
@@ -91,7 +148,7 @@ classdef appTestMiaer_exported < matlab.apps.AppBase
             end
 
             try
-                app.connection{3} = tcpclient(conf.proxy.address, conf.service.realtime.port, 'Timeout', conf.service.realtime.timeout_s, 'ConnectTimeout', conf.service.realtime.timeout_s, 'Tag', 'rtdcb');
+                app.connection{3} = tcpclient(app.config.proxy.address,app.config.service.realtime.port, 'Timeout',app.config.service.realtime.timeout_s, 'ConnectTimeout',app.config.service.realtime.timeout_s, 'Tag', 'rtdcb');
                 app.lamp_switch(3,app.GREEN_LAMP);
             catch
                 warning('Failed to connect to the realtime channel');
@@ -100,7 +157,7 @@ classdef appTestMiaer_exported < matlab.apps.AppBase
             end        
         
             try
-                app.connection{4} = tcpclient(conf.proxy.address, conf.service.error.port, 'Timeout', conf.service.error.timeout_s, 'ConnectTimeout', conf.service.error.timeout_s, 'Tag', 'ercb');
+                app.connection{4} = tcpclient(app.config.proxy.address,app.config.service.error.port, 'Timeout',app.config.service.error.timeout_s, 'ConnectTimeout',app.config.service.error.timeout_s, 'Tag', 'ercb');
                 app.lamp_switch(4,app.GREEN_LAMP);
             catch
                 warning('Failed to connect to the error channel');
@@ -109,7 +166,7 @@ classdef appTestMiaer_exported < matlab.apps.AppBase
             end
         
             try
-                app.connection{5} = tcpclient(conf.proxy.address, conf.service.sound.port, 'Timeout', conf.service.sound.timeout_s, 'ConnectTimeout', conf.service.sound.timeout_s, 'Tag', 'snd');
+                app.connection{5} = tcpclient(app.config.proxy.address,app.config.service.sound.port, 'Timeout',app.config.service.sound.timeout_s, 'ConnectTimeout',app.config.service.sound.timeout_s, 'Tag', 'snd');
                 app.lamp_switch(5,app.GREEN_LAMP);
             catch
                 warning('Failed to connect to the sound channel');
@@ -118,10 +175,15 @@ classdef appTestMiaer_exported < matlab.apps.AppBase
             end            
         end
 
+        %-----------------------------------------------------------------%
         function disconnect(app)
+            % Disconnect all channels and reset lamps
+
             for i = 1:5
                 try
-                    clear(app.connection{i});
+                    flush(app.connection{i});
+                    clear app.connection{i};
+                    delete(app.connection{i});
                     app.lamp_switch(i,app.RED_LAMP);
                 catch
                     warning('Failed to disconnect from %s channel.',app.CHANNEL_NAME{i});
@@ -138,23 +200,36 @@ classdef appTestMiaer_exported < matlab.apps.AppBase
 
         % Code that executes after component creation
         function startupFcn(app)
-            % load client config and command samples
-            [app.config, command_list] = loadConf();
-
-            app.connection = cell(5,1);
-
-            app.CommandDropDown.Value = string(fieldnames(command_list));
+            % load client config, command samples and start app
+            app.loadConf();
         end
 
         % Value changed function: ConnectButton
         function ConnectButtonValueChanged(app, event)
-            if ~app.ConnectButton.Value
+            if app.ConnectButton.Value
+                app.ConnectButton.Enable = false;
+                app.connect();
                 app.ConnectButton.Text = 'Disconnect';
-                app.connect(app);
+                app.ConnectButton.Enable = true;
             else
+                app.ConnectButton.Enable = false;
+                app.disconnect();
                 app.ConnectButton.Text = 'Connect';
-                app.disconnect(app);
+                app.ConnectButton.Enable = true;
             end
+        end
+
+        % Clicked callback: CommandDropDown
+        function CommandDropDownClicked(app, event)
+            app.CommandDropDown.FontColor = [0.0, 0.0, 0.0];
+            app.CommandDropDown.Items{1} = '<none>';
+        end
+
+        % Value changed function: CommandDropDown
+        function CommandDropDownValueChanged(app, event)
+            command = app.CommandDropDown.Value;
+
+            write(app.connection{1},command);
         end
 
         % Changes arrangement of the app based on UIFigure width
@@ -217,14 +292,14 @@ classdef appTestMiaer_exported < matlab.apps.AppBase
 
             % Create CMDLamp
             app.CMDLamp = uilamp(app.GridLayout2);
-            app.CMDLamp.Tooltip = {'Command connection activity. Channel used to by the client to send commands'};
+            app.CMDLamp.Tooltip = {'Command connection activity. Channel used by the client to send commands'};
             app.CMDLamp.Layout.Row = 3;
             app.CMDLamp.Layout.Column = 1;
             app.CMDLamp.Color = [0.6353 0.0784 0.1843];
 
             % Create RTDLamp
             app.RTDLamp = uilamp(app.GridLayout2);
-            app.RTDLamp.Tooltip = {'RealTime Callback connection activity.. Used for binary streaming for traces, occupancy and DF sweeps'};
+            app.RTDLamp.Tooltip = {'RealTime Callback connection activity. Used for binary streaming for traces, occupancy and DF sweeps'};
             app.RTDLamp.Layout.Row = 3;
             app.RTDLamp.Layout.Column = 3;
             app.RTDLamp.Color = [0.6353 0.0784 0.1843];
@@ -287,8 +362,13 @@ classdef appTestMiaer_exported < matlab.apps.AppBase
 
             % Create CommandDropDown
             app.CommandDropDown = uidropdown(app.GridLayout2);
+            app.CommandDropDown.Items = {'<select a command>'};
+            app.CommandDropDown.ValueChangedFcn = createCallbackFcn(app, @CommandDropDownValueChanged, true);
+            app.CommandDropDown.FontColor = [0.8 0.8 0.8];
             app.CommandDropDown.Layout.Row = 5;
             app.CommandDropDown.Layout.Column = [1 5];
+            app.CommandDropDown.ClickedFcn = createCallbackFcn(app, @CommandDropDownClicked, true);
+            app.CommandDropDown.Value = '<select a command>';
 
             % Create DataReceivedTextAreaLabel
             app.DataReceivedTextAreaLabel = uilabel(app.GridLayout2);
@@ -322,7 +402,6 @@ classdef appTestMiaer_exported < matlab.apps.AppBase
             app.ConnectButton = uibutton(app.GridLayout2, 'state');
             app.ConnectButton.ValueChangedFcn = createCallbackFcn(app, @ConnectButtonValueChanged, true);
             app.ConnectButton.Text = 'Connect';
-            app.ConnectButton.FontColor = [0.9294 0.6902 0.1294];
             app.ConnectButton.Layout.Row = 1;
             app.ConnectButton.Layout.Column = [1 5];
 
