@@ -6,12 +6,25 @@ classdef appTestMiaer_exported < matlab.apps.AppBase
         GridLayout                 matlab.ui.container.GridLayout
         LeftPanel                  matlab.ui.container.Panel
         GridLayout2                matlab.ui.container.GridLayout
+        TabGroup                   matlab.ui.container.TabGroup
+        DCBTab                     matlab.ui.container.Tab
+        dcbText                    matlab.ui.control.TextArea
+        TextArea_3Label            matlab.ui.control.Label
+        RTDTab                     matlab.ui.container.Tab
+        rtdText                    matlab.ui.control.TextArea
+        TextArea_2Label            matlab.ui.control.Label
+        ERRTab                     matlab.ui.container.Tab
+        errText                    matlab.ui.control.TextArea
+        Label_3                    matlab.ui.control.Label
+        SNDTab                     matlab.ui.container.Tab
+        VolumeKnob                 matlab.ui.control.Knob
+        VolumeKnobLabel            matlab.ui.control.Label
+        Gauge                      matlab.ui.control.SemicircularGauge
+        Label_2                    matlab.ui.control.Label
+        CMDTab                     matlab.ui.container.Tab
+        cmdText                    matlab.ui.control.TextArea
+        Label                      matlab.ui.control.Label
         ConnectButton              matlab.ui.control.StateButton
-        Tree                       matlab.ui.container.Tree
-        Node                       matlab.ui.container.TreeNode
-        Node2                      matlab.ui.container.TreeNode
-        Node3                      matlab.ui.container.TreeNode
-        Node4                      matlab.ui.container.TreeNode
         DataReceivedTextAreaLabel  matlab.ui.control.Label
         CommandDropDown            matlab.ui.control.DropDown
         CommandDropDownLabel       matlab.ui.control.Label
@@ -27,9 +40,9 @@ classdef appTestMiaer_exported < matlab.apps.AppBase
         CMDLampLabel               matlab.ui.control.Label
         RightPanel                 matlab.ui.container.Panel
         GridLayout3                matlab.ui.container.GridLayout
+        SPTAxes                    matlab.ui.control.UIAxes
         OCCAxes                    matlab.ui.control.UIAxes
         AOAAxes                    matlab.ui.control.UIAxes
-        SPTAxes                    matlab.ui.control.UIAxes
     end
 
     % Properties that correspond to apps with auto-reflow
@@ -125,12 +138,21 @@ classdef appTestMiaer_exported < matlab.apps.AppBase
         end
 
         %-----------------------------------------------------------------%
+        function lamp_blink(app,lamp)
+            lamp_switch(app,lamp,app.BLUE_LAMP);
+            pause(1);
+            lamp_switch(app,lamp,app.GREEN_LAMP);
+        end
+
+        %-----------------------------------------------------------------%
         function connect(app)
             % Connect the various socket interfaces desginated as channels
             % and set corresponding lamp indication in the UI
 
             try
                 app.connection{1} = tcpclient(app.config.proxy.address, app.config.service.command.port, 'Timeout', app.config.service.command.timeout_s, 'ConnectTimeout', app.config.service.command.timeout_s, 'Tag', 'cmd');
+                configureCallback(app.connection{1},"terminator",@app.cmdChannelCB);
+                configureTerminator(app.connection{1},"CR/LF");
                 app.lamp_switch(1,app.GREEN_LAMP);
             catch
                 warning('Failed to connect to the command channel');
@@ -140,6 +162,8 @@ classdef appTestMiaer_exported < matlab.apps.AppBase
         
             try
                 app.connection{2} = tcpclient(app.config.proxy.address,app.config.service.data.port, 'Timeout',app.config.service.data.timeout_s, 'ConnectTimeout',app.config.service.data.timeout_s, 'Tag', 'dcb');
+                configureCallback(app.connection{1},"terminator",@app.dcbChannelCB);
+                configureTerminator(app.connection{1},"CR/LF");
                 app.lamp_switch(2,app.GREEN_LAMP);
             catch
                 warning('Failed to connect to the data channel');
@@ -149,6 +173,8 @@ classdef appTestMiaer_exported < matlab.apps.AppBase
 
             try
                 app.connection{3} = tcpclient(app.config.proxy.address,app.config.service.realtime.port, 'Timeout',app.config.service.realtime.timeout_s, 'ConnectTimeout',app.config.service.realtime.timeout_s, 'Tag', 'rtdcb');
+                configureCallback(app.connection{1},"terminator",@app.rtdChannelCB);
+                configureTerminator(app.connection{1},"CR/LF");
                 app.lamp_switch(3,app.GREEN_LAMP);
             catch
                 warning('Failed to connect to the realtime channel');
@@ -158,6 +184,8 @@ classdef appTestMiaer_exported < matlab.apps.AppBase
         
             try
                 app.connection{4} = tcpclient(app.config.proxy.address,app.config.service.error.port, 'Timeout',app.config.service.error.timeout_s, 'ConnectTimeout',app.config.service.error.timeout_s, 'Tag', 'ercb');
+                configureCallback(app.connection{1},"terminator",@app.errChannelCB);
+                configureTerminator(app.connection{1},"CR/LF");
                 app.lamp_switch(4,app.GREEN_LAMP);
             catch
                 warning('Failed to connect to the error channel');
@@ -165,21 +193,25 @@ classdef appTestMiaer_exported < matlab.apps.AppBase
                 app.connection{4} = [];
             end
         
+            %{
             try
                 app.connection{5} = tcpclient(app.config.proxy.address,app.config.service.sound.port, 'Timeout',app.config.service.sound.timeout_s, 'ConnectTimeout',app.config.service.sound.timeout_s, 'Tag', 'snd');
+                configureCallback(app.connection{1},"terminator",@app.sndChannelCB);
+                configureTerminator(app.connection{1},"CR/LF");                
                 app.lamp_switch(5,app.GREEN_LAMP);
             catch
                 warning('Failed to connect to the sound channel');
                 app.lamp_switch(5,app.RED_LAMP);
                 app.connection{5} = [];
-            end            
+            end 
+            %}
         end
 
         %-----------------------------------------------------------------%
         function disconnect(app)
             % Disconnect all channels and reset lamps
 
-            for i = 1:5
+            for i = 1:4 % change to 5 to include sound
                 try
                     flush(app.connection{i});
                     clear app.connection{i};
@@ -192,8 +224,39 @@ classdef appTestMiaer_exported < matlab.apps.AppBase
             end
         end
 
-    end
+        %-----------------------------------------------------------------%
+        function cmdChannelCB(app, src, ~)
+            % Handle incomming data in the command channel
+            app.cmdText.Value = read(src,src.BytesAvailableFcnCount,"uint8");
+            lamp_blink(app,1);
+        end
 
+        %-----------------------------------------------------------------%
+        function dcbChannelCB(app, src, ~)
+            % Handle incomming data in the data calback channel
+            app.dcbText.Value = read(src,src.BytesAvailableFcnCount,"uint8");
+            lamp_blink(app,2);
+        end
+
+        function rtdChannelCB(app, src, ~)
+            % Handle incomming data in the data calback channel
+            app.rtdText.Value = read(src,src.BytesAvailableFcnCount,"uint8");
+            lamp_blink(app,3);
+        end
+
+        function errChannelCB(app, src, ~)
+            % Handle incomming data in the data calback channel
+            app.errText.Value = read(src,src.BytesAvailableFcnCount,"uint8");
+            lamp_blink(app,4);
+        end
+
+        function sndChannelCB(app, src, ~)
+            % Handle incomming data in the data calback channel
+            app.Gauge = read(src,src.BytesAvailableFcnCount,"uint8");
+            lamp_blink(app,5);
+        end
+
+    end
 
     % Callbacks that handle component events
     methods (Access = private)
@@ -202,6 +265,7 @@ classdef appTestMiaer_exported < matlab.apps.AppBase
         function startupFcn(app)
             % load client config, command samples and start app
             app.loadConf();
+            pause on
         end
 
         % Value changed function: ConnectButton
@@ -228,7 +292,6 @@ classdef appTestMiaer_exported < matlab.apps.AppBase
         % Value changed function: CommandDropDown
         function CommandDropDownValueChanged(app, event)
             command = app.CommandDropDown.Value;
-
             write(app.connection{1},command);
         end
 
@@ -237,14 +300,14 @@ classdef appTestMiaer_exported < matlab.apps.AppBase
             currentFigureWidth = app.UIFigure.Position(3);
             if(currentFigureWidth <= app.onePanelWidth)
                 % Change to a 2x1 grid
-                app.GridLayout.RowHeight = {717, 717};
+                app.GridLayout.RowHeight = {768, 768};
                 app.GridLayout.ColumnWidth = {'1x'};
                 app.RightPanel.Layout.Row = 2;
                 app.RightPanel.Layout.Column = 1;
             else
                 % Change to a 1x2 grid
                 app.GridLayout.RowHeight = {'1x'};
-                app.GridLayout.ColumnWidth = {212, '1x'};
+                app.GridLayout.ColumnWidth = {332, '1x'};
                 app.RightPanel.Layout.Row = 1;
                 app.RightPanel.Layout.Column = 2;
             end
@@ -260,13 +323,13 @@ classdef appTestMiaer_exported < matlab.apps.AppBase
             % Create UIFigure and hide until all components are created
             app.UIFigure = uifigure('Visible', 'off');
             app.UIFigure.AutoResizeChildren = 'off';
-            app.UIFigure.Position = [100 100 733 717];
+            app.UIFigure.Position = [100 100 853 768];
             app.UIFigure.Name = 'MATLAB App';
             app.UIFigure.SizeChangedFcn = createCallbackFcn(app, @updateAppLayout, true);
 
             % Create GridLayout
             app.GridLayout = uigridlayout(app.UIFigure);
-            app.GridLayout.ColumnWidth = {212, '1x'};
+            app.GridLayout.ColumnWidth = {332, '1x'};
             app.GridLayout.RowHeight = {'1x'};
             app.GridLayout.ColumnSpacing = 0;
             app.GridLayout.RowSpacing = 0;
@@ -285,7 +348,7 @@ classdef appTestMiaer_exported < matlab.apps.AppBase
 
             % Create CMDLampLabel
             app.CMDLampLabel = uilabel(app.GridLayout2);
-            app.CMDLampLabel.HorizontalAlignment = 'right';
+            app.CMDLampLabel.HorizontalAlignment = 'center';
             app.CMDLampLabel.Layout.Row = 2;
             app.CMDLampLabel.Layout.Column = 1;
             app.CMDLampLabel.Text = 'CMD';
@@ -306,14 +369,14 @@ classdef appTestMiaer_exported < matlab.apps.AppBase
 
             % Create RTDLampLabel
             app.RTDLampLabel = uilabel(app.GridLayout2);
-            app.RTDLampLabel.HorizontalAlignment = 'right';
+            app.RTDLampLabel.HorizontalAlignment = 'center';
             app.RTDLampLabel.Layout.Row = 2;
             app.RTDLampLabel.Layout.Column = 3;
             app.RTDLampLabel.Text = 'RTD';
 
             % Create DCBLampLabel
             app.DCBLampLabel = uilabel(app.GridLayout2);
-            app.DCBLampLabel.HorizontalAlignment = 'right';
+            app.DCBLampLabel.HorizontalAlignment = 'center';
             app.DCBLampLabel.Layout.Row = 2;
             app.DCBLampLabel.Layout.Column = 2;
             app.DCBLampLabel.Text = 'DCB';
@@ -327,7 +390,7 @@ classdef appTestMiaer_exported < matlab.apps.AppBase
 
             % Create ERRLampLabel
             app.ERRLampLabel = uilabel(app.GridLayout2);
-            app.ERRLampLabel.HorizontalAlignment = 'right';
+            app.ERRLampLabel.HorizontalAlignment = 'center';
             app.ERRLampLabel.Layout.Row = 2;
             app.ERRLampLabel.Layout.Column = 4;
             app.ERRLampLabel.Text = 'ERR';
@@ -341,13 +404,15 @@ classdef appTestMiaer_exported < matlab.apps.AppBase
 
             % Create SNDLampLabel
             app.SNDLampLabel = uilabel(app.GridLayout2);
-            app.SNDLampLabel.HorizontalAlignment = 'right';
+            app.SNDLampLabel.HorizontalAlignment = 'center';
+            app.SNDLampLabel.Enable = 'off';
             app.SNDLampLabel.Layout.Row = 2;
             app.SNDLampLabel.Layout.Column = 5;
             app.SNDLampLabel.Text = 'SND';
 
             % Create SNDLamp
             app.SNDLamp = uilamp(app.GridLayout2);
+            app.SNDLamp.Enable = 'off';
             app.SNDLamp.Tooltip = {'Sound connection activity. Indicates that sound streaming is being performed.'};
             app.SNDLamp.Layout.Row = 3;
             app.SNDLamp.Layout.Column = 5;
@@ -377,33 +442,99 @@ classdef appTestMiaer_exported < matlab.apps.AppBase
             app.DataReceivedTextAreaLabel.Layout.Column = [1 5];
             app.DataReceivedTextAreaLabel.Text = 'Data Received';
 
-            % Create Tree
-            app.Tree = uitree(app.GridLayout2);
-            app.Tree.Layout.Row = 7;
-            app.Tree.Layout.Column = [1 5];
-
-            % Create Node
-            app.Node = uitreenode(app.Tree);
-            app.Node.Text = 'Node';
-
-            % Create Node2
-            app.Node2 = uitreenode(app.Node);
-            app.Node2.Text = 'Node2';
-
-            % Create Node3
-            app.Node3 = uitreenode(app.Node);
-            app.Node3.Text = 'Node3';
-
-            % Create Node4
-            app.Node4 = uitreenode(app.Node);
-            app.Node4.Text = 'Node4';
-
             % Create ConnectButton
             app.ConnectButton = uibutton(app.GridLayout2, 'state');
             app.ConnectButton.ValueChangedFcn = createCallbackFcn(app, @ConnectButtonValueChanged, true);
             app.ConnectButton.Text = 'Connect';
             app.ConnectButton.Layout.Row = 1;
             app.ConnectButton.Layout.Column = [1 5];
+
+            % Create TabGroup
+            app.TabGroup = uitabgroup(app.GridLayout2);
+            app.TabGroup.Layout.Row = 7;
+            app.TabGroup.Layout.Column = [1 5];
+
+            % Create CMDTab
+            app.CMDTab = uitab(app.TabGroup);
+            app.CMDTab.Title = 'CMD';
+
+            % Create Label
+            app.Label = uilabel(app.CMDTab);
+            app.Label.HorizontalAlignment = 'right';
+            app.Label.Position = [1 480 25 22];
+            app.Label.Text = '';
+
+            % Create cmdText
+            app.cmdText = uitextarea(app.CMDTab);
+            app.cmdText.Position = [1 1 308 503];
+
+            % Create DCBTab
+            app.DCBTab = uitab(app.TabGroup);
+            app.DCBTab.Title = 'DCB';
+
+            % Create TextArea_3Label
+            app.TextArea_3Label = uilabel(app.DCBTab);
+            app.TextArea_3Label.HorizontalAlignment = 'right';
+            app.TextArea_3Label.Position = [1 480 25 22];
+            app.TextArea_3Label.Text = '';
+
+            % Create dcbText
+            app.dcbText = uitextarea(app.DCBTab);
+            app.dcbText.Position = [1 0 308 504];
+
+            % Create RTDTab
+            app.RTDTab = uitab(app.TabGroup);
+            app.RTDTab.Title = 'RTD';
+
+            % Create TextArea_2Label
+            app.TextArea_2Label = uilabel(app.RTDTab);
+            app.TextArea_2Label.HorizontalAlignment = 'right';
+            app.TextArea_2Label.Position = [1 480 25 22];
+            app.TextArea_2Label.Text = '';
+
+            % Create rtdText
+            app.rtdText = uitextarea(app.RTDTab);
+            app.rtdText.Position = [1 1 308 503];
+
+            % Create ERRTab
+            app.ERRTab = uitab(app.TabGroup);
+            app.ERRTab.Title = 'ERR';
+
+            % Create Label_3
+            app.Label_3 = uilabel(app.ERRTab);
+            app.Label_3.HorizontalAlignment = 'right';
+            app.Label_3.Position = [37 408 25 22];
+            app.Label_3.Text = '';
+
+            % Create errText
+            app.errText = uitextarea(app.ERRTab);
+            app.errText.Position = [3 1 302 501];
+
+            % Create SNDTab
+            app.SNDTab = uitab(app.TabGroup);
+            app.SNDTab.Title = 'SND';
+
+            % Create Label_2
+            app.Label_2 = uilabel(app.SNDTab);
+            app.Label_2.HorizontalAlignment = 'center';
+            app.Label_2.Position = [141 1 25 22];
+            app.Label_2.Text = '';
+
+            % Create Gauge
+            app.Gauge = uigauge(app.SNDTab, 'semicircular');
+            app.Gauge.Enable = 'off';
+            app.Gauge.Position = [3 38 302 164];
+
+            % Create VolumeKnobLabel
+            app.VolumeKnobLabel = uilabel(app.SNDTab);
+            app.VolumeKnobLabel.HorizontalAlignment = 'center';
+            app.VolumeKnobLabel.Position = [132 267 46 22];
+            app.VolumeKnobLabel.Text = 'Volume';
+
+            % Create VolumeKnob
+            app.VolumeKnob = uiknob(app.SNDTab, 'continuous');
+            app.VolumeKnob.Enable = 'off';
+            app.VolumeKnob.Position = [124 323 60 60];
 
             % Create RightPanel
             app.RightPanel = uipanel(app.GridLayout);
@@ -414,14 +545,6 @@ classdef appTestMiaer_exported < matlab.apps.AppBase
             app.GridLayout3 = uigridlayout(app.RightPanel);
             app.GridLayout3.ColumnWidth = {'1x'};
             app.GridLayout3.RowHeight = {'1x', '1x', '1x'};
-
-            % Create SPTAxes
-            app.SPTAxes = uiaxes(app.GridLayout3);
-            xlabel(app.SPTAxes, 'Frequency')
-            ylabel(app.SPTAxes, 'Level')
-            zlabel(app.SPTAxes, 'Z')
-            app.SPTAxes.Layout.Row = 1;
-            app.SPTAxes.Layout.Column = 1;
 
             % Create AOAAxes
             app.AOAAxes = uiaxes(app.GridLayout3);
@@ -437,6 +560,14 @@ classdef appTestMiaer_exported < matlab.apps.AppBase
             ylabel(app.OCCAxes, 'Occupancy')
             app.OCCAxes.Layout.Row = 3;
             app.OCCAxes.Layout.Column = 1;
+
+            % Create SPTAxes
+            app.SPTAxes = uiaxes(app.GridLayout3);
+            xlabel(app.SPTAxes, 'Frequency')
+            ylabel(app.SPTAxes, 'Level')
+            zlabel(app.SPTAxes, 'Z')
+            app.SPTAxes.Layout.Row = 1;
+            app.SPTAxes.Layout.Column = 1;
 
             % Show the figure after all components are created
             app.UIFigure.Visible = 'on';
