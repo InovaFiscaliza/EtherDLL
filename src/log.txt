@@ -1,0 +1,6 @@
+[2024-10-01 08:58:25.110] [MIAerConn] [info] Starting...
+[2024-10-01 08:58:25.888] [MIAerConn] [error] Object associated with station not created: Unable to resolve host
+[2024-10-01 08:58:25.954] [MIAerConn] [info] Error service listening on port 3002
+[2024-10-01 08:58:25.954] [MIAerConn] [info] Control service listening on port 3000
+[2024-10-01 08:58:25.957] [MIAerConn] [info] Real time service listening on port 3003
+[2024-10-01 08:58:25.958] [MIAerConn] [info] Stream service listening on port 3001

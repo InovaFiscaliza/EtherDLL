@@ -28,6 +28,7 @@
 #include <MIAerConnCodes.hpp>
 #include <MIAerConnUtils.h>
 #include "MIAerLog.h"
+#include <MIAerConnAudio.h>
 
 #pragma comment (lib, "Ws2_32.lib")
 #pragma comment (lib, "Mswsock.lib")
@@ -1628,8 +1629,29 @@ int main() {
 					logMIAer.logCommandExec(RequestBist(APIserverId, (EBistScope)jsonObj["scope"].get<int>(), &requestID), "RequestBist");
 					break;
 				case ECSMSDllMsgType::SET_AUDIO_PARAMS:
-					logMIAer.logCommandExec(SetAudio(APIserverId, jsonToSAudioParams(jsonObj["audioParams"]), &requestID), "SetAudio");
+				{
+					ERetCode ret = SetAudio(APIserverId, jsonToSAudioParams(jsonObj["audioParams"]), &requestID);
+					logMIAer.logCommandExec(ret, "SetAudio");
+					if (ret == ERetCode::API_SUCCESS) {
+						CLoopbackCapture loopbackCapture;
+						DWORD processId = wcstoul(L"123", nullptr, 0);
+						HRESULT hr = loopbackCapture.StartCaptureAsync(processId, false, L"saida.wav");
+						if (FAILED(hr))
+						{
+							logMIAer.error("Failed to start audio capture");
+						}
+						else
+						{
+							logMIAer.info("Capturing 20 seconds of audio.");
+							Sleep(20000);
+
+							loopbackCapture.StopCaptureAsync();
+
+							logMIAer.info("Finished audio capture.");
+						}
+					}
 					break;
+				}
 				case ECSMSDllMsgType::FREE_AUDIO_CHANNEL:
 					logMIAer.logCommandExec(FreeAudio(APIserverId, jsonObj["channel"].get<unsigned long>(), &requestID), "FreeAudio");
 					break;
