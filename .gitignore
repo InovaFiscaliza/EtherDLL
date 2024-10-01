@@ -399,3 +399,5 @@ test/resources/project/root/fjRQtWiSIy7hIlj-Kmk87M7s21kp.xml
 test/resources/project/root/GiiBklLgTxteCEmomM8RCvWT0nQd.xml
 test/resources/project/root/GiiBklLgTxteCEmomM8RCvWT0nQp.xml
 test/resources/project/root/qaw0eS1zuuY1ar9TdPn1GMfrjbQp.xml
+/resources/project
+*.xml
