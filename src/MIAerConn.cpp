@@ -68,6 +68,9 @@ std::atomic<int> interruptionCode{ mcs::Code::RUNNING };
 // Vector used for the command queue
 std::vector<std::string> commandQueue;
 
+// Command queue counter
+std::atomic<unsigned long> commandQueueCounter{ 0 };
+
 // Vector used for the data stream output
 std::vector<std::string> streamBuffer;
 
@@ -77,7 +80,7 @@ std::vector<std::string> errorBuffer;
 // Vector used for the real time output
 std::vector<std::string> realtimeBuffer;
 
-// Mutex to protect the command queue
+// Mutex to protect queue
 std::mutex MCCommandMutex;
 std::mutex MCstreamMutex;
 std::mutex MCStationMutex;
@@ -425,7 +428,9 @@ void processOccupancyResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg:
 	using json = nlohmann::json;
 	json jsonObj;
 	jsonObj["respType"] = std::to_string(respType);
-	if (respType == ECSMSDllMsgType::OCC_MSGLEN_DIST_RESPONSE)
+	switch (respType)
+	{
+	case ECSMSDllMsgType::OCC_MSGLEN_DIST_RESPONSE:
 	{
 		SEquipCtrlMsg::SMsgLengthDistributionResp* Response = (SEquipCtrlMsg::SMsgLengthDistributionResp*)data;
 		jsonObj["SMsgLengthDistributionResp"]["histData"]["channel"] = Response->histData->channel;
@@ -452,7 +457,8 @@ void processOccupancyResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg:
 		jsonObj["SMsgLengthDistributionResp"]["occHdr"]["gpsResponse"]["status"]["timSrce"] = (unsigned long)Response->occHdr.gpsResponse.status.timSrce;
 		jsonObj["SMsgLengthDistributionResp"]["occHdr"]["gpsResponse"]["status"]["tracking"] = (unsigned long)Response->occHdr.gpsResponse.status.tracking;
 	}
-	else if (respType == ECSMSDllMsgType::OCC_SPECTRUM_RESPONSE)
+	break;
+	case ECSMSDllMsgType::OCC_SPECTRUM_RESPONSE:
 	{
 		SEquipCtrlMsg::SOccResult* Response = (SEquipCtrlMsg::SOccResult*)data;
 		jsonObj["SOccResult"]["occHdr"]["firstChannel"] = Response->occHdr.firstChannel;
@@ -482,18 +488,25 @@ void processOccupancyResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg:
 		jsonObj["SOccResult"]["occHdr"]["status"] = (unsigned long)Response->occHdr.status;
 		jsonObj["SOccResult"]["resultData"] = (unsigned long)Response->resultData;
 	}
-	else if (respType == ECSMSDllMsgType::OCC_STATE_RESPONSE ||
-		respType == ECSMSDllMsgType::OCC_SOLICIT_STATE_RESPONSE)
+	break;
+	case ECSMSDllMsgType::OCC_STATE_RESPONSE:
 	{
 		SEquipCtrlMsg::SStateResp* Response = (SEquipCtrlMsg::SStateResp*)data;
 		jsonObj["SStateResp"]["completionTime"] = (unsigned long)Response->completionTime;
 		jsonObj["SStateResp"]["state"] = (unsigned long)Response->state;
 	}
-	else if (respType == ECSMSDllMsgType::OCC_FREQ_VS_CHANNEL)
+	break;
+	case ECSMSDllMsgType::OCC_SOLICIT_STATE_RESPONSE:
+	{
+		SEquipCtrlMsg::SStateResp* Response = (SEquipCtrlMsg::SStateResp*)data;
+		jsonObj["SStateResp"]["completionTime"] = (unsigned long)Response->completionTime;
+		jsonObj["SStateResp"]["state"] = (unsigned long)Response->state;
+	}
+	break;
+	case ECSMSDllMsgType::OCC_FREQ_VS_CHANNEL:
 	{
 		SEquipCtrlMsg::SFrequencyVsChannelResp* Response = (SEquipCtrlMsg::SFrequencyVsChannelResp*)data;
 		jsonObj["SFrequencyVsChannelResp"]["frequencies"]["internal"] = Response->frequencies->internal;
-
 		jsonObj["SFrequencyVsChannelResp"]["hostName"] = Response->hostName;
 		jsonObj["SFrequencyVsChannelResp"]["numBands"] = Response->numBands;
 		jsonObj["SFrequencyVsChannelResp"]["numChannels"] = Response->numChannels;
@@ -527,9 +540,9 @@ void processOccupancyResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg:
 		jsonObj["SFrequencyVsChannelResp"]["saveIntermediateData"] = Response->saveIntermediateData;
 		jsonObj["SFrequencyVsChannelResp"]["selectedAntenna"] = Response->selectedAntenna;
 		jsonObj["SFrequencyVsChannelResp"]["useSecondaryThreshold"] = Response->useSecondaryThreshold;
-
 	}
-	else if (respType == ECSMSDllMsgType::OCC_CHANNEL_RESULT)
+	break;
+	case ECSMSDllMsgType::OCC_CHANNEL_RESULT:
 	{
 		SEquipCtrlMsg::SOccResult* Response = (SEquipCtrlMsg::SOccResult*)data;
 		jsonObj["SOccResult"]["occHdr"]["firstChannel"] = Response->occHdr.firstChannel;
@@ -559,7 +572,8 @@ void processOccupancyResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg:
 		jsonObj["SOccResult"]["occHdr"]["status"] = (unsigned long)Response->occHdr.status;
 		jsonObj["SOccResult"]["resultData"] = (unsigned long)Response->resultData;
 	}
-	else if (respType == ECSMSDllMsgType::OCC_EFLD_CHANNEL_RESULT)
+	break;
+	case ECSMSDllMsgType::OCC_EFLD_CHANNEL_RESULT:
 	{
 		SEquipCtrlMsg::SOccResult* Response = (SEquipCtrlMsg::SOccResult*)data;
 		jsonObj["SOccResult"]["occHdr"]["firstChannel"] = Response->occHdr.firstChannel;
@@ -589,7 +603,8 @@ void processOccupancyResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg:
 		jsonObj["SOccResult"]["occHdr"]["status"] = (unsigned long)Response->occHdr.status;
 		jsonObj["SOccResult"]["resultData"] = (unsigned long)Response->resultData;
 	}
-	else if (respType == ECSMSDllMsgType::OCC_TIMEOFDAY_RESULT)
+	break;
+	case ECSMSDllMsgType::OCC_TIMEOFDAY_RESULT:
 	{
 		SEquipCtrlMsg::SOccResult* Response = (SEquipCtrlMsg::SOccResult*)data;
 		jsonObj["SOccResult"]["occHdr"]["firstChannel"] = Response->occHdr.firstChannel;
@@ -619,7 +634,8 @@ void processOccupancyResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg:
 		jsonObj["SOccResult"]["occHdr"]["status"] = (unsigned long)Response->occHdr.status;
 		jsonObj["SOccResult"]["resultData"] = (unsigned long)Response->resultData;
 	}
-	else if (respType == ECSMSDllMsgType::OCC_MSGLEN_CHANNEL_RESULT)
+	break;
+	case ECSMSDllMsgType::OCC_MSGLEN_CHANNEL_RESULT:
 	{
 		SEquipCtrlMsg::SOccResult* Response = (SEquipCtrlMsg::SOccResult*)data;
 		jsonObj["SOccResult"]["occHdr"]["firstChannel"] = Response->occHdr.firstChannel;
@@ -649,7 +665,8 @@ void processOccupancyResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg:
 		jsonObj["SOccResult"]["occHdr"]["status"] = (unsigned long)Response->occHdr.status;
 		jsonObj["SOccResult"]["resultData"] = (unsigned long)Response->resultData;
 	}
-	else if (respType == ECSMSDllMsgType::OCC_EFLD_TIMEOFDAY_RESULT)
+	break;
+	case ECSMSDllMsgType::OCC_EFLD_TIMEOFDAY_RESULT:
 	{
 		SEquipCtrlMsg::SOccResult* Response = (SEquipCtrlMsg::SOccResult*)data;
 		jsonObj["SOccResult"]["occHdr"]["firstChannel"] = Response->occHdr.firstChannel;
@@ -679,7 +696,8 @@ void processOccupancyResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg:
 		jsonObj["SOccResult"]["occHdr"]["status"] = (unsigned long)Response->occHdr.status;
 		jsonObj["SOccResult"]["resultData"] = (unsigned long)Response->resultData;
 	}
-	else if (respType == ECSMSDllMsgType::OCC_STATUS)
+	break;
+	case ECSMSDllMsgType::OCC_STATUS:
 	{
 		SEquipCtrlMsg::SEquipTaskStatusResp* Response = (SEquipCtrlMsg::SEquipTaskStatusResp*)data;
 		jsonObj["SEquipTaskStatusResp"]["dateTime"] = Response->dateTime;
@@ -687,7 +705,8 @@ void processOccupancyResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg:
 		jsonObj["SEquipTaskStatusResp"]["status"] = Response->status;
 		jsonObj["SEquipTaskStatusResp"]["taskId"] = Response->taskId;
 	}
-	else if (respType == ECSMSDllMsgType::VALIDATE_OCCUPANCY)
+	break;
+	case ECSMSDllMsgType::VALIDATE_OCCUPANCY:
 	{
 		SEquipCtrlMsg::SValidateOccupancyResp* Response = (SEquipCtrlMsg::SValidateOccupancyResp*)data;
 		jsonObj["SValidateOccupancyResp"]["occCmd"]["ant"] = Response->occCmd.ant;
@@ -725,12 +744,13 @@ void processOccupancyResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg:
 		jsonObj["SValidateOccupancyResp"]["occCmd"]["thresholdMethod"] = Response->occCmd.thresholdMethod;
 		jsonObj["SValidateOccupancyResp"]["occCmd"]["useSecondaryThreshold"] = Response->occCmd.useSecondaryThreshold;
 		jsonObj["SValidateOccupancyResp"]["status"] = Response->status;
-
 	}
-	else	// not OCCUPANCY_RESPONSE
-	{
+	break;
+	default: // not OCCUPANCY_RESPONSE
 		//tempstr.Format(_T("unexpected occupancy message %u"),
 			//respType);
+		logMIAer.warn("unexpected occupancy message: " + std::to_string(respType));
+		return;
 	}
 	streamBuffer.push_back(jsonObj.dump());
 }
@@ -740,14 +760,23 @@ void processOccupancyDFResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMs
 	json jsonObj;
 	jsonObj["respType"] = std::to_string(respType);
 
-	if (respType == ECSMSDllMsgType::OCCDF_STATE_RESPONSE ||
-		respType == ECSMSDllMsgType::OCCDF_SOLICIT_STATE_RESPONSE)
+	switch (respType)
 	{
-		SEquipCtrlMsg::SStateResp* Response = (SEquipCtrlMsg::SStateResp*)data;
-		jsonObj["SStateResp"]["completionTime"] = Response->completionTime;
-		jsonObj["SStateResp"]["state"] = Response->state;
-	}
-	else if (respType == ECSMSDllMsgType::OCCDF_FREQ_VS_CHANNEL)
+	case ECSMSDllMsgType::OCCDF_STATE_RESPONSE:
+		{
+			SEquipCtrlMsg::SStateResp* Response = (SEquipCtrlMsg::SStateResp*)data;
+			jsonObj["SStateResp"]["completionTime"] = Response->completionTime;
+			jsonObj["SStateResp"]["state"] = Response->state;
+		}
+		break;
+	case ECSMSDllMsgType::OCCDF_SOLICIT_STATE_RESPONSE:
+		{
+			SEquipCtrlMsg::SStateResp* Response = (SEquipCtrlMsg::SStateResp*)data;
+			jsonObj["SStateResp"]["completionTime"] = Response->completionTime;
+			jsonObj["SStateResp"]["state"] = Response->state;
+		}
+		break;
+	case ECSMSDllMsgType::OCCDF_FREQ_VS_CHANNEL:
 	{
 		SEquipCtrlMsg::SFrequencyVsChannelResp* Response = (SEquipCtrlMsg::SFrequencyVsChannelResp*)data;
 		jsonObj["SFrequencyVsChannelResp"]["frequencies"]["internal"] = Response->frequencies->internal;
@@ -786,7 +815,8 @@ void processOccupancyDFResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMs
 		jsonObj["SFrequencyVsChannelResp"]["selectedAntenna"] = Response->selectedAntenna;
 		jsonObj["SFrequencyVsChannelResp"]["useSecondaryThreshold"] = Response->useSecondaryThreshold;
 	}
-	else if (respType == ECSMSDllMsgType::OCCDF_SCANDF_VS_CHANNEL)
+	break;
+	case ECSMSDllMsgType::OCCDF_SCANDF_VS_CHANNEL:
 	{
 		SEquipCtrlMsg::SScanDfVsChannelResp* Response = (SEquipCtrlMsg::SScanDfVsChannelResp*)data;
 		jsonObj["SScanDfVsChannelResp"]["aveFldStr"] = Response->aveFldStr;
@@ -820,7 +850,8 @@ void processOccupancyDFResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMs
 		jsonObj["SScanDfVsChannelResp"]["occHdr"]["status"] = Response->occHdr.status;
 		jsonObj["SScanDfVsChannelResp"]["scanDfData"] = Response->scanDfData;
 	}
-	else if (respType == ECSMSDllMsgType::OCCDF_STATUS)
+	break;
+	case ECSMSDllMsgType::OCCDF_STATUS:
 	{
 		SEquipCtrlMsg::SEquipTaskStatusResp* Response = (SEquipCtrlMsg::SEquipTaskStatusResp*)data;
 		jsonObj["SEquipTaskStatusResp"]["dateTime"] = Response->dateTime;
@@ -828,11 +859,14 @@ void processOccupancyDFResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMs
 		jsonObj["SEquipTaskStatusResp"]["status"] = Response->status;
 		jsonObj["SEquipTaskStatusResp"]["taskId"] = Response->taskId;
 	}
-	else	// not OCCUPANCYDF_RESPONSE
-	{
+	break;
+	default: // not OCCUPANCYDF_RESPONSE
 		//tempstr.Format(_T("unexpected occupancyDF message %u"),
-		//	respType);
+			//respType);
+        logMIAer.warn("Unexpected occupancyDF message: " + std::to_string(respType));
+		return;
 	}
+
 	streamBuffer.push_back(jsonObj.dump());
 
 }
@@ -995,7 +1029,8 @@ void ProcessRealTimeData(_In_ ECSMSDllMsgType respType, _In_ SSmsRealtimeMsg::UB
 	}
 	default:
 	{
-		break;
+		logMIAer.warn("Unexpected response type in ProcessRealTimeData: " + std::to_string(respType));
+		return;
 	}
 	}
 	streamBuffer.push_back(jsonObj.dump());
@@ -1058,6 +1093,7 @@ void OnData(_In_ ECSMSDllMsgType respType, _In_ unsigned long sourceAddr, _In_ u
 			//m_taskType = ECSMSDllMsgType::GET_DM; // TODO should be in DM_STATUS reponse instead
 			break;
 		default:
+			logMIAer.warn("Unexpected response type: " + std::to_string(respType));
 			break;
 	}
 	return;
@@ -1197,8 +1233,10 @@ void handleCommandConnection(SOCKET clientSocket, std::string name) {
 			}
 			
 			std::string ack = mcs::Form::ACK + 
-				std::to_string(commandQueue.size()) +
+				std::to_string(commandQueueCounter) +
 				mcs::Form::SEP;
+			commandQueueCounter++;
+
 			iResult = send(clientSocket, ack.c_str(), (int)(ack.length()), 0);
 			if (iResult == SOCKET_ERROR) {
 				logMIAer.warn(name + " ACK send failed. EC:" + std::to_string(WSAGetLastError()));
@@ -1578,10 +1616,12 @@ int main() {
 	while (running.load()) {
 
 		if (!commandQueue.empty()) {
-// ! Need to fix the mutex lock, moving it to functions which manipulate the commandQueue outside the scope of the main loop
-			std::lock_guard<std::mutex> lock(MCCommandMutex);
-			std::string command = commandQueue.back();
-			commandQueue.pop_back();
+			{
+				std::lock_guard<std::mutex> lock(MCCommandMutex);
+				std::string command = commandQueue.back();
+				commandQueue.pop_back();
+			}
+
 			logMIAer.info("Processing command: " + command);
 			
 			/*
