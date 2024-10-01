@@ -1,4 +1,4 @@
-function [conf, command_list] = loadConf()
+function [conf, drop_down_items,items_data] = loadConf()
 %LOADCONF load app configuration from json file
 %   Use a default json file to define constants that control the
 %   application and further load command examples in json format to populate the command list
@@ -20,13 +20,19 @@ function [conf, command_list] = loadConf()
     files = dir('cmd*.json');
 
     % load the command list from the json files
-    command_list = {};
-    for i = 1:length(files)
+    ddsize = length(files)+1;
+    drop_down_items{ddsize} = [];
+    items_data{ddsize} = [];
+ 
+    drop_down_items{1} = "<select a command>";
+    items_data{1} = "";
+    for i = 2:ddsize
         try
             % create a command name by removing the initial lettes 'cmd' and the extension '.json' from the file name
-            command_name = files(i).name(4:end-5);
+            j = i-1;
+            drop_down_items{i} = files(j).name(4:end-5);
+            items_data{i} = fileread(files(j).name);
 
-            command_list = [command_name, jsondecode(fileread(files(i).name))];
         catch
             % skip the file if it is not in json format
             warning('Failed to read command list from file %s', files(i).name);

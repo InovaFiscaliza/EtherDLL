@@ -15,7 +15,8 @@
             "port": 3000,
             "timeout_s": 10000,
             "sleep_ms": 100,
-            "check_period": 10
+            "check_period": 10,
+            "path": "D:/Documents/Anatel/Aplicativos/GitHub/MIAerConnVS/test"
         },
         "data": {
             "port": 3001,
