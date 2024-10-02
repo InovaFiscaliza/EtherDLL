@@ -39,12 +39,12 @@
 
 */
 #ifdef _X86_
-	#pragma comment (lib, "ScorpioAPIDll.lib")
+	#pragma comment (lib, "ScorpioAPIDll.lib") //RELEASE/DEBUG 32Bits
 #else
 	#ifdef NDEBUG
-		#pragma comment (lib, "ScorpioAPIDll.lib") //RELEASE
+		#pragma comment (lib, "ScorpioAPIDll.lib") //RELEASE 64Bits
 	#else
-		#pragma comment (lib, "ScorpioAPIDlld.lib") //DEBUG
+		#pragma comment (lib, "ScorpioAPIDlld.lib") //DEBUG 64Bits
 	#endif
 #endif
 
@@ -1135,50 +1135,6 @@ void registerSignalHandlers() {
 }
 
 //
-// Function to create simulated data
-// Data is a random number of packages, from 1 to 5.
-// Each package has 4096 bytes of data, which is 1024 floats of 32 bits
-// First 12 points are a sequency of 0, 1, 0, -1, repeated 3 times
-// Following 500 points describes a ramp from -100 to -20
-// Finally 512 points describes cosine cycles with the same amplitude. The number of cycles varies with the package number.
-
-void generateSimData(void) {
-	
-	float data[1024];
-	int j = 1;
-	std::string trace;
-	
-	for (j = 1; rand() % 6; j++) {
-		for (int i = 0; i < 12; i = i + 4) {
-			data[0+i] = (float)(0.0);
-			data[1+i] = (float)(1.0);
-			data[2+i] = (float)(0.0);
-			data[3+i] = (float)(-1.0);
-		}
-		for (int i = 12; i < 512; i++) {
-			data[i] = (float)((40.0 * (((float)(i) / 250) - 1)) - 60.0);
-		}
-		for (int i = 512; i < 1024; i++) {
-			data[i] = (float)((60.0 * cos((i * 0.0184)*2*j)) - 80.0);
-		}
-		trace = std::string(reinterpret_cast<char*>(data), sizeof(data));
-		streamBuffer.push_back(trace);
-	}
-	
-	// logger.info("Simulated data generated " + std::to_string(j) + " traces with 1024 float points.");
-	if (sizeof(trace) > 48) {
-		std::string message = "Sample points: [";
-		// add the first 12 points as uint8 translation from the streamBuffer
-		for (int i = 0; i < 48; i++) {
-			message += std::to_string((unsigned char)trace[i]) + ", ";
-		}
-		message += "...]";
-		logMIAer.info(message);
-	}
-	//
-}
-
-//
 // Function to handle command connections
 //
 void handleCommandConnection(SOCKET clientSocket, std::string name) {
@@ -1251,13 +1207,7 @@ void handleStreamConnection(SOCKET clientSocket, std::string name) {
 		}
 		else {
 			if (checkPeriod == 0) {
-				if (config["service"]["simulated"].get<bool>()) {
-					generateSimData();
-					logMIAer.info(name + " generated sim data. Nothing from the station.");
-				}
-				else {
-					logMIAer.info(name + " waiting for data from station to send...");
-				}
+				logMIAer.info(name + " waiting for data from station to send...");
 				checkPeriod = config["service"]["stream"]["check_period"].get<int>();
 			}
 			else {

@@ -1,0 +1,19 @@
+{
+    "commandCode": 16,
+    "audioParams": {
+        "anyChannel": true,
+        "bandwidth": 30000,
+        "bfo": 0,
+        "channel": 0,
+        "detMode": 3,
+        "doModRec": false,
+        "doRDS": false,
+        "freq": 98500000,
+		"streamID": 0
+    }
+}
+
+
+
+
+{"commandCode": 16,"audioParams": {"anyChannel": true, "bandwidth": 30000, "bfo": 0, "channel": 0, "detMode": 3, "doModRec": false, "doRDS": false, "freq": 98500000, "streamID": 0}}

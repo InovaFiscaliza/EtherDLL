@@ -1,0 +1,11 @@
+{
+    "commandCode": 55,
+    "panParams": {
+        "bandwidth": 1000000,
+        "freq": 98500000,
+        "rcvrAtten": 255
+    }
+}
+
+
+{"commandCode": 55, "panParams": {"bandwidth": 1000000,"freq": 98500000,"rcvrAtten": 255}}

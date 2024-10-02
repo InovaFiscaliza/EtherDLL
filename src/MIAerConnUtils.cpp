@@ -74,8 +74,8 @@ SAudioParams jsonToSAudioParams(nlohmann::json jsonObj) {
 	if (jsonObj["freq"].is_null() == false) {
 		structSO.freq = Units::Frequency(jsonObj["freq"].get<unsigned long>()).GetRaw();
 	}
-	if (jsonObj["doRDS"].is_null() == false) {
-		strncpy_s(structSO.ipAddressRDSRadio, jsonObj["doRDS"].get<std::string>().c_str(), SSmsMsg::IP_ADDRESS_LEN);
+	if (structSO.doRDS == true) {
+		//strncpy_s(structSO.ipAddressRDSRadio, jsonObj["doRDS"].get<std::string>().c_str(), SSmsMsg::IP_ADDRESS_LEN);
 	}
 	structSO.streamID = jsonObj["streamID"].is_null() == true ? NULL : jsonObj["streamID"].get<unsigned long>();
 

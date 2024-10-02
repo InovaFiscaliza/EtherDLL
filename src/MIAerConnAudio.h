@@ -12,6 +12,12 @@
 
 #include "MIAerConnAudioCommon.h"
 
+#pragma comment (lib, "mmdevapi.lib")
+#pragma comment (lib, "mfreadwrite.lib")
+#pragma comment (lib, "windowsapp.lib")
+#pragma comment (lib, "mfplat.lib")
+#pragma comment (lib, "mfuuid.lib")
+
 using namespace Microsoft::WRL;
 
 class CLoopbackCapture :

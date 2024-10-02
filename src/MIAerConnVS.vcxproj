@@ -96,7 +96,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>./nlohmann;./;./spdlog;C:\Program Files (x86)\TCI\Scorpio API\Release\Common;C:\Program Files (x86)\TCI\Scorpio API\Release\GShared\Monitoring System\Shared Include;C:\Program Files (x86)\TCI\Scorpio API\Release\GShared\IO;C:\Program Files (x86)\TCI\Scorpio API\Release\GShared\Primitives</AdditionalIncludeDirectories>
     </ClCompile>
@@ -117,7 +117,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>./nlohmann;./;./spdlog;C:\Program Files (x86)\TCI\Scorpio API\Common;C:\Program Files (x86)\TCI\Scorpio API\GShared\Monitoring System\Shared Include;C:\Program Files (x86)\TCI\Scorpio API\GShared\IO;C:\Program Files (x86)\TCI\Scorpio API\GShared\Primitives</AdditionalIncludeDirectories>
     </ClCompile>
@@ -138,7 +138,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>./nlohmann;./;./spdlog;C:\Program Files (x86)\TCI\Scorpio API\Release\Common;C:\Program Files (x86)\TCI\Scorpio API\Release\GShared\Monitoring System\Shared Include;C:\Program Files (x86)\TCI\Scorpio API\Release\GShared\IO;C:\Program Files (x86)\TCI\Scorpio API\Release\GShared\Primitives</AdditionalIncludeDirectories>
     </ClCompile>
@@ -159,10 +159,9 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>./wil;./nlohmann;./;./spdlog;C:\Program Files (x86)\TCI\Scorpio API\Common;C:\Program Files (x86)\TCI\Scorpio API\GShared\Monitoring System\Shared Include;C:\Program Files (x86)\TCI\Scorpio API\GShared\IO;C:\Program Files (x86)\TCI\Scorpio API\GShared\Primitives</AdditionalIncludeDirectories>
-      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -171,11 +170,13 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EntryPointSymbol>mainCRTStartup</EntryPointSymbol>
-      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;mfplat.lib;mmdevapi.lib;mfuuid.lib;mfreadwrite.lib;windowsapp.lib;userenv.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>C:\Program Files %28x86%29\TCI\Scorpio API\lib</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="CRtspSession.h" />
+    <ClInclude Include="CStreamer.h" />
     <ClInclude Include="MIAerConnAudio.h" />
     <ClInclude Include="MIAerConnAudioCommon.h" />
     <ClInclude Include="MIAerConnCodes.hpp" />
@@ -188,6 +189,8 @@
     <ClInclude Include="StdAfx.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="CRtspSession.cpp" />
+    <ClCompile Include="CStreamer.cpp" />
     <ClCompile Include="ExternalCodes.cpp" />
     <ClCompile Include="MIAerConn.cpp" />
     <ClCompile Include="MIAerConnAudio.cpp" />
