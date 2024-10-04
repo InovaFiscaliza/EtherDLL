@@ -6,6 +6,24 @@
 #include "MIAerConnAudio.h"
 
 #define BITS_PER_BYTE 8
+SOCKET clientSocket = NULL;
+
+void CLoopbackCapture::handleSocketConnection(SOCKET _clientSocket, std::string name) {
+
+    int checkPeriod = 0;
+    int iResult = 0;
+    clientSocket = _clientSocket;
+}
+
+HRESULT CLoopbackCapture::SendAudioBySocket(void* audioData, size_t size) {
+    if (clientSocket != NULL) { //if not null write audio data in socket
+        char* dataAux = (char*)malloc(size + 1);
+        memcpy(dataAux, audioData, size);
+        send(clientSocket, dataAux, size, 0);
+        free(dataAux);
+    }
+    return S_OK;
+}
 
 HRESULT CLoopbackCapture::SetDeviceStateErrorIfFailed(HRESULT hr)
 {
@@ -158,49 +176,22 @@ HRESULT CLoopbackCapture::CreateWAVFile()
                                 sizeof(m_CaptureFormat) // Size of fmt chunk
             };
             DWORD dwBytesWritten = 0;
-            RETURN_IF_WIN32_BOOL_FALSE(WriteFile(m_hFile.get(), header, sizeof(header), &dwBytesWritten, NULL));
+            SendAudioBySocket(header, sizeof(header));
 
             m_cbHeaderSize += dwBytesWritten;
 
             // 2. The fmt sub-chunk
             WI_ASSERT(m_CaptureFormat.cbSize == 0);
-            RETURN_IF_WIN32_BOOL_FALSE(WriteFile(m_hFile.get(), &m_CaptureFormat, sizeof(m_CaptureFormat), &dwBytesWritten, NULL));
+            SendAudioBySocket(&m_CaptureFormat, sizeof(m_CaptureFormat));
             m_cbHeaderSize += dwBytesWritten;
 
             // 3. The data sub-chunk
             DWORD data[] = { FCC('data'), 0 };  // Start of 'data' chunk
-            RETURN_IF_WIN32_BOOL_FALSE(WriteFile(m_hFile.get(), data, sizeof(data), &dwBytesWritten, NULL));
+            SendAudioBySocket(data, sizeof(data));
             m_cbHeaderSize += dwBytesWritten;
 
             return S_OK;
         }());
-}
-
-
-//
-//  FixWAVHeader()
-//
-//  The size values were not known when we originally wrote the header, so now go through and fix the values
-//
-HRESULT CLoopbackCapture::FixWAVHeader()
-{
-    // Write the size of the 'data' chunk first
-    DWORD dwPtr = SetFilePointer(m_hFile.get(), m_cbHeaderSize - sizeof(DWORD), NULL, FILE_BEGIN);
-    RETURN_LAST_ERROR_IF(INVALID_SET_FILE_POINTER == dwPtr);
-
-    DWORD dwBytesWritten = 0;
-    RETURN_IF_WIN32_BOOL_FALSE(WriteFile(m_hFile.get(), &m_cbDataSize, sizeof(DWORD), &dwBytesWritten, NULL));
-
-    // Write the total file size, minus RIFF chunk and size
-    // sizeof(DWORD) == sizeof(FOURCC)
-    RETURN_LAST_ERROR_IF(INVALID_SET_FILE_POINTER == SetFilePointer(m_hFile.get(), sizeof(DWORD), NULL, FILE_BEGIN));
-
-    DWORD cbTotalSize = m_cbDataSize + m_cbHeaderSize - 8;
-    RETURN_IF_WIN32_BOOL_FALSE(WriteFile(m_hFile.get(), &cbTotalSize, sizeof(DWORD), &dwBytesWritten, NULL));
-
-    RETURN_IF_WIN32_BOOL_FALSE(FlushFileBuffers(m_hFile.get()));
-
-    return S_OK;
 }
 
 HRESULT CLoopbackCapture::StartCaptureAsync(DWORD processId, bool includeProcessTree, PCWSTR outputFileName)
@@ -217,7 +208,6 @@ HRESULT CLoopbackCapture::StartCaptureAsync(DWORD processId, bool includeProcess
         m_DeviceState = DeviceState::Starting;
         return MFPutWorkItem2(MFASYNC_CALLBACK_QUEUE_MULTITHREADED, 0, &m_xStartCapture, nullptr);
     }
-
     return S_OK;
 }
 
@@ -301,14 +291,11 @@ HRESULT CLoopbackCapture::FinishCaptureAsync()
 //
 HRESULT CLoopbackCapture::OnFinishCapture(IMFAsyncResult* pResult)
 {
-    // FixWAVHeader will set the DeviceStateStopped when all async tasks are complete
-    HRESULT hr = FixWAVHeader();
-
     m_DeviceState = DeviceState::Stopped;
 
     m_hCaptureStopped.SetEvent();
-
-    return hr;
+    closesocket(clientSocket);
+    return S_OK;
 }
 
 //
@@ -340,6 +327,7 @@ HRESULT CLoopbackCapture::OnSampleReady(IMFAsyncResult* pResult)
 //
 //  Called when audio device fires m_SampleReadyEvent
 //
+
 HRESULT CLoopbackCapture::OnAudioSampleRequested()
 {
     UINT32 FramesAvailable = 0;
@@ -397,13 +385,7 @@ HRESULT CLoopbackCapture::OnAudioSampleRequested()
         // Write File
         if (m_DeviceState != DeviceState::Stopping)
         {
-            DWORD dwBytesWritten = 0;
-            RETURN_IF_WIN32_BOOL_FALSE(WriteFile(
-                m_hFile.get(),
-                Data,
-                cbBytesToCapture,
-                &dwBytesWritten,
-                NULL));
+            SendAudioBySocket(Data, cbBytesToCapture);
         }
 
         // Release buffer back

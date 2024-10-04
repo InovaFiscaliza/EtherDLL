@@ -1,7 +1,46 @@
-[2024-10-02 11:44:48.173] [MIAerConn] [info] Starting...
-[2024-10-02 11:44:48.507] [MIAerConn] [info] Object creation successful
-[2024-10-02 11:44:49.710] [MIAerConn] [info] Connected to station 166.139.112.178
-[2024-10-02 11:44:49.715] [MIAerConn] [info] Stream service listening on port 3001
-[2024-10-02 11:44:49.715] [MIAerConn] [info] Control service listening on port 3000
-[2024-10-02 11:44:49.715] [MIAerConn] [info] Error service listening on port 3002
-[2024-10-02 11:44:49.715] [MIAerConn] [info] Real time service listening on port 3003
+[2024-10-04 17:48:20.373] [MIAerConn] [info] Starting...
+[2024-10-04 17:48:20.648] [MIAerConn] [info] Object creation successful
+[2024-10-04 17:48:22.212] [MIAerConn] [info] Connected to station 166.139.112.178
+[2024-10-04 17:48:22.232] [MIAerConn] [info] Audio service listening on port 5000
+[2024-10-04 17:48:22.232] [MIAerConn] [info] Real time service listening on port 3003
+[2024-10-04 17:48:22.232] [MIAerConn] [info] Error service listening on port 3002
+[2024-10-04 17:48:22.232] [MIAerConn] [info] Stream service listening on port 3001
+[2024-10-04 17:48:22.232] [MIAerConn] [info] Control service listening on port 3000
+[2024-10-04 17:48:27.920] [MIAerConn] [info] Control service accepted connection from 0.0.0.0
+[2024-10-04 17:48:29.770] [MIAerConn] [info] Stream service accepted connection from 0.0.0.0
+[2024-10-04 17:48:29.771] [MIAerConn] [info] Stream service waiting for data from station to send...
+[2024-10-04 17:48:30.765] [MIAerConn] [info] Error service accepted connection from 0.0.0.0
+[2024-10-04 17:48:30.768] [MIAerConn] [info] Error service waiting for data from station to send...
+[2024-10-04 17:48:32.688] [MIAerConn] [info] Real time service accepted connection from 8.252.118.4
+[2024-10-04 17:48:32.699] [MIAerConn] [info] Real time service waiting for data from station to send...
+[2024-10-04 17:48:35.712] [MIAerConn] [info] Processing command: {"commandCode": 14,"occupancyParams": {"numBands": 1,"storageTime": 15,"measurementTime": 300,"numAzimuths": 360,"confidence": 75,"recordHoldoff": 5,"scanDfThreshold": 10,"recordAudioDf": false,"band": {"channelBandwidth": 25000,"exclude": false,"highFrequency": 99975000,"lowFrequency": 90000000},"rcvrCtrl": {"bandwidth": 6000,"bfo": 800,"detMode": 2,"freq": 90000000,"agcTime": 500}}}
+[2024-10-04 17:48:35.714] [MIAerConn] [info] [RequestOccupancyDF] command executed
+[2024-10-04 17:48:36.128] [MIAerConn] [info] eived destination address 
+[2024-10-04 17:48:36.129] [MIAerConn] [info] Data received destination address 
+[2024-10-04 17:48:36.130] [MIAerConn] [info] nData received server ID 
+[2024-10-04 17:48:36.130] [MIAerConn] [info] eceived destination address 
+[2024-10-04 17:48:36.130] [MIAerConn] [info] Data received destination address 
+[2024-10-04 17:48:36.131] [MIAerConn] [info] nData received server ID 
+[2024-10-04 17:48:36.131] [MIAerConn] [info] ived destination address 
+[2024-10-04 17:48:36.132] [MIAerConn] [info] Data received destination address 
+[2024-10-04 17:48:36.132] [MIAerConn] [info] nData received server ID 
+[2024-10-04 17:48:45.669] [MIAerConn] [info] Control service waiting for commands from client...
+[2024-10-04 17:48:45.976] [MIAerConn] [info] Processing command: {"commandCode": 55, "panParams": {"bandwidth": 1000000,"freq": 98500000,"rcvrAtten": 255}}
+[2024-10-04 17:48:45.977] [MIAerConn] [info] [RequestPan] command executed
+[2024-10-04 17:48:46.750] [MIAerConn] [info]  address 
+[2024-10-04 17:48:46.751] [MIAerConn] [info] ata received destination address 
+[2024-10-04 17:48:46.752] [MIAerConn] [info] nData received server ID 
+[2024-10-04 17:48:51.269] [MIAerConn] [info] eceived destination address 
+[2024-10-04 17:48:51.270] [MIAerConn] [info] Data received destination address 
+[2024-10-04 17:48:51.271] [MIAerConn] [info] nData received server ID 
+[2024-10-04 17:48:51.285] [MIAerConn] [info] ved destination address 
+[2024-10-04 17:48:51.286] [MIAerConn] [info] Data received destination address 
+[2024-10-04 17:48:51.287] [MIAerConn] [info] nData received server ID 
+[2024-10-04 17:48:51.505] [MIAerConn] [info] ved destination address 
+[2024-10-04 17:48:51.506] [MIAerConn] [info] Data received destination address 
+[2024-10-04 17:48:51.507] [MIAerConn] [info] nData received server ID 
+[2024-10-04 17:48:51.516] [MIAerConn] [info] ved destination address 
+[2024-10-04 17:48:51.517] [MIAerConn] [info] Data received destination address 
+[2024-10-04 17:48:51.518] [MIAerConn] [info] nData received server ID 
+[2024-10-04 17:48:51.736] [MIAerConn] [info] ved destination address 
+[2024-10-04 17:48:51.737] [MIAerConn] [inf

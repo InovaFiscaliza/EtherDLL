@@ -11,7 +11,6 @@
 #include <wil\result.h>
 
 #include "MIAerConnAudioCommon.h"
-
 #pragma comment (lib, "mmdevapi.lib")
 #pragma comment (lib, "mfreadwrite.lib")
 #pragma comment (lib, "windowsapp.lib")
@@ -28,8 +27,12 @@ public:
     ~CLoopbackCapture();
 
     HRESULT StartCaptureAsync(DWORD processId, bool includeProcessTree, PCWSTR outputFileName);
-    HRESULT StopCaptureAsync();
 
+    HRESULT SendAudioBySocket(void* audioData, size_t size);
+
+    HRESULT StopCaptureAsync();
+    void handleSocketConnection(SOCKET _clientSocket, std::string name);
+    
     METHODASYNCCALLBACK(CLoopbackCapture, StartCapture, OnStartCapture);
     METHODASYNCCALLBACK(CLoopbackCapture, StopCapture, OnStopCapture);
     METHODASYNCCALLBACK(CLoopbackCapture, SampleReady, OnSampleReady);
@@ -37,6 +40,8 @@ public:
 
     // IActivateAudioInterfaceCompletionHandler
     STDMETHOD(ActivateCompleted)(IActivateAudioInterfaceAsyncOperation* operation);
+
+    DWORD m_cbHeaderSize = 0;
 
 private:
     // NB: All states >= Initialized will allow some methods
@@ -51,7 +56,6 @@ private:
         Stopping,
         Stopped,
     };
-
     HRESULT OnStartCapture(IMFAsyncResult* pResult);
     HRESULT OnStopCapture(IMFAsyncResult* pResult);
     HRESULT OnFinishCapture(IMFAsyncResult* pResult);
@@ -59,7 +63,6 @@ private:
 
     HRESULT InitializeLoopbackCapture();
     HRESULT CreateWAVFile();
-    HRESULT FixWAVHeader();
     HRESULT OnAudioSampleRequested();
 
     HRESULT ActivateAudioInterface(DWORD processId, bool includeProcessTree);
@@ -78,7 +81,6 @@ private:
     wil::unique_hfile m_hFile;
     wil::critical_section m_CritSec;
     DWORD m_dwQueueID = 0;
-    DWORD m_cbHeaderSize = 0;
     DWORD m_cbDataSize = 0;
 
     // These two members are used to communicate between the main thread

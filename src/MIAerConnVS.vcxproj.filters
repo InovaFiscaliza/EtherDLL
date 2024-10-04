@@ -41,10 +41,7 @@
     <ClInclude Include="MIAerConnAudio.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="CRtspSession.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="CStreamer.h">
+    <ClInclude Include="MIAerConnProcessApiResponse.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -67,10 +64,7 @@
     <ClCompile Include="MIAerConnAudio.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="CRtspSession.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="CStreamer.cpp">
+    <ClCompile Include="MIAerConnProcessApiResponse.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
