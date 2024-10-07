@@ -35,6 +35,15 @@
     <ClInclude Include="MIAerLog.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="MIAerConnAudioCommon.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MIAerConnAudio.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MIAerConnProcessApiResponse.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MIAerConn.cpp">
@@ -50,6 +59,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MIAerLog.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MIAerConnAudio.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MIAerConnProcessApiResponse.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
