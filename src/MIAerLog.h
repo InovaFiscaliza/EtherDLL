@@ -8,6 +8,8 @@
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/sinks/basic_file_sink.h>
 
+extern std::vector<std::string> errorBuffer;
+
 #pragma once
 
 class MIAerLog

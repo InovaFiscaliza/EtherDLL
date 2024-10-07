@@ -76,7 +76,10 @@ void MIAerLog::start(std::string name, bool consoleEnable, bool fileEnable, std:
 void MIAerLog::logCommandExec(ERetCode errCode, std::string command) {
 	if (errCode != ERetCode::API_SUCCESS)
 	{
-		logger.error("[" + command + "] ERROR. " + ERetCodeToString(errCode));
+		std::string message = "[" + command + "] command failed with error code: " + ERetCodeToString(errCode);
+		logger.error(message);
+		errorBuffer.push_back(message);
+
 		/*if (clientSocketCommand != NULL) {
 			int iResult = send(clientSocketCommand,
 				(ERetCodeToString(errCode) + "\n").c_str(),

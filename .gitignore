@@ -402,3 +402,4 @@ test/resources/project/root/qaw0eS1zuuY1ar9TdPn1GMfrjbQp.xml
 /resources/project
 *.xml
 src/log.txt
+/src/log.txt
