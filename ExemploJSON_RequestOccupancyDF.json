@@ -1,0 +1,29 @@
+{
+    "commandCode": 14,
+    "occupancyParams": {
+        "numBands": 1,
+        "storageTime": 15,
+        "measurementTime": 300,
+        "numAzimuths": 360,
+        "confidence": 75,
+        "recordHoldoff": 5,
+        "scanDfThreshold": 10,
+        "recordAudioDf": false,
+        "band": {
+            "channelBandwidth": 25000,
+            "exclude": false,
+            "highFrequency": 99975000,
+            "lowFrequency": 90000000
+        },
+        "rcvrCtrl": {
+            "bandwidth": 6000,
+            "bfo": 800,
+            "detMode": 2,
+            "freq": 90000000,
+            "agcTime": 500
+        }
+    }
+}
+
+
+{"commandCode": 14,"occupancyParams": {"numBands": 1,"storageTime": 15,"measurementTime": 300,"numAzimuths": 360,"confidence": 75,"recordHoldoff": 5,"scanDfThreshold": 10,"recordAudioDf": false,"band": {"channelBandwidth": 25000,"exclude": false,"highFrequency": 99975000,"lowFrequency": 90000000},"rcvrCtrl": {"bandwidth": 6000,"bfo": 800,"detMode": 2,"freq": 90000000,"agcTime": 500}}}
