@@ -111,7 +111,7 @@ HRESULT CLoopbackCapture::ActivateCompleted(IActivateAudioInterfaceAsyncOperatio
             RETURN_IF_FAILED(punkAudioInterface.copy_to(&m_AudioClient));
 
             // The app can also call m_AudioClient->GetMixFormat instead to get the capture format.
-            // 16 - bit PCM format.
+            // 16 - bit PCM format.    https://learn.microsoft.com/pt-br/previous-versions/dd757713(v=vs.85)
             m_CaptureFormat.wFormatTag = WAVE_FORMAT_PCM;
             m_CaptureFormat.nChannels = 2;
             m_CaptureFormat.nSamplesPerSec = 44100;
@@ -155,8 +155,6 @@ HRESULT CLoopbackCapture::ActivateCompleted(IActivateAudioInterfaceAsyncOperatio
 
 //
 //  CreateWAVFile()
-//
-//  Creates a WAV file in music folder
 //
 HRESULT CLoopbackCapture::CreateWAVFile()
 {

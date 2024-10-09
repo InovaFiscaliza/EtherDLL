@@ -304,9 +304,11 @@ std::string processPanResponse(_In_ SEquipCtrlMsg::UBody* data)
 	json jsonObj;
 	jsonObj["respType"] = std::to_string(GET_ANT_LIST_INFO);
 	SEquipCtrlMsg::SGetPanResp* PanResponse = (SEquipCtrlMsg::SGetPanResp*)data;
+	for (size_t i = 0; i < PanResponse->nActiveAudioChannels; ++i) {
+		jsonObj["SGetPanResp"]["audioPower"][i]["powerdBm"] = PanResponse->audioPower[i].powerdBm;
+	}
+	jsonObj["SGetPanResp"]["binData"] = std::string(reinterpret_cast<char*>(PanResponse->binData), PanResponse->numBins);
 	jsonObj["SGetPanResp"]["audioPower"]["active"] = PanResponse->audioPower->active;
-	jsonObj["SGetPanResp"]["audioPower"]["powerdBm"] = PanResponse->audioPower->powerdBm;
-	jsonObj["SGetPanResp"]["binData"] = PanResponse->binData;
 	jsonObj["SGetPanResp"]["binSize"]["internal"] = PanResponse->binSize.internal;
 	jsonObj["SGetPanResp"]["conversionFactorForFS"] = PanResponse->conversionFactorForFS;
 	jsonObj["SGetPanResp"]["dateTime"] = PanResponse->dateTime;
