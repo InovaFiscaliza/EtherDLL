@@ -245,7 +245,8 @@ void handleCommandConnection(SOCKET clientSocket, std::string name) {
 			
 			std::string ack = mcs::Form::ACK + 
 				std::to_string(commandQueue.size()) +
-				mcs::Form::SEP;
+				"}"+
+				mcs::Form::MSG_END;
 			iResult = send(clientSocket, ack.c_str(), (int)(ack.length()), 0);
 			if (iResult == SOCKET_ERROR) {
 				logMIAer.warn(name + " ACK send failed. EC:" + std::to_string(WSAGetLastError()));
@@ -287,7 +288,7 @@ void handleStreamConnection(SOCKET clientSocket, std::string name) {
 	int iResult = 0;
 	while (running.load()) {
 		if (!streamBuffer.empty()) {
-			std::string data = streamBuffer.back() + mcs::Form::BLOCK_END;
+			std::string data = streamBuffer.back() + mcs::Form::MSG_END;
 			streamBuffer.pop_back();
 			iResult = send(clientSocket, data.c_str(), static_cast<int>(data.length()), 0);
 			if (iResult == SOCKET_ERROR) {
@@ -317,7 +318,7 @@ void handleErrorConnection(SOCKET clientSocket, std::string name) {
 	int iResult = 0;
 	while (running.load()) {
 		if (!errorBuffer.empty()) {
-			std::string data = errorBuffer.back() + mcs::Form::BLOCK_END;
+			std::string data = errorBuffer.back() + mcs::Form::MSG_END;
 			errorBuffer.pop_back();
 			iResult = send(clientSocket, data.c_str(), static_cast<int>(data.length()), 0);
 			if (iResult == SOCKET_ERROR) {
@@ -346,7 +347,7 @@ void handleRealTimeConnection(SOCKET clientSocket, std::string name) {
 	int iResult = 0;
 	while (running.load()) {
 		if (!realtimeBuffer.empty()) {
-			std::string data = realtimeBuffer.back() + mcs::Form::BLOCK_END;
+			std::string data = realtimeBuffer.back() + mcs::Form::MSG_END;
 			realtimeBuffer.pop_back();
 			iResult = send(clientSocket, data.c_str(), static_cast<int>(data.length()), 0);
 			if (iResult == SOCKET_ERROR) {

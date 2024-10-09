@@ -28,9 +28,8 @@ namespace mcs {
     };
 
     struct Form {
-        static constexpr const char SEP[] = "\r\n";
-        static constexpr const char PING[] = "PING\r\n";
-        static constexpr const char ACK[] = "ACK:";
-        static constexpr const char BLOCK_END[] = { 39, 13, 10, 39, '\0' }; // Sequence of 4 bytes with null termination for string: '\n\r'
+        static constexpr const char PING[] = "{\"PING\":1}\r\n";
+        static constexpr const char ACK[] = "{\"ACK\":";
+        static constexpr const char MSG_END[] = "\r\n";
     };
 }
