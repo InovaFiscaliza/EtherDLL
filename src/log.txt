@@ -1,46 +1,43 @@
-[2024-10-04 17:48:20.373] [MIAerConn] [info] Starting...
-[2024-10-04 17:48:20.648] [MIAerConn] [info] Object creation successful
-[2024-10-04 17:48:22.212] [MIAerConn] [info] Connected to station 166.139.112.178
-[2024-10-04 17:48:22.232] [MIAerConn] [info] Audio service listening on port 5000
-[2024-10-04 17:48:22.232] [MIAerConn] [info] Real time service listening on port 3003
-[2024-10-04 17:48:22.232] [MIAerConn] [info] Error service listening on port 3002
-[2024-10-04 17:48:22.232] [MIAerConn] [info] Stream service listening on port 3001
-[2024-10-04 17:48:22.232] [MIAerConn] [info] Control service listening on port 3000
-[2024-10-04 17:48:27.920] [MIAerConn] [info] Control service accepted connection from 0.0.0.0
-[2024-10-04 17:48:29.770] [MIAerConn] [info] Stream service accepted connection from 0.0.0.0
-[2024-10-04 17:48:29.771] [MIAerConn] [info] Stream service waiting for data from station to send...
-[2024-10-04 17:48:30.765] [MIAerConn] [info] Error service accepted connection from 0.0.0.0
-[2024-10-04 17:48:30.768] [MIAerConn] [info] Error service waiting for data from station to send...
-[2024-10-04 17:48:32.688] [MIAerConn] [info] Real time service accepted connection from 8.252.118.4
-[2024-10-04 17:48:32.699] [MIAerConn] [info] Real time service waiting for data from station to send...
-[2024-10-04 17:48:35.712] [MIAerConn] [info] Processing command: {"commandCode": 14,"occupancyParams": {"numBands": 1,"storageTime": 15,"measurementTime": 300,"numAzimuths": 360,"confidence": 75,"recordHoldoff": 5,"scanDfThreshold": 10,"recordAudioDf": false,"band": {"channelBandwidth": 25000,"exclude": false,"highFrequency": 99975000,"lowFrequency": 90000000},"rcvrCtrl": {"bandwidth": 6000,"bfo": 800,"detMode": 2,"freq": 90000000,"agcTime": 500}}}
-[2024-10-04 17:48:35.714] [MIAerConn] [info] [RequestOccupancyDF] command executed
-[2024-10-04 17:48:36.128] [MIAerConn] [info] eived destination address 
-[2024-10-04 17:48:36.129] [MIAerConn] [info] Data received destination address 
-[2024-10-04 17:48:36.130] [MIAerConn] [info] nData received server ID 
-[2024-10-04 17:48:36.130] [MIAerConn] [info] eceived destination address 
-[2024-10-04 17:48:36.130] [MIAerConn] [info] Data received destination address 
-[2024-10-04 17:48:36.131] [MIAerConn] [info] nData received server ID 
-[2024-10-04 17:48:36.131] [MIAerConn] [info] ived destination address 
-[2024-10-04 17:48:36.132] [MIAerConn] [info] Data received destination address 
-[2024-10-04 17:48:36.132] [MIAerConn] [info] nData received server ID 
-[2024-10-04 17:48:45.669] [MIAerConn] [info] Control service waiting for commands from client...
-[2024-10-04 17:48:45.976] [MIAerConn] [info] Processing command: {"commandCode": 55, "panParams": {"bandwidth": 1000000,"freq": 98500000,"rcvrAtten": 255}}
-[2024-10-04 17:48:45.977] [MIAerConn] [info] [RequestPan] command executed
-[2024-10-04 17:48:46.750] [MIAerConn] [info]  address 
-[2024-10-04 17:48:46.751] [MIAerConn] [info] ata received destination address 
-[2024-10-04 17:48:46.752] [MIAerConn] [info] nData received server ID 
-[2024-10-04 17:48:51.269] [MIAerConn] [info] eceived destination address 
-[2024-10-04 17:48:51.270] [MIAerConn] [info] Data received destination address 
-[2024-10-04 17:48:51.271] [MIAerConn] [info] nData received server ID 
-[2024-10-04 17:48:51.285] [MIAerConn] [info] ved destination address 
-[2024-10-04 17:48:51.286] [MIAerConn] [info] Data received destination address 
-[2024-10-04 17:48:51.287] [MIAerConn] [info] nData received server ID 
-[2024-10-04 17:48:51.505] [MIAerConn] [info] ved destination address 
-[2024-10-04 17:48:51.506] [MIAerConn] [info] Data received destination address 
-[2024-10-04 17:48:51.507] [MIAerConn] [info] nData received server ID 
-[2024-10-04 17:48:51.516] [MIAerConn] [info] ved destination address 
-[2024-10-04 17:48:51.517] [MIAerConn] [info] Data received destination address 
-[2024-10-04 17:48:51.518] [MIAerConn] [info] nData received server ID 
-[2024-10-04 17:48:51.736] [MIAerConn] [info] ved destination address 
-[2024-10-04 17:48:51.737] [MIAerConn] [inf
+[2024-10-10 19:48:51.708] [MIAerConn] [info] Starting...
+[2024-10-10 19:48:51.819] [MIAerConn] [info] Object creation successful
+[2024-10-10 19:48:53.349] [MIAerConn] [info] Connected to station 166.139.112.178
+[2024-10-10 19:48:53.356] [MIAerConn] [info] Audio service listening on port 5000
+[2024-10-10 19:48:53.356] [MIAerConn] [info] Control service listening on port 3000
+[2024-10-10 19:48:53.356] [MIAerConn] [info] Stream service listening on port 3001
+[2024-10-10 19:48:53.376] [MIAerConn] [info] Real time service listening on port 3003
+[2024-10-10 19:48:53.376] [MIAerConn] [info] Error service listening on port 3002
+[2024-10-10 19:49:09.133] [MIAerConn] [info] Control service accepted connection from 0.0.0.0
+[2024-10-10 19:49:11.380] [MIAerConn] [info] Stream service accepted connection from 0.0.0.0
+[2024-10-10 19:49:11.380] [MIAerConn] [info] Stream service waiting for data from station to send...
+[2024-10-10 19:49:13.528] [MIAerConn] [info] Real time service accepted connection from 48.249.119.4
+[2024-10-10 19:49:13.529] [MIAerConn] [info] Real time service waiting for data from station to send...
+[2024-10-10 19:49:16.024] [MIAerConn] [info] Error service accepted connection from 0.0.0.0
+[2024-10-10 19:49:16.024] [MIAerConn] [info] Error service waiting for data from station to send...
+[2024-10-10 19:49:19.147] [MIAerConn] [info] Control service waiting for commands from client...
+[2024-10-10 19:49:19.904] [MIAerConn] [info] Processing command: {"commandCode": 55, "panParams": {"bandwidth": 1000000,"freq": 101300000,"rcvrAtten": 255}}
+
+[2024-10-10 19:49:19.904] [MIAerConn] [info] [RequestPan] command executed
+[2024-10-10 19:49:20.111] [MIAerConn] [info]  address 
+[2024-10-10 19:49:20.112] [MIAerConn] [info] Data received destination address 
+[2024-10-10 19:49:20.112] [MIAerConn] [info] nData received server ID 
+[2024-10-10 19:49:48.244] [MIAerConn] [info] Processing command: {"commandCode": 55, "panParams": {"bandwidth": 1000000,"freq": 101300000,"rcvrAtten": 255}}
+[2024-10-10 19:49:48.245] [MIAerConn] [info] [RequestPan] command executed
+[2024-10-10 19:49:48.451] [MIAerConn] [info]  address 
+[2024-10-10 19:49:48.451] [MIAerConn] [info] ata received destination address 
+[2024-10-10 19:49:48.452] [MIAerConn] [info] nData received server ID 
+[2024-10-10 19:50:42.096] [MIAerConn] [info] Control service waiting for commands from client...
+[2024-10-10 19:50:43.296] [MIAerConn] [warning] Control service PING send failed. EC:10053
+[2024-10-10 19:50:43.297] [MIAerConn] [info] Control service connection with address1188 lost.
+[2024-10-10 19:50:43.297] [MIAerConn] [info] Control service listening on port 3000
+[2024-10-10 19:50:53.628] [MIAerConn] [info] Stream service waiting for data from station to send...
+[2024-10-10 19:50:55.908] [MIAerConn] [info] Real time service waiting for data from station to send...
+[2024-10-10 19:50:58.332] [MIAerConn] [info] Error service waiting for data from station to send...
+[2024-10-10 19:51:02.351] [MIAerConn] [warning] Received interruption signal (ctrl+C)
+[2024-10-10 19:51:02.368] [MIAerConn] [info] Service will shutdown...
+[2024-10-10 19:51:02.370] [MIAerConn] [info] Real time service stopped listening on port 3003
+[2024-10-10 19:51:02.372] [MIAerConn] [warning] Control service failed in accept operation with 0.0.0.0. EC:10004
+[2024-10-10 19:51:02.373] [MIAerConn] [warning] Audio service failed in accept operation with 0.0.0.0. EC:10004
+[2024-10-10 19:51:02.374] [MIAerConn] [info] Audio service stopped listening on port 5000
+[2024-10-10 19:51:02.373] [MIAerConn] [info] Control service stopped listening on port 3000
+[2024-10-10 19:51:02.629] [MIAerConn] [info] Stream service stopped listening on port 3001
+[2024-10-10 19:51:02.752] [MIAerConn] [info] Error service stopped listening on port 3002
