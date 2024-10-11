@@ -40,6 +40,10 @@
       "sleep_ms": 500,
       "check_period": 200
     },
+	"audio": {
+      "port": 3004,
+      "timeout_s": 60000
+    },
     "simulated": true
   }
 }

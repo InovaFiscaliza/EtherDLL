@@ -1,5 +1,10 @@
 #include "MIAerConnUtils.h"
 
+/*
+* Felipe Machado
+* 
+* Generate a new config file with default values if file not exist
+*/
 void newDefaultConfigFile() {
 	using json = nlohmann::json;
 	json jsonObj;
@@ -30,10 +35,13 @@ void newDefaultConfigFile() {
 	jsonObj["service"]["error"]["sleep_ms"] = 500;
 	jsonObj["service"]["error"]["check_period"] = 200;
 
-	jsonObj["service"]["realtime"]["port"] = 3002;
+	jsonObj["service"]["realtime"]["port"] = 3003;
 	jsonObj["service"]["realtime"]["timeout_s"] = 10000;
 	jsonObj["service"]["realtime"]["sleep_ms"] = 500;
 	jsonObj["service"]["realtime"]["check_period"] = 200;
+
+	jsonObj["service"]["audio"]["port"] = 3004;
+	jsonObj["service"]["audio"]["timeout_s"] = 60000;
 
 	jsonObj["service"]["simulated"] = true;
 
@@ -57,6 +65,11 @@ std::vector<std::string> split(std::string s, std::string delimiter) {
 	return res;
 }
 
+/*
+* Felipe Machado
+* 
+* Convert JSON object in struct a of SAudioParams
+*/
 SAudioParams jsonToSAudioParams(nlohmann::json jsonObj) {
 	SAudioParams structSO;
 
@@ -74,14 +87,17 @@ SAudioParams jsonToSAudioParams(nlohmann::json jsonObj) {
 	if (jsonObj["freq"].is_null() == false) {
 		structSO.freq = Units::Frequency(jsonObj["freq"].get<unsigned long>()).GetRaw();
 	}
-	if (structSO.doRDS == true) {
-		//strncpy_s(structSO.ipAddressRDSRadio, jsonObj["doRDS"].get<std::string>().c_str(), SSmsMsg::IP_ADDRESS_LEN);
-	}
+	
 	structSO.streamID = jsonObj["streamID"].is_null() == true ? NULL : jsonObj["streamID"].get<unsigned long>();
 
 	return structSO;
 }
 
+/*
+* Felipe Machado
+* 
+* Convert JSON object in struct a of SGetPanParams
+*/
 SGetPanParams jsonToSGetPanParams(nlohmann::json jsonObj) {
 	SGetPanParams structSO;
 
@@ -96,6 +112,11 @@ SGetPanParams jsonToSGetPanParams(nlohmann::json jsonObj) {
 	return structSO;
 }
 
+/*
+* Felipe Machado
+* 
+* Convert JSON object in struct a of SPanParams
+*/
 SPanParams jsonToSPanParams(nlohmann::json jsonObj) {
 	SPanParams structSO;
 
@@ -118,6 +139,11 @@ SPanParams jsonToSPanParams(nlohmann::json jsonObj) {
 	return structSO;
 }
 
+/*
+* Felipe Machado
+* 
+* Convert JSON object in struct a of SMeasReqData
+*/
 SMeasReqData* jsonToSMeasReqData(nlohmann::json jsonObj) {
 	SMeasReqData structSO;
 	
@@ -193,6 +219,11 @@ SMeasReqData* jsonToSMeasReqData(nlohmann::json jsonObj) {
 	return m_measureReqMsg;
 }
 
+/*
+* Felipe Machado
+* 
+* Convert JSON object in struct a of SOccupReqData
+*/
 SOccupReqData* jsonToSOccupReqData(nlohmann::json jsonObj) {
 	SOccupReqData structSO;
 	structSO.ant = jsonObj["ant"].is_null() == true ? (SEquipCtrlMsg::EAnt)NULL : jsonObj["ant"].get<SEquipCtrlMsg::EAnt>();
@@ -235,6 +266,11 @@ SOccupReqData* jsonToSOccupReqData(nlohmann::json jsonObj) {
 	return m_occReqMsg;
 }
 
+/*
+* Felipe Machado
+* 
+* Convert JSON object in struct a of SOccDFReqData
+*/
 SOccDFReqData* jsonToSOccDFReqData(nlohmann::json jsonObj) {
 	SOccDFReqData structSO;
 	SSmsMsg::SGetScanDfCmdV1::SBand band;
@@ -295,6 +331,11 @@ SOccDFReqData* jsonToSOccDFReqData(nlohmann::json jsonObj) {
 	return occDFReqMsg;
 }
 
+/*
+* Felipe Machado
+* 
+* Convert JSON object in struct a of SAVDReqData
+*/
 SAVDReqData* jsonToSAVDReqData(nlohmann::json jsonObj) {
 	SAVDReqData structSO;
 	
@@ -341,10 +382,20 @@ std::wstring stringToWString(const std::string& str) {
 	return std::wstring(str.begin(), str.end());
 }
 
+/*
+* Felipe Machado
+* 
+* Convert std::string to unsigned long
+*/
 unsigned long stringToUnsignedLong(std::string str) {
 	return strtoul(str.c_str(), NULL, 0);
 }
 
+/*
+* Felipe Machado
+* 
+* Convert std::string to boolean
+*/
 bool stringToBool(std::string str) {
 	std::transform(str.begin(), str.end(), str.begin(), ::tolower);
 	std::istringstream is(str);

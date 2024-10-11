@@ -8,6 +8,11 @@
 #define BITS_PER_BYTE 8
 SOCKET clientSocket = NULL;
 
+/*
+* Felipe Machado
+* 
+* Set a socket connection for send captured audio
+*/
 void CLoopbackCapture::handleSocketConnection(SOCKET _clientSocket, std::string name) {
 
     int checkPeriod = 0;
@@ -15,6 +20,11 @@ void CLoopbackCapture::handleSocketConnection(SOCKET _clientSocket, std::string 
     clientSocket = _clientSocket;
 }
 
+/*
+* Felipe Machado
+*
+* Send a audio package in socket connection
+*/
 HRESULT CLoopbackCapture::SendAudioBySocket(void* audioData, size_t size) {
     if (clientSocket != NULL) { //if not null write audio data in socket
         char* dataAux = (char*)malloc(size + 1);
@@ -91,12 +101,12 @@ HRESULT CLoopbackCapture::ActivateAudioInterface(DWORD processId, bool includePr
         }());
 }
 
-//
-//  ActivateCompleted()
-//
-//  Callback implementation of ActivateAudioInterfaceAsync function.  This will be called on MTA thread
-//  when results of the activation are available.
-//
+/*
+* Felipe Machado
+*
+* Callback implementation of ActivateAudioInterfaceAsync function.  This will be called on MTA thread
+* when results of the activation are available.
+*/
 HRESULT CLoopbackCapture::ActivateCompleted(IActivateAudioInterfaceAsyncOperation* operation)
 {
     m_activateResult = SetDeviceStateErrorIfFailed([&]()->HRESULT
@@ -153,9 +163,11 @@ HRESULT CLoopbackCapture::ActivateCompleted(IActivateAudioInterfaceAsyncOperatio
     return S_OK;
 }
 
-//
-//  CreateWAVFile()
-//
+/*
+* Felipe Machado
+*
+* Create a header of wav file and send in socket
+*/
 HRESULT CLoopbackCapture::CreateWAVFile()
 {
     return SetDeviceStateErrorIfFailed([&]()->HRESULT
@@ -192,6 +204,11 @@ HRESULT CLoopbackCapture::CreateWAVFile()
         }());
 }
 
+/*
+* Felipe Machado
+*
+* Starting capture
+*/
 HRESULT CLoopbackCapture::StartCaptureAsync(DWORD processId, bool includeProcessTree, PCWSTR outputFileName)
 {
     m_outputFileName = outputFileName;
@@ -209,11 +226,11 @@ HRESULT CLoopbackCapture::StartCaptureAsync(DWORD processId, bool includeProcess
     return S_OK;
 }
 
-//
-//  OnStartCapture()
-//
-//  Callback method to start capture
-//
+/*
+* Felipe Machado
+*
+* Callback method to start capture
+*/
 HRESULT CLoopbackCapture::OnStartCapture(IMFAsyncResult* pResult)
 {
     return SetDeviceStateErrorIfFailed([&]()->HRESULT
@@ -228,12 +245,11 @@ HRESULT CLoopbackCapture::OnStartCapture(IMFAsyncResult* pResult)
         }());
 }
 
-
-//
-//  StopCaptureAsync()
-//
-//  Stop capture asynchronously via MF Work Item
-//
+/*
+* Felipe Machado
+*
+* Stop capture asynchronously via MF Work Item
+*/
 HRESULT CLoopbackCapture::StopCaptureAsync()
 {
     RETURN_HR_IF(E_NOT_VALID_STATE, (m_DeviceState != DeviceState::Capturing) &&
@@ -249,11 +265,11 @@ HRESULT CLoopbackCapture::StopCaptureAsync()
     return S_OK;
 }
 
-//
-//  OnStopCapture()
-//
-//  Callback method to stop capture
-//
+/*
+* Felipe Machado
+*
+* Callback method to stop capture
+*/
 HRESULT CLoopbackCapture::OnStopCapture(IMFAsyncResult* pResult)
 {
     // Stop capture by cancelling Work Item
@@ -270,23 +286,22 @@ HRESULT CLoopbackCapture::OnStopCapture(IMFAsyncResult* pResult)
     return FinishCaptureAsync();
 }
 
-//
-//  FinishCaptureAsync()
-//
-//  Finalizes WAV file on a separate thread via MF Work Item
-//
+/*
+* Felipe Machado
+*
+* Finalizes WAV file on a separate thread via MF Work Item
+*/
 HRESULT CLoopbackCapture::FinishCaptureAsync()
 {
     // We should be flushing when this is called
     return MFPutWorkItem2(MFASYNC_CALLBACK_QUEUE_MULTITHREADED, 0, &m_xFinishCapture, nullptr);
 }
 
-//
-//  OnFinishCapture()
-//
-//  Because of the asynchronous nature of the MF Work Queues and the DataWriter, there could still be
-//  a sample processing.  So this will get called to finalize the WAV header.
-//
+/*
+* Felipe Machado
+*
+* finalize the WAV header
+*/
 HRESULT CLoopbackCapture::OnFinishCapture(IMFAsyncResult* pResult)
 {
     m_DeviceState = DeviceState::Stopped;
@@ -296,11 +311,11 @@ HRESULT CLoopbackCapture::OnFinishCapture(IMFAsyncResult* pResult)
     return S_OK;
 }
 
-//
-//  OnSampleReady()
-//
-//  Callback method when ready to fill sample buffer
-//
+/*
+* Felipe Machado
+*
+* Callback method when ready to fill sample buffer
+*/
 HRESULT CLoopbackCapture::OnSampleReady(IMFAsyncResult* pResult)
 {
     if (SUCCEEDED(OnAudioSampleRequested()))
@@ -320,12 +335,11 @@ HRESULT CLoopbackCapture::OnSampleReady(IMFAsyncResult* pResult)
     return S_OK;
 }
 
-//
-//  OnAudioSampleRequested()
-//
-//  Called when audio device fires m_SampleReadyEvent
-//
-
+/*
+* Felipe Machado
+*
+* Called when audio device fires m_SampleReadyEvent
+*/
 HRESULT CLoopbackCapture::OnAudioSampleRequested()
 {
     UINT32 FramesAvailable = 0;
@@ -379,8 +393,6 @@ HRESULT CLoopbackCapture::OnAudioSampleRequested()
         // Get sample buffer
         RETURN_IF_FAILED(m_AudioCaptureClient->GetBuffer(&Data, &FramesAvailable, &dwCaptureFlags, &u64DevicePosition, &u64QPCPosition));
 
-
-        // Write File
         if (m_DeviceState != DeviceState::Stopping)
         {
             SendAudioBySocket(Data, cbBytesToCapture);
