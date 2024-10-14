@@ -624,12 +624,12 @@ int main() {
 	/*
 	  * Felipe Machado - 04/10/2024
 	*/
-	// Start thread for the audio socket service. This thread will stream real time data to the client
+	// Start thread for the audio socket service.
 	std::thread audioThread(socketHandle,
 		"Audio service",
 		mcs::Code::STREAM_ERROR,
-		5000,
-		6000,
+		config["service"]["audio"]["port"].get<int>(),
+		config["service"]["audio"]["timeout_s"].get<int>(),
 		handleAudioConnection);
 		
 	// Main loop to process commands received
@@ -696,16 +696,14 @@ int main() {
 						{
 							logMIAer.error("Failed to start audio capture");
 						}
-						logMIAer.info("Capturing 20 seconds of audio.");
-						Sleep(20000);
-
-						loopbackCapture.StopCaptureAsync();
-						logMIAer.info("Finished audio capture.");
+						logMIAer.info("Capturing audio.");
 					}
 					break;
 				}
 				case ECSMSDllMsgType::FREE_AUDIO_CHANNEL:
 					logMIAer.logCommandExec(FreeAudio(APIserverId, jsonObj["channel"].get<unsigned long>(), &requestID), "FreeAudio");
+					loopbackCapture.StopCaptureAsync();
+					logMIAer.info("Finished audio capture.");
 					break;
 				case ECSMSDllMsgType::SET_PAN_PARAMS:
 					logMIAer.logCommandExec(SetPanParams(APIserverId, jsonToSPanParams(jsonObj["panParams"]), &requestID), "SetPanParams");

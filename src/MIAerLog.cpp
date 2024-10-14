@@ -2,6 +2,9 @@
 
 spdlog::logger logger = spdlog::logger("");
 
+/*
+* Start log in console and file
+*/
 void MIAerLog::start(std::string name, bool consoleEnable, bool fileEnable, std::string consoleLevel, std::string logFilename, std::string fileLevel) {
 	
 	logger = spdlog::logger(name);
@@ -73,24 +76,15 @@ void MIAerLog::start(std::string name, bool consoleEnable, bool fileEnable, std:
 	logger.info("Starting...");
 }
 
+/*
+* Felipe Machado
+* 
+* Log return of Scorpio API function called
+*/
 void MIAerLog::logCommandExec(ERetCode errCode, std::string command) {
 	if (errCode != ERetCode::API_SUCCESS)
 	{
-		std::string message = "[" + command + "] command failed with error code: " + ERetCodeToString(errCode);
-		logger.error(message);
-		errorBuffer.push_back(message);
-
-		/*if (clientSocketCommand != NULL) {
-			int iResult = send(clientSocketCommand,
-				(ERetCodeToString(errCode) + "\n").c_str(),
-				static_cast<int>(strlen(ERetCodeToString(errCode).c_str()) + 1),
-				0);
-			if (iResult == SOCKET_ERROR) {
-				logger.warn("Failed to send socket. EC:" + std::to_string(WSAGetLastError()));
-				logger.info("Connection with address" + std::to_string(clientSocketCommand) + " lost.");
-				return;
-			}
-		}*/
+		logger.error("[" + command + "] ERROR. " + ERetCodeToString(errCode));
 	}
 	else
 	{
@@ -98,14 +92,29 @@ void MIAerLog::logCommandExec(ERetCode errCode, std::string command) {
 	}
 }
 
+/*
+* Felipe Machado
+*
+* Informations
+*/
 void MIAerLog::info(std::string str) {
 	logger.info(str);
 }
 
+/*
+* Felipe Machado
+*
+* Warnings occured in application
+*/
 void MIAerLog::warn(std::string str) {
 	logger.warn(str);
 }
 
+/*
+* Felipe Machado
+*
+* Errors occured in application
+*/
 void MIAerLog::error(std::string str) {
 	logger.error(str);
 }
