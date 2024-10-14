@@ -1,5 +1,9 @@
 #include "MIAerConnProcessApiResponse.h"
 
+/*Felipe Machado
+* 
+* Convert response of BIT command in JSON
+*/
 std::string processBITEResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody* respdata)
 {
 	using json = nlohmann::json;
@@ -22,12 +26,15 @@ std::string processBITEResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMs
 		jsonObj["SGetBistResp"]["text"] = BITEResponse->text;
 		jsonObj["SGetBistResp"]["textLen"] = BITEResponse->textLen;
 	}
-	else
-	{
-	}
+	
 	return jsonObj.dump();
 
 }
+
+/*Felipe Machado
+*
+* Convert response of type GET_ANT_LIST_INFO in JSON
+*/
 std::string ProcessAntListResponse(_In_ SEquipCtrlMsg::UBody* data)
 {
 	SEquipCtrlMsg::SAntInfoListResp* antListResponse = (SEquipCtrlMsg::SAntInfoListResp*)data;
@@ -54,6 +61,11 @@ std::string ProcessAntListResponse(_In_ SEquipCtrlMsg::UBody* data)
 
 	return jsonObj.dump();
 }
+
+/*Felipe Machado
+*	
+* Convert response of types AVD_FREQ_VS_CHANNEL, AVD_OCC_CHANNEL_RESULT, AVD_FREQ_MEAS, AVD_BW_MEAS, AVD_SOLICIT_STATE_RESPONSE, AVD_STATE_RESPONSE and AVD_STATUS  in JSON
+*/
 std::string processAutoViolateResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody* data)
 {
 	SEquipCtrlMsg::SOccupancyHeader* pOccHdr = nullptr;
@@ -109,9 +121,10 @@ std::string processAutoViolateResponse(_In_ ECSMSDllMsgType respType, _In_ SEqui
 	else if (respType == ECSMSDllMsgType::AVD_FREQ_MEAS)
 	{
 		SEquipCtrlMsg::SAvdMeasureResult* Response = (SEquipCtrlMsg::SAvdMeasureResult*)data;
-		SSmsMsg::SAvdMeasureResultV1::SMeasureData arrayMeasData[1000];
-		// TODO - montar array de measData
-		//jsonObj["SAvdMeasureResult"]["measData"] = Response->measData;
+		for (size_t i = 0; i < 1000; ++i) {
+			jsonObj["SAvdMeasureResult"]["measData"][i]["result"] = Response->measData[i].result;
+			jsonObj["SAvdMeasureResult"]["measData"][i]["stdDev"] = Response->measData[i].stdDev;
+		}
 		jsonObj["SAvdMeasureResult"]["occHdr"]["firstChannel"] = Response->occHdr.firstChannel;
 		jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["dateTime"] = Response->occHdr.gpsResponse.dateTime;
 		jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["latitude"] = Response->occHdr.gpsResponse.latitude;
@@ -141,8 +154,10 @@ std::string processAutoViolateResponse(_In_ ECSMSDllMsgType respType, _In_ SEqui
 	else if (respType == ECSMSDllMsgType::AVD_BW_MEAS)
 	{
 		SEquipCtrlMsg::SAvdMeasureResult* Response = (SEquipCtrlMsg::SAvdMeasureResult*)data;
-		// TODO - montar array de measData
-		//jsonObj["SAvdMeasureResult"]["measData"] = Response->measData;
+		for (size_t i = 0; i < 1000; ++i) {
+			jsonObj["SAvdMeasureResult"]["measData"][i]["result"] = Response->measData[i].result;
+			jsonObj["SAvdMeasureResult"]["measData"][i]["stdDev"] = Response->measData[i].stdDev;
+		}
 		jsonObj["SAvdMeasureResult"]["occHdr"]["firstChannel"] = Response->occHdr.firstChannel;
 		jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["dateTime"] = Response->occHdr.gpsResponse.dateTime;
 		jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["latitude"] = Response->occHdr.gpsResponse.latitude;
@@ -209,14 +224,14 @@ std::string processAutoViolateResponse(_In_ ECSMSDllMsgType respType, _In_ SEqui
 		jsonObj["SOccResult"]["resultData"]["avg"] = Response->resultData->avg;
 		jsonObj["SOccResult"]["resultData"]["avg"] = Response->resultData->max;
 	}
-	else	// not AUTOVIOLATE_RESPONSE
-	{
-		//tempstr.Format(_T("unexpected AVD message %u"),
-			//respType);
-	}
-
+	
 	return jsonObj.dump();
 }
+
+/*Felipe Machado
+*
+* Convert response of types GET_MEAS and VALIDATE_MEAS in JSON
+*/
 std::string processMeasResponse(_In_ ECSMSDllMsgType respType, _In_ unsigned long sourceAddr, _In_ SEquipCtrlMsg::UBody* data)
 {
 	using json = nlohmann::json;
@@ -259,6 +274,11 @@ std::string processMeasResponse(_In_ ECSMSDllMsgType respType, _In_ unsigned lon
 	}
 	return jsonObj.dump();
 }
+
+/*Felipe Machado
+*
+* Convert response of types SET_PAN_PARAMS, SET_AUDIO_PARAMS and FREE_AUDIO_CHANNEL in JSON
+*/
 std::string processDemodCtrlResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody* data)
 {
 	using json = nlohmann::json;
@@ -287,13 +307,14 @@ std::string processDemodCtrlResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipC
 		SEquipCtrlMsg::SGenericResp* FreeAudioResponse = (SEquipCtrlMsg::SGenericResp*)data;
 		jsonObj["SGenericResp"]["status"] = FreeAudioResponse->status;
 	}
-	else
-	{
-		//tempstr.Format(_T("unexpected Demod Control message subType %lu"),
-		//	m_Response.hdr.msgSubType);
-	}
+	
 	return jsonObj.dump();
 }
+
+/*Felipe Machado
+*
+* Convert response of type GET_PAN in JSON
+*/
 std::string processPanResponse(_In_ SEquipCtrlMsg::UBody* data)
 {
 	//error codes:
@@ -308,6 +329,7 @@ std::string processPanResponse(_In_ SEquipCtrlMsg::UBody* data)
 		jsonObj["SGetPanResp"]["audioPower"][i]["powerdBm"] = PanResponse->audioPower[i].powerdBm;
 	}
 	jsonObj["SGetPanResp"]["binData"] = std::string(reinterpret_cast<char*>(PanResponse->binData), PanResponse->numBins);
+	jsonObj["SGetPanResp"]["audioPower"]["active"] = PanResponse->audioPower->active;
 	jsonObj["SGetPanResp"]["binSize"]["internal"] = PanResponse->binSize.internal;
 	jsonObj["SGetPanResp"]["conversionFactorForFS"] = PanResponse->conversionFactorForFS;
 	jsonObj["SGetPanResp"]["dateTime"] = PanResponse->dateTime;
@@ -319,6 +341,11 @@ std::string processPanResponse(_In_ SEquipCtrlMsg::UBody* data)
 	jsonObj["SGetPanResp"]["status"] = PanResponse->status;
 	return jsonObj.dump();
 }
+
+/*Felipe Machado
+*
+* Convert response of types OCC_MSGLEN_DIST_RESPONSE, OCC_FREQ_VS_CHANNEL, OCC_CHANNEL_RESULT, OCC_STATUS, OCC_STATE_RESPONSE, OCC_SOLICIT_STATE_RESPONSE, OCC_SPECTRUM_RESPONSE, OCC_TIMEOFDAY_RESULT, OCC_EFLD_CHANNEL_RESULT, OCC_MSGLEN_CHANNEL_RESULT, OCC_EFLD_TIMEOFDAY_RESULT in JSON
+*/
 std::string processOccupancyResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody* data)
 {
 	using json = nlohmann::json;
@@ -626,13 +653,13 @@ std::string processOccupancyResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipC
 		jsonObj["SValidateOccupancyResp"]["status"] = Response->status;
 
 	}
-	else	// not OCCUPANCY_RESPONSE
-	{
-		//tempstr.Format(_T("unexpected occupancy message %u"),
-			//respType);
-	}
 	return jsonObj.dump();
 }
+
+/*Felipe Machado
+*
+* Convert response of types OCCDF_FREQ_VS_CHANNEL, OCCDF_SCANDF_VS_CHANNEL, OCCDF_STATUS, OCCDF_STATE_RESPONSE and OCCDF_SOLICIT_STATE_RESPONSE in JSON
+*/
 std::string processOccupancyDFResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody* data)
 {
 	using json = nlohmann::json;
@@ -727,13 +754,14 @@ std::string processOccupancyDFResponse(_In_ ECSMSDllMsgType respType, _In_ SEqui
 		jsonObj["SEquipTaskStatusResp"]["status"] = Response->status;
 		jsonObj["SEquipTaskStatusResp"]["taskId"] = Response->taskId;
 	}
-	else	// not OCCUPANCYDF_RESPONSE
-	{
-		//tempstr.Format(_T("unexpected occupancyDF message %u"),
-		//	respType);
-	}
+	
 	return jsonObj.dump();
 }
+
+/*Felipe Machado
+*
+* Convert response returned by callback OnRealTimeDataFunc in JSON
+*/
 std::string ProcessRealTimeData(_In_ ECSMSDllMsgType respType, _In_ SSmsRealtimeMsg::UBody* data)
 {
 	using json = nlohmann::json;
@@ -744,18 +772,11 @@ std::string ProcessRealTimeData(_In_ ECSMSDllMsgType respType, _In_ SSmsRealtime
 	case ECSMSDllMsgType::RT_SPECTRUM_START:
 	{
 		const SSmsRealtimeMsg::SStartV2* pData = (SSmsRealtimeMsg::SStartV2*)data;
-		unsigned int i;
-
-		jsonObj["SStart"]["taskId"] = pData->taskId;
-		jsonObj["SStart"]["numBands"] = pData->numBands;		
-		for (i = 0; i < pData->numBands; i++)
-		{
-			json bandObj;
-			bandObj["binSize"] = pData->band[i].chanSize.internal;
-			bandObj["startFreq"] = pData->band[i].firstChanFreq.internal;
-			bandObj["numChan"] = pData->band[i].numChan;
-			jsonObj["SStart"]["band"].push_back(bandObj);
-		}
+		jsonObj["SStartV2"]["band"]["chanSize"]["internal"] = pData->band->chanSize.internal;
+		jsonObj["SStartV2"]["band"]["firstChanFreq"]["internal"] = pData->band->firstChanFreq.internal;
+		jsonObj["SStartV2"]["band"]["numChan"] = pData->band->numChan;
+		jsonObj["SStartV2"]["numBands"] = pData->numBands;
+		jsonObj["SStartV2"]["taskId"] = pData->taskId;
 		break;
 	}
 	case ECSMSDllMsgType::RT_SPECTRUM_STOP:
@@ -767,80 +788,61 @@ std::string ProcessRealTimeData(_In_ ECSMSDllMsgType respType, _In_ SSmsRealtime
 	case ECSMSDllMsgType::RT_SPECTRUM_V1RESPONSE:
 	{
 		const SSmsRealtimeMsg::SSpectrum* pData = (SSmsRealtimeMsg::SSpectrum*)data;
-
-		jsonObj["Spectrum"]["taskId"] = pData->taskId; 
-		jsonObj["Spectrum"]["bandIndex"] = pData->bandIndex;
-		jsonObj["Spectrum"]["startFreq"] = pData->firstChanFreq;
-		jsonObj["Spectrum"]["binSize"] = pData->chanSize;
-		jsonObj["Spectrum"]["numChan"] = pData->numChan;
-		jsonObj["Spectrum"]["noiseFloor"] = pData->noiseFloor;
-		jsonObj["Spectrum"]["levelData"] = std::string(reinterpret_cast<const char*>(pData->chanData), pData->numChan);
+		jsonObj["SSpectrum"]["bandIndex"] = pData->bandIndex;
+		jsonObj["SSpectrum"]["chanData"] = pData->chanData;
+		jsonObj["SSpectrum"]["chanSize"] = pData->chanSize;
+		jsonObj["SSpectrum"]["firstChanFreq"] = pData->firstChanFreq;
+		jsonObj["SSpectrum"]["noiseFloor"] = pData->noiseFloor;
+		jsonObj["SSpectrum"]["numChan"] = pData->numChan;
+		jsonObj["SSpectrum"]["taskId"] = pData->taskId;
 		break;
 	}
 	case ECSMSDllMsgType::RT_SPECTRUM_V2RESPONSE:
 	{
 		const SSmsRealtimeMsg::SSpectrumV2* pData = (SSmsRealtimeMsg::SSpectrumV2*)data;
-
-		jsonObj["Spectrum"]["taskId"] = pData->taskId;
-		jsonObj["Spectrum"]["bandIndex"] = pData->bandIndex;
-		jsonObj["Spectrum"]["startFreq"]["internal"] = pData->firstChanFreq.internal;
-		jsonObj["Spectrum"]["binSize"]["internal"] = pData->chanSize.internal;
-		jsonObj["Spectrum"]["numChan"] = pData->numChan;
-		jsonObj["Spectrum"]["noiseFloor"] = pData->noiseFloor;		
-		jsonObj["Spectrum"]["levelData"] = std::string(reinterpret_cast<const char*>(pData->chanData), pData->numChan);
+		jsonObj["SSpectrumV2"]["bandIndex"] = pData->bandIndex;
+		jsonObj["SSpectrumV2"]["chanData"] = pData->chanData;
+		jsonObj["SSpectrumV2"]["chanSize"]["internal"] = pData->chanSize.internal;
+		jsonObj["SSpectrumV2"]["firstChanFreq"]["internal"] = pData->firstChanFreq.internal;
+		jsonObj["SSpectrumV2"]["noiseFloor"] = pData->noiseFloor;
+		jsonObj["SSpectrumV2"]["numChan"] = pData->numChan;
+		jsonObj["SSpectrumV2"]["taskId"] = pData->taskId;
 		break;
 	}
 	case ECSMSDllMsgType::RT_SPECTRUM_RESPONSE:
 	{
 		const SSmsRealtimeMsg::SSpectrumV3* pData = (SSmsRealtimeMsg::SSpectrumV3*)data;
-
-		jsonObj["Spectrum"]["taskId"] = pData->taskId; 
-		jsonObj["Spectrum"]["bandIndex"] = pData->bandIndex;
-		jsonObj["Spectrum"]["startFreq"]["internal"] = pData->firstChanFreq.internal;
-		jsonObj["Spectrum"]["binSize"]["internal"] = pData->chanSize.internal;
-		jsonObj["Spectrum"]["numChan"] = pData->numChan;
-		jsonObj["Spectrum"]["noiseFloor"] = pData->noiseFloor;
-		jsonObj["Spectrum"]["efield"] = pData->efield;
-		jsonObj["Spectrum"]["zeroVal"] = pData->zeroVal;
-		jsonObj["Spectrum"]["levelData"] = std::string(reinterpret_cast<const char*>(pData->chanData), pData->numChan);
+		jsonObj["SSpectrumV3"]["bandIndex"] = pData->bandIndex;
+		jsonObj["SSpectrumV3"]["chanData"] = pData->chanData;
+		jsonObj["SSpectrumV3"]["chanSize"]["internal"] = pData->chanSize.internal;
+		jsonObj["SSpectrumV3"]["firstChanFreq"]["internal"] = pData->firstChanFreq.internal;
+		jsonObj["SSpectrumV3"]["noiseFloor"] = pData->noiseFloor;
+		jsonObj["SSpectrumV3"]["numChan"] = pData->numChan;
+		jsonObj["SSpectrumV3"]["taskId"] = pData->taskId;
+		jsonObj["SSpectrumV3"]["efield"] = pData->efield;
+		jsonObj["SSpectrumV3"]["zeroVal"] = pData->zeroVal;
 		break;
 
 	}
 	case ECSMSDllMsgType::RT_DF_START:
 	{
 		const SSmsRealtimeMsg::SStartV2* pData = (SSmsRealtimeMsg::SStartV2*)data;
-		unsigned int i;
-		
-		jsonObj["RTDFStart"]["taskId"] = pData->taskId;
-		jsonObj["RTDFStart"]["numBands"] = pData->numBands;
-
-        for (i = 0; i < pData->numBands; i++)
-        {
-			json bandObj;
-            bandObj["binSize"] = pData->band[i].chanSize.internal;
-            bandObj["startFreq"] = pData->band[i].firstChanFreq.internal;
-            bandObj["numChan"] = pData->band[i].numChan;
-            jsonObj["RTDFStart"]["band"].push_back(bandObj);
-        }
+		jsonObj["SStartV2"]["band"]["chanSize"]["internal"] = pData->band->chanSize.internal;
+		jsonObj["SStartV2"]["band"]["firstChanFreq"]["internal"] = pData->band->firstChanFreq.internal;
+		jsonObj["SStartV2"]["band"]["numChan"] = pData->band->numChan;
+		jsonObj["SStartV2"]["numBands"] = pData->numBands;
+		jsonObj["SStartV2"]["taskId"] = pData->taskId;
 		break;
 	}
 	case ECSMSDllMsgType::RT_DF_STARTV1:
 	{
 		const SSmsRealtimeMsg::SStart* pData = (SSmsRealtimeMsg::SStart*)data;
-		unsigned int i;
-
-		jsonObj["RTDFStart"]["taskId"] = pData->taskId;
-		jsonObj["RTDFStart"]["numBands"] = pData->numBands;
-		jsonObj["RTDFStart"]["MAX_OCCBANDS"] = pData->MAX_OCCBANDS;
-		for (i = 0; i < pData->numBands; i++)
-		{
-			json bandObj;
-			bandObj["binSize"]["internal"] = pData->chanSize[i];
-			bandObj["startFreq"]["internal"] = pData->firstChanFreq[i];
-			bandObj["numChan"] = pData->numChan[i];
-			jsonObj["RTDFStart"]["band"].push_back(bandObj);
-		}
-		
+		jsonObj["SStart"]["chanSize"] = pData->chanSize;
+		jsonObj["SStart"]["firstChanFreq"] = pData->firstChanFreq;
+		jsonObj["SStart"]["MAX_OCCBANDS"] = pData->MAX_OCCBANDS;
+		jsonObj["SStart"]["numBands"] = pData->numBands;
+		jsonObj["SStart"]["numChan"] = pData->numChan;
+		jsonObj["SStart"]["taskId"] = pData->taskId;
 		break;
 	}
 	case ECSMSDllMsgType::RT_DF_STOP:
