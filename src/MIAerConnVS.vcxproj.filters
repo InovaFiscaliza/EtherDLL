@@ -49,9 +49,6 @@
     <ClCompile Include="MIAerConn.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="StdAfx.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="ExternalCodes.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
