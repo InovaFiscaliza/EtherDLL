@@ -1,9 +1,11 @@
 #include "MIAerConnProcessApiResponse.h"
+#include "string"
+#include "ExternalCodes.h"
 
-/*Felipe Machado
-* 
-* Convert response of BIT command in JSON
-*/
+
+//
+// Convert response of BIT command in JSON
+//
 std::string processBITEResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody* respdata)
 {
 	using json = nlohmann::json;
@@ -21,6 +23,7 @@ std::string processBITEResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMs
                 jsonObj["BIST"]["textLen"] = BITEResponse->textLen;
             }
             break;
+
 	    case ECSMSDllMsgType::GET_DIAGNOSTICS:
             {
                 SEquipCtrlMsg::SGetBistResp* BITEResponse = (SEquipCtrlMsg::SGetBistResp*)respdata;
@@ -29,18 +32,18 @@ std::string processBITEResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMs
                 jsonObj["BIST"]["text"] = BITEResponse->text;
                 jsonObj["BIST"]["textLen"] = BITEResponse->textLen;
             }
+
         default:
-            jsonObj["BIST"]["Error"] = sprintf("Unexpected processBITEResponse type: %d", respType);
+            jsonObj["BIST"]["Error"] = std::string("Unexpected processBITEResponse type ") + ECSMSDllMsgTypeToString(respType);
             break;
     }
 	
 	return jsonObj.dump();
 }
 
-/*Felipe Machado
-*
-* Convert response of type GET_ANT_LIST_INFO in JSON
-*/
+//
+// Convert response of type GET_ANT_LIST_INFO in JSON
+//
 std::string ProcessAntListResponse(_In_ SEquipCtrlMsg::UBody* data)
 {
 	SEquipCtrlMsg::SAntInfoListResp* antListResponse = (SEquipCtrlMsg::SAntInfoListResp*)data;
@@ -68,10 +71,9 @@ std::string ProcessAntListResponse(_In_ SEquipCtrlMsg::UBody* data)
 	return jsonObj.dump();
 }
 
-/*Felipe Machado
-*	
-* Convert response of types AVD_FREQ_VS_CHANNEL, AVD_OCC_CHANNEL_RESULT, AVD_FREQ_MEAS, AVD_BW_MEAS, AVD_SOLICIT_STATE_RESPONSE, AVD_STATE_RESPONSE and AVD_STATUS  in JSON
-*/
+//
+// Convert response of types AVD_FREQ_VS_CHANNEL, AVD_OCC_CHANNEL_RESULT, AVD_FREQ_MEAS, AVD_BW_MEAS, AVD_SOLICIT_STATE_RESPONSE, AVD_STATE_RESPONSE and AVD_STATUS  in JSON
+//
 std::string processAutoViolateResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody* data)
 {
 	SEquipCtrlMsg::SOccupancyHeader* pOccHdr = nullptr;
@@ -133,7 +135,7 @@ std::string processAutoViolateResponse(_In_ ECSMSDllMsgType respType, _In_ SEqui
         case ECSMSDllMsgType::AVD_FREQ_MEAS:
             {
                 SEquipCtrlMsg::SAvdMeasureResult* Response = (SEquipCtrlMsg::SAvdMeasureResult*)data;
-                # TODO: Check the origin of the loop total. Why 1000?
+// TODO #16: Check the origin of the loop total. Why 1000?
                 for (size_t i = 0; i < 1000; ++i) {
                     jsonObj["SAvdMeasureResult"]["measData"][i]["result"] = Response->measData[i].result;
                     jsonObj["SAvdMeasureResult"]["measData"][i]["stdDev"] = Response->measData[i].stdDev;
@@ -245,17 +247,16 @@ std::string processAutoViolateResponse(_In_ ECSMSDllMsgType respType, _In_ SEqui
             break;
 
         default:
-            jsonObj["Error"] = sprintf("Unexpected processAutoViolateResponse type: %d", respType);
+			jsonObj["Error"] = std::string("Unexpected processAutoViolateResponse type ") + ECSMSDllMsgTypeToString(respType);
             break;
     }
 	
 	return jsonObj.dump();
 }
 
-/*Felipe Machado
-*
-* Convert response of types GET_MEAS and VALIDATE_MEAS in JSON
-*/
+//
+// Convert response of types GET_MEAS and VALIDATE_MEAS in JSON
+//
 std::string processMeasResponse(_In_ ECSMSDllMsgType respType, _In_ unsigned long sourceAddr, _In_ SEquipCtrlMsg::UBody* data)
 {
 	using json = nlohmann::json;
@@ -302,17 +303,16 @@ std::string processMeasResponse(_In_ ECSMSDllMsgType respType, _In_ unsigned lon
             }
             break;
         default:
-            jsonObj["Error"] = sprintf("Unexpected processMeasResponse type: %d", respType);
+			jsonObj["Error"] = std::string("Unexpected processMeasResponse type ") + ECSMSDllMsgTypeToString(respType);
             break;
     }
 
 	return jsonObj.dump();
 }
 
-/*Felipe Machado
-*
-* Convert response of types SET_PAN_PARAMS, SET_AUDIO_PARAMS and FREE_AUDIO_CHANNEL in JSON
-*/
+//
+// Convert response of types SET_PAN_PARAMS, SET_AUDIO_PARAMS and FREE_AUDIO_CHANNEL in JSON
+//
 std::string processDemodCtrlResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody* data)
 {
 	using json = nlohmann::json;
@@ -352,24 +352,18 @@ std::string processDemodCtrlResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipC
             break;
 
         default:
-            jsonObj["Error"] = sprintf("Unexpected processDemodCtrlResponse type: %d", respType);
+			jsonObj["Error"] = std::string("Unexpected processDemodCtrlResponse type ") + ECSMSDllMsgTypeToString(respType);
             break;
     }
 	
 	return jsonObj.dump();
 }
 
-/*Felipe Machado
-*
-* Convert response of type GET_PAN in JSON
-*/
+//
+// Convert response of type GET_PAN in JSON
+//
 std::string processPanResponse(_In_ SEquipCtrlMsg::UBody* data)
 {
-	//error codes:
-	// 0 = no error
-	// 1 = server timeout
-	// 2 = Carrier signal not detected
-
 	using json = nlohmann::json;
 	json jsonObj;
 
@@ -381,6 +375,8 @@ std::string processPanResponse(_In_ SEquipCtrlMsg::UBody* data)
 	}
     jsonObj["SGetPanResp"]["status"] = PanResponse->status;
 	jsonObj["SGetPanResp"]["binData"] = std::string(reinterpret_cast<char*>(PanResponse->binData), PanResponse->numBins);
+// TODO #15: Check for invalid characters in the string, including " and \r\n to avoid json parsing errors. check https://stackoverflow.com/questions/7724448/simple-json-string-escape-for-c
+	// jsonObj["SGetPanResp"]["binDataEscaped"] = true;
 	jsonObj["SGetPanResp"]["audioPower"]["active"] = PanResponse->audioPower->active;
 	jsonObj["SGetPanResp"]["conversionFactorForFS"] = PanResponse->conversionFactorForFS;
 	jsonObj["SGetPanResp"]["dateTime"] = PanResponse->dateTime;
@@ -393,10 +389,10 @@ std::string processPanResponse(_In_ SEquipCtrlMsg::UBody* data)
 	return jsonObj.dump();
 }
 
-/*Felipe Machado
-*
-* Convert response of types OCC_MSGLEN_DIST_RESPONSE, OCC_FREQ_VS_CHANNEL, OCC_CHANNEL_RESULT, OCC_STATUS, OCC_STATE_RESPONSE, OCC_SOLICIT_STATE_RESPONSE, OCC_SPECTRUM_RESPONSE, OCC_TIMEOFDAY_RESULT, OCC_EFLD_CHANNEL_RESULT, OCC_MSGLEN_CHANNEL_RESULT, OCC_EFLD_TIMEOFDAY_RESULT in JSON
-*/
+
+//
+// Convert response of types OCC_MSGLEN_DIST_RESPONSE, OCC_FREQ_VS_CHANNEL, OCC_CHANNEL_RESULT, OCC_STATUS, OCC_STATE_RESPONSE, OCC_SOLICIT_STATE_RESPONSE, OCC_SPECTRUM_RESPONSE, OCC_TIMEOFDAY_RESULT, OCC_EFLD_CHANNEL_RESULT, OCC_MSGLEN_CHANNEL_RESULT, OCC_EFLD_TIMEOFDAY_RESULT in JSON
+//
 std::string processOccupancyResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody* data)
 {
 	using json = nlohmann::json;
@@ -730,16 +726,15 @@ std::string processOccupancyResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipC
             break;
 
         default:
-            jsonObj["error"] = sprintf("Unexpected processOccupancyResponse type: %d", respType);
+			jsonObj["error"] = std::string("Unexpected processOccupancyResponse type ") + ECSMSDllMsgTypeToString(respType);
             break;
     }
 	return jsonObj.dump();
 }
 
-/*Felipe Machado
-*
-* Convert response of types OCCDF_FREQ_VS_CHANNEL, OCCDF_SCANDF_VS_CHANNEL, OCCDF_STATUS, OCCDF_STATE_RESPONSE and OCCDF_SOLICIT_STATE_RESPONSE in JSON
-*/
+//
+// Convert response of types OCCDF_FREQ_VS_CHANNEL, OCCDF_SCANDF_VS_CHANNEL, OCCDF_STATUS, OCCDF_STATE_RESPONSE and OCCDF_SOLICIT_STATE_RESPONSE in JSON
+//
 std::string processOccupancyDFResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody* data)
 {
 	using json = nlohmann::json;
@@ -846,16 +841,15 @@ std::string processOccupancyDFResponse(_In_ ECSMSDllMsgType respType, _In_ SEqui
             break;
 
         default:
-            jsonObj["error"] = sprintf("Unexpected processOccupancyDFResponse type: %d", respType);
+            jsonObj["error"] = std::string("Unexpected processOccupancyDFResponse type ") + ECSMSDllMsgTypeToString(respType);
             break;
     }
 	return jsonObj.dump();
 }
 
-/*Felipe Machado
-*
-* Convert response returned by callback OnRealTimeDataFunc in JSON
-*/
+//
+// Convert response returned by callback OnRealTimeDataFunc in JSON
+//
 std::string ProcessRealTimeData(_In_ ECSMSDllMsgType respType, _In_ SSmsRealtimeMsg::UBody* data)
 {
 	using json = nlohmann::json;
@@ -1050,7 +1044,7 @@ std::string ProcessRealTimeData(_In_ ECSMSDllMsgType respType, _In_ SSmsRealtime
             break;
 
         default:
-            jsonObj["error"] = sprintf("Unexpected ProcessRealTimeData type: %d", respType);
+            jsonObj["error"] = std::string("Unexpected ProcessRealTimeData type ") + ECSMSDllMsgTypeToString(respType);
             break;
 	}
 	return jsonObj.dump();
