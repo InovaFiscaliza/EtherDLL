@@ -6,3 +6,4 @@
 
 // Function prototype
 std::string ERetCodeToString(ERetCode code);
+std::string ECSMSDllMsgTypeToString(ECSMSDllMsgType code);
