@@ -99,15 +99,11 @@
   <ItemGroup>
     <ClInclude Include="MIAerConnAudio.h" />
     <ClInclude Include="MIAerConnAudioCommon.h" />
-    <ClInclude Include="MIAerConnCodes.hpp" />
+    <ClInclude Include="MIAerConnConstants.h" />
     <ClInclude Include="ExternalCodes.h" />
     <ClInclude Include="MIAerConnProcessApiResponse.h" />
     <ClInclude Include="MIAerLog.h" />
     <ClInclude Include="MIAerConnUtils.h" />
-    <ClInclude Include="MoreEquipCtrlMsg.h" />
-    <ClInclude Include="MIAerConn.h" />
-    <ClInclude Include="OccupSpectConnect.h" />
-    <ClInclude Include="StdAfx.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ExternalCodes.cpp" />
