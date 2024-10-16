@@ -32,4 +32,12 @@ namespace mcs {
         static constexpr const char ACK[] = "{\"ACK\":";
         static constexpr const char MSG_END[] = "\r\n";
     };
+
+	constexpr double MHZ_MULTIPLIER = 1000000.0;
+	constexpr double KHZ_MAX_VALUE = 1.0;
+	constexpr double KHZ_FROM_MHZ = 1000.0;
+	constexpr double GHZ_MIN_VALUE = 1000.0;
+	constexpr double GHZ_FROM_MHZ = 0.001;
+	constexpr double PAN_OFFSET = 192.0;
+	constexpr double FREQ_FACTOR = 1920.0;
 }
