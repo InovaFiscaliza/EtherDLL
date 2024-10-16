@@ -1,4 +1,5 @@
 #include "MIAerConnProcessApiResponse.h"
+#include <MIAerConnConstants.h>
 #include "string"
 #include "ExternalCodes.h"
 
@@ -10,7 +11,7 @@ std::string processBITEResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMs
 {
 	using json = nlohmann::json;
 	json jsonObj;
-	jsonObj["respType"] = std::to_string(respType);
+	jsonObj["respType"] = static_cast<int>(respType);
 	switch (respType) 
     {
         case ECSMSDllMsgType::GET_BIST:
@@ -44,30 +45,31 @@ std::string processBITEResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMs
 //
 // Convert response of type GET_ANT_LIST_INFO in JSON
 //
-std::string ProcessAntListResponse(_In_ SEquipCtrlMsg::UBody* data)
+std::string ProcessAntListResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody* data)
 {
 	SEquipCtrlMsg::SAntInfoListResp* antListResponse = (SEquipCtrlMsg::SAntInfoListResp*)data;
 	using json = nlohmann::json;
 	json jsonObj;
-	jsonObj["respType"] = std::to_string(GET_ANT_LIST_INFO);
+    jsonObj["Type"] = static_cast<int>(respType);
 
-	jsonObj["SAntInfoListResp"]["ant"]["ant"] = antListResponse->ant->ant;
-	jsonObj["SAntInfoListResp"]["ant"]["antName"] = antListResponse->ant->antName;
-	jsonObj["SAntInfoListResp"]["ant"]["azimuthStart"] = antListResponse->ant->azimuthStart;
-	jsonObj["SAntInfoListResp"]["ant"]["azimuthStep"] = antListResponse->ant->azimuthStep;
-	jsonObj["SAntInfoListResp"]["ant"]["azimuthStop"] = antListResponse->ant->azimuthStop;
-	jsonObj["SAntInfoListResp"]["ant"]["azimuthTolerance"] = antListResponse->ant->azimuthTolerance;
-	jsonObj["SAntInfoListResp"]["ant"]["aziOrientation"] = antListResponse->ant->aziOrientation;
-	jsonObj["SAntInfoListResp"]["ant"]["elevationStart"] = antListResponse->ant->elevationStart;
-	jsonObj["SAntInfoListResp"]["ant"]["elevationStep"] = antListResponse->ant->elevationStep;
-	jsonObj["SAntInfoListResp"]["ant"]["elevationStop"] = antListResponse->ant->elevationStop;
-	jsonObj["SAntInfoListResp"]["ant"]["elevationTolerance"] = antListResponse->ant->elevationTolerance;
-	jsonObj["SAntInfoListResp"]["ant"]["highFreq"]["internal"] = antListResponse->ant->highFreq.internal;
-	jsonObj["SAntInfoListResp"]["ant"]["lowFreq"]["internal"] = antListResponse->ant->lowFreq.internal;
-	jsonObj["SAntInfoListResp"]["ant"]["polarization"] = antListResponse->ant->polarization;
-	jsonObj["SAntInfoListResp"]["ant"]["rotatorId"] = antListResponse->ant->rotatorId;
-	jsonObj["SAntInfoListResp"]["numAnt"] = antListResponse->numAnt;
-
+    jsonObj["Equipment"]["antenna"]["numAntennas"] = antListResponse->numAnt;
+    for (size_t i = 0; i < antListResponse->numAnt; ++i) {
+        jsonObj["Equipment"]["antenna"][i]["Name"] = antListResponse->ant[i].antName;
+        jsonObj["Equipment"]["antenna"][i]["type"] = antListResponse->ant[i].ant;
+        jsonObj["Equipment"]["antenna"][i]["lowFrequency"] = antListResponse->ant[i].lowFreq.internal;
+        jsonObj["Equipment"]["antenna"][i]["highFrequency"] = antListResponse->ant[i].highFreq.internal;
+	    jsonObj["Equipment"]["antenna"][i]["azimuthStart"] = antListResponse->ant[i].azimuthStart;
+	    jsonObj["Equipment"]["antenna"][i]["azimuthStep"] = antListResponse->ant[i].azimuthStep;
+	    jsonObj["Equipment"]["antenna"][i]["azimuthStop"] = antListResponse->ant[i].azimuthStop;
+	    jsonObj["Equipment"]["antenna"][i]["azimuthTolerance"] = antListResponse->ant[i].azimuthTolerance;
+	    jsonObj["Equipment"]["antenna"][i]["aziOrientation"] = antListResponse->ant[i].aziOrientation;
+	    jsonObj["Equipment"]["antenna"][i]["elevationStart"] = antListResponse->ant[i].elevationStart;
+        jsonObj["Equipment"]["antenna"][i]["elevationStep"] = antListResponse->ant[i].elevationStep;
+	    jsonObj["Equipment"]["antenna"][i]["elevationStop"] = antListResponse->ant[i].elevationStop;
+	    jsonObj["Equipment"]["antenna"][i]["elevationTolerance"] = antListResponse->ant[i].elevationTolerance;
+	    jsonObj["Equipment"]["antenna"][i]["polarization"] = antListResponse->ant[i].polarization;
+	    jsonObj["Equipment"]["antenna"][i]["rotatorId"] = antListResponse->ant[i].rotatorId;
+    }
 	return jsonObj.dump();
 }
 
@@ -79,7 +81,7 @@ std::string processAutoViolateResponse(_In_ ECSMSDllMsgType respType, _In_ SEqui
 	SEquipCtrlMsg::SOccupancyHeader* pOccHdr = nullptr;
 	using json = nlohmann::json;
 	json jsonObj;
-	jsonObj["respType"] = std::to_string(GET_ANT_LIST_INFO);
+    jsonObj["respType"] = static_cast<int>(respType);
 
 	switch (respType)
     {
@@ -262,7 +264,7 @@ std::string processMeasResponse(_In_ ECSMSDllMsgType respType, _In_ unsigned lon
 	using json = nlohmann::json;
 	json jsonObj;
 
-	jsonObj["respType"] = std::to_string(GET_ANT_LIST_INFO);
+	jsonObj["respType"] = static_cast<int>(respType);
 
 	switch (respType)
     {
@@ -317,7 +319,7 @@ std::string processDemodCtrlResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipC
 {
 	using json = nlohmann::json;
 	json jsonObj;
-	jsonObj["respType"] = std::to_string(GET_ANT_LIST_INFO);
+	jsonObj["respType"] = static_cast<int>(respType);
 
 	switch (respType)
     {
@@ -362,31 +364,38 @@ std::string processDemodCtrlResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipC
 //
 // Convert response of type GET_PAN in JSON
 //
-std::string processPanResponse(_In_ SEquipCtrlMsg::UBody* data)
+std::string processPanResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody* data)
 {
 	using json = nlohmann::json;
 	json jsonObj;
 
-	jsonObj["respType"] = std::to_string(GET_ANT_LIST_INFO);
+	jsonObj["respType"] = static_cast<int>(respType);
 
 	SEquipCtrlMsg::SGetPanResp* PanResponse = (SEquipCtrlMsg::SGetPanResp*)data;
-	for (size_t i = 0; i < PanResponse->nActiveAudioChannels; ++i) {
-		jsonObj["SGetPanResp"]["audioPower"][i]["powerdBm"] = PanResponse->audioPower[i].powerdBm;
-	}
-    jsonObj["SGetPanResp"]["status"] = PanResponse->status;
-	jsonObj["SGetPanResp"]["binData"] = std::string(reinterpret_cast<char*>(PanResponse->binData), PanResponse->numBins);
-// TODO #15: Check for invalid characters in the string, including " and \r\n to avoid json parsing errors. check https://stackoverflow.com/questions/7724448/simple-json-string-escape-for-c
-	// jsonObj["SGetPanResp"]["binDataEscaped"] = true;
-	jsonObj["SGetPanResp"]["audioPower"]["active"] = PanResponse->audioPower->active;
-	jsonObj["SGetPanResp"]["conversionFactorForFS"] = PanResponse->conversionFactorForFS;
-	jsonObj["SGetPanResp"]["dateTime"] = PanResponse->dateTime;
-    jsonObj["SGetPanResp"]["numBins"] = PanResponse->numBins;
-	jsonObj["SGetPanResp"]["freq"]["internal"] = PanResponse->freq.internal;
-    jsonObj["SGetPanResp"]["binSize"]["internal"] = PanResponse->binSize.internal;
-	jsonObj["SGetPanResp"]["nActiveAudioChannels"] = PanResponse->nActiveAudioChannels;
-	jsonObj["SGetPanResp"]["powerDbm"] = PanResponse->powerDbm;
-	jsonObj["SGetPanResp"]["rcvrAtten"] = PanResponse->rcvrAtten;
+
+    jsonObj["Measurement"]["status"] = PanResponse->status;
+    jsonObj["Measurement"]["dateTime"] = PanResponse->dateTime;   
+    jsonObj["Measurement"]["powerDbm"] = PanResponse->powerDbm;
+    jsonObj["Measurement"]["attenuation"] = PanResponse->rcvrAtten;
+    jsonObj["Measurement"]["numBins"] = PanResponse->numBins;
+	double centralFrequency = double(PanResponse->freq.internal) / ( mcs::FREQ_FACTOR * mcs::MHZ_MULTIPLIER );
+    double binSize = double(PanResponse->binSize.internal) / mcs::FREQ_FACTOR;
+	jsonObj["Measurement"]["startFrequency"] = centralFrequency - (binSize * double((floor(PanResponse->numBins / 2.0))));
+	jsonObj["Measurement"]["stopFrequency"] = centralFrequency + (binSize * double((floor(PanResponse->numBins / 2.0)));
+	jsonObj["Measurement"]["frequencyUnit"] = "MHz";
+	jsonObj["Measurement"]["binSize"] = binSize;
+	jsonObj["Measurement"]["binSizeUnit"] = "Hz";
+    jsonObj["Measurement"]["sweepData"] = std::string(reinterpret_cast<char*>(PanResponse->binData), PanResponse->numBins);
+	jsonObj["Measurement"]["nActiveAudioChannels"] = PanResponse->nActiveAudioChannels;
+    jsonObj["Measurement"]["audioPower"]["active"] = PanResponse->audioPower->active;
+    for (size_t i = 0; i < PanResponse->nActiveAudioChannels; ++i) {
+        jsonObj["Measurement"]["audioPower"][i]["powerdBm"] = PanResponse->audioPower[i].powerdBm;
+    }
+    jsonObj["Measurement"]["conversionFactorForFS"] = PanResponse->conversionFactorForFS;
+
 	return jsonObj.dump();
+    // TODO #15: Check for invalid characters in the string, including " and \r\n to avoid json parsing errors. check https://stackoverflow.com/questions/7724448/simple-json-string-escape-for-c
+        // jsonObj["SGetPanResp"]["binDataEscaped"] = true;
 }
 
 
@@ -398,7 +407,7 @@ std::string processOccupancyResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipC
 	using json = nlohmann::json;
 	json jsonObj;
 
-	jsonObj["respType"] = std::to_string(respType);
+	jsonObj["respType"] = static_cast<int>(respType);
 
     switch (respType)
     {
@@ -740,7 +749,7 @@ std::string processOccupancyDFResponse(_In_ ECSMSDllMsgType respType, _In_ SEqui
 	using json = nlohmann::json;
 	json jsonObj;
 
-	jsonObj["respType"] = std::to_string(respType);
+	jsonObj["respType"] = static_cast<int>(respType);
 
     switch (respType)
     {
@@ -855,7 +864,7 @@ std::string ProcessRealTimeData(_In_ ECSMSDllMsgType respType, _In_ SSmsRealtime
 	using json = nlohmann::json;
 	json jsonObj;
 
-	jsonObj["respType"] = std::to_string(respType);
+	jsonObj["respType"] = static_cast<int>(respType);
 
 	switch (respType)
 	{

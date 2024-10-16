@@ -26,7 +26,7 @@
 #include <ExternalCodes.h>
 #include <MIAerConnAudio.h>
 #include <MIAerConnUtils.h>
-#include <MIAerConnCodes.hpp>
+#include <MIAerConnConstants.h>
 #include <MIAerConnProcessApiResponse.h>
 
  // Libs for socket
@@ -113,7 +113,7 @@ void OnDataFunc(_In_  unsigned long serverId, _In_ ECSMSDllMsgType respType, _In
 			streamBuffer.push_back(processBITEResponse(respType, data));
 			break;
 		case ECSMSDllMsgType::GET_ANT_LIST_INFO:
-			streamBuffer.push_back(ProcessAntListResponse(data));
+			streamBuffer.push_back(ProcessAntListResponse(respType, data));
 			break;
 		case ECSMSDllMsgType::OCC_MSGLEN_DIST_RESPONSE:
 		case ECSMSDllMsgType::OCC_FREQ_VS_CHANNEL:
@@ -154,7 +154,7 @@ void OnDataFunc(_In_  unsigned long serverId, _In_ ECSMSDllMsgType respType, _In
 			streamBuffer.push_back(processDemodCtrlResponse(respType, data));
 			break;
 		case ECSMSDllMsgType::GET_PAN:
-			streamBuffer.push_back(processPanResponse(data));
+			streamBuffer.push_back(processPanResponse(respType, data));
 			break;
 		case ECSMSDllMsgType::GET_DM:
 
