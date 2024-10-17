@@ -1,38 +1,38 @@
 #include "MIAerConnProcessApiResponse.h"
 #include <MIAerConnConstants.h>
 #include "string"
+#include <locale>
+#include <codecvt>
 #include "ExternalCodes.h"
+#include <nlohmann/json.hpp>
 
+using json = nlohmann::json;
 
 //
 // Convert response of BIT command in JSON
 //
 std::string processBITEResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody* respdata)
 {
-	using json = nlohmann::json;
 	json jsonObj;
-	jsonObj["respType"] = static_cast<int>(respType);
+
+	jsonObj["respType"] = int(respType);
+
 	switch (respType) 
     {
-        case ECSMSDllMsgType::GET_BIST:
+        case ECSMSDllMsgType::GET_BIST: // BIST_RESPONSE, GET_BIST_RESPONSE, GET_DIAGNOSTICS_RESPONSE, GET_BIST_RESULT_RESPONSE
 		case ECSMSDllMsgType::GET_BIST_RESULT:
+        case ECSMSDllMsgType::GET_DIAGNOSTICS:
             {
                 SEquipCtrlMsg::SGetBistResp* BITEResponse = (SEquipCtrlMsg::SGetBistResp*)respdata;
-                jsonObj["BIST"]["last"] = BITEResponse->last;
-                jsonObj["BIST"]["result"] = BITEResponse->result;
-                jsonObj["BIST"]["text"] = BITEResponse->text;
-                jsonObj["BIST"]["textLen"] = BITEResponse->textLen;
+                std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
+
+                jsonObj["BIST"]["last"] = bool(BITEResponse->last);
+				jsonObj["BIST"]["result"] = BISTResultToString(BITEResponse->result);
+                std::string text = converter.to_bytes(BITEResponse->text, BITEResponse->text + BITEResponse->textLen);
+				jsonObj["BIST"]["text"] = text;
+                // jsonObj["BIST"]["textLen"] = BITEResponse->textLen; // Not necessary to include textLen in the JSON
             }
             break;
-
-	    case ECSMSDllMsgType::GET_DIAGNOSTICS:
-            {
-                SEquipCtrlMsg::SGetBistResp* BITEResponse = (SEquipCtrlMsg::SGetBistResp*)respdata;
-                jsonObj["BIST"]["last"] = BITEResponse->last;
-                jsonObj["BIST"]["result"] = BITEResponse->result;
-                jsonObj["BIST"]["text"] = BITEResponse->text;
-                jsonObj["BIST"]["textLen"] = BITEResponse->textLen;
-            }
 
         default:
             jsonObj["BIST"]["Error"] = std::string("Unexpected processBITEResponse type ") + ECSMSDllMsgTypeToString(respType);
@@ -48,14 +48,14 @@ std::string processBITEResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMs
 std::string ProcessAntListResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody* data)
 {
 	SEquipCtrlMsg::SAntInfoListResp* antListResponse = (SEquipCtrlMsg::SAntInfoListResp*)data;
-	using json = nlohmann::json;
 	json jsonObj;
+
     jsonObj["Type"] = static_cast<int>(respType);
 
     jsonObj["Equipment"]["antenna"]["numAntennas"] = antListResponse->numAnt;
     for (size_t i = 0; i < antListResponse->numAnt; ++i) {
         jsonObj["Equipment"]["antenna"][i]["Name"] = antListResponse->ant[i].antName;
-        jsonObj["Equipment"]["antenna"][i]["type"] = antListResponse->ant[i].ant;
+        jsonObj["Equipment"]["antenna"][i]["type"] = eAntToString(antListResponse->ant[i].ant);
         jsonObj["Equipment"]["antenna"][i]["lowFrequency"] = antListResponse->ant[i].lowFreq.internal;
         jsonObj["Equipment"]["antenna"][i]["highFrequency"] = antListResponse->ant[i].highFreq.internal;
 	    jsonObj["Equipment"]["antenna"][i]["azimuthStart"] = antListResponse->ant[i].azimuthStart;
@@ -67,7 +67,7 @@ std::string ProcessAntListResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtr
         jsonObj["Equipment"]["antenna"][i]["elevationStep"] = antListResponse->ant[i].elevationStep;
 	    jsonObj["Equipment"]["antenna"][i]["elevationStop"] = antListResponse->ant[i].elevationStop;
 	    jsonObj["Equipment"]["antenna"][i]["elevationTolerance"] = antListResponse->ant[i].elevationTolerance;
-	    jsonObj["Equipment"]["antenna"][i]["polarization"] = antListResponse->ant[i].polarization;
+		jsonObj["Equipment"]["antenna"][i]["polarization"] = eAntPolToString(antListResponse->ant[i].polarization);
 	    jsonObj["Equipment"]["antenna"][i]["rotatorId"] = antListResponse->ant[i].rotatorId;
     }
 	return jsonObj.dump();
@@ -79,8 +79,8 @@ std::string ProcessAntListResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtr
 std::string processAutoViolateResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody* data)
 {
 	SEquipCtrlMsg::SOccupancyHeader* pOccHdr = nullptr;
-	using json = nlohmann::json;
 	json jsonObj;
+
     jsonObj["respType"] = static_cast<int>(respType);
 
 	switch (respType)
@@ -89,8 +89,9 @@ std::string processAutoViolateResponse(_In_ ECSMSDllMsgType respType, _In_ SEqui
 		case ECSMSDllMsgType::AVD_SOLICIT_STATE_RESPONSE:
             {
                 SEquipCtrlMsg::SStateResp* Response = (SEquipCtrlMsg::SStateResp*)data;
-                jsonObj["SStateResp"]["completionTime"] = Response->completionTime;
-                jsonObj["SStateResp"]["state"] = Response->state;
+
+                jsonObj["SStateResp"]["completionTime"] = double(Response->completionTime);
+				jsonObj["SStateResp"]["state"] = eStateRespToString(Response->state);
             }
             break;
 
@@ -261,7 +262,6 @@ std::string processAutoViolateResponse(_In_ ECSMSDllMsgType respType, _In_ SEqui
 //
 std::string processMeasResponse(_In_ ECSMSDllMsgType respType, _In_ unsigned long sourceAddr, _In_ SEquipCtrlMsg::UBody* data)
 {
-	using json = nlohmann::json;
 	json jsonObj;
 
 	jsonObj["respType"] = static_cast<int>(respType);
@@ -317,8 +317,8 @@ std::string processMeasResponse(_In_ ECSMSDllMsgType respType, _In_ unsigned lon
 //
 std::string processDemodCtrlResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody* data)
 {
-	using json = nlohmann::json;
 	json jsonObj;
+
 	jsonObj["respType"] = static_cast<int>(respType);
 
 	switch (respType)
@@ -366,32 +366,31 @@ std::string processDemodCtrlResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipC
 //
 std::string processPanResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody* data)
 {
-	using json = nlohmann::json;
 	json jsonObj;
 
 	jsonObj["respType"] = static_cast<int>(respType);
 
 	SEquipCtrlMsg::SGetPanResp* PanResponse = (SEquipCtrlMsg::SGetPanResp*)data;
 
-    jsonObj["Measurement"]["status"] = PanResponse->status;
-    jsonObj["Measurement"]["dateTime"] = PanResponse->dateTime;   
-    jsonObj["Measurement"]["powerDbm"] = PanResponse->powerDbm;
-    jsonObj["Measurement"]["attenuation"] = PanResponse->rcvrAtten;
-    jsonObj["Measurement"]["numBins"] = PanResponse->numBins;
+    jsonObj["measure"]["status"] = PanResponse->status;
+    jsonObj["measure"]["dateTime"] = PanResponse->dateTime;   
+    jsonObj["measure"]["powerDbm"] = PanResponse->powerDbm;
+    jsonObj["setting"]["attenuation"] = PanResponse->rcvrAtten;
+    jsonObj["spectrum"]["numBins"] = PanResponse->numBins;
 	double centralFrequency = double(PanResponse->freq.internal) / ( mcs::FREQ_FACTOR * mcs::MHZ_MULTIPLIER );
     double binSize = double(PanResponse->binSize.internal) / mcs::FREQ_FACTOR;
-	jsonObj["Measurement"]["startFrequency"] = centralFrequency - (binSize * double((floor(PanResponse->numBins / 2.0))));
-	jsonObj["Measurement"]["stopFrequency"] = centralFrequency + (binSize * double((floor(PanResponse->numBins / 2.0)));
-	jsonObj["Measurement"]["frequencyUnit"] = "MHz";
-	jsonObj["Measurement"]["binSize"] = binSize;
-	jsonObj["Measurement"]["binSizeUnit"] = "Hz";
-    jsonObj["Measurement"]["sweepData"] = std::string(reinterpret_cast<char*>(PanResponse->binData), PanResponse->numBins);
-	jsonObj["Measurement"]["nActiveAudioChannels"] = PanResponse->nActiveAudioChannels;
-    jsonObj["Measurement"]["audioPower"]["active"] = PanResponse->audioPower->active;
+	jsonObj["spectrum"]["startFrequency"] = centralFrequency - (binSize * double(floor(PanResponse->numBins / 2.0)));
+	jsonObj["spectrum"]["stopFrequency"] = centralFrequency + (binSize * double(floor(PanResponse->numBins / 2.0)));
+	jsonObj["spectrum"]["frequencyUnit"] = "MHz";
+	jsonObj["spectrum"]["binSize"] = binSize;
+	jsonObj["spectrum"]["binSizeUnit"] = "Hz";
+    jsonObj["spectrum"]["sweepData"] = std::string(reinterpret_cast<char*>(PanResponse->binData), PanResponse->numBins);
+	jsonObj["demod"]["nActiveAudioChannels"] = PanResponse->nActiveAudioChannels;
+    jsonObj["demod"]["audioPower"]["active"] = PanResponse->audioPower->active;
     for (size_t i = 0; i < PanResponse->nActiveAudioChannels; ++i) {
-        jsonObj["Measurement"]["audioPower"][i]["powerdBm"] = PanResponse->audioPower[i].powerdBm;
+        jsonObj["demod"]["audioPower"][i]["powerdBm"] = PanResponse->audioPower[i].powerdBm;
     }
-    jsonObj["Measurement"]["conversionFactorForFS"] = PanResponse->conversionFactorForFS;
+    jsonObj["spectrum"]["conversionFactorForFS"] = PanResponse->conversionFactorForFS;
 
 	return jsonObj.dump();
     // TODO #15: Check for invalid characters in the string, including " and \r\n to avoid json parsing errors. check https://stackoverflow.com/questions/7724448/simple-json-string-escape-for-c
@@ -404,7 +403,6 @@ std::string processPanResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg
 //
 std::string processOccupancyResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody* data)
 {
-	using json = nlohmann::json;
 	json jsonObj;
 
 	jsonObj["respType"] = static_cast<int>(respType);
@@ -744,9 +742,8 @@ std::string processOccupancyResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipC
 //
 // Convert response of types OCCDF_FREQ_VS_CHANNEL, OCCDF_SCANDF_VS_CHANNEL, OCCDF_STATUS, OCCDF_STATE_RESPONSE and OCCDF_SOLICIT_STATE_RESPONSE in JSON
 //
-std::string processOccupancyDFResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody* data)
+json processOccupancyDFResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody* data)
 {
-	using json = nlohmann::json;
 	json jsonObj;
 
 	jsonObj["respType"] = static_cast<int>(respType);
@@ -761,48 +758,111 @@ std::string processOccupancyDFResponse(_In_ ECSMSDllMsgType respType, _In_ SEqui
                 jsonObj["SStateResp"]["state"] = Response->state;
             }
             break;
+/* 
+    jsonObj["measure"]["status"] = PanResponse->status;
+    jsonObj["measure"]["dateTime"] = PanResponse->dateTime;
+    jsonObj["measure"]["powerDbm"] = PanResponse->powerDbm;
+    jsonObj["setting"]["attenuation"] = PanResponse->rcvrAtten;
+    jsonObj["spectrum"]["numBins"] = PanResponse->numBins;
+    double centralFrequency = double(PanResponse->freq.internal) / ( mcs::FREQ_FACTOR * mcs::MHZ_MULTIPLIER );
+    double binSize = double(PanResponse->binSize.internal) / mcs::FREQ_FACTOR;
+    jsonObj["spectrum"]["startFrequency"] = centralFrequency - (binSize * double(floor(PanResponse->numBins / 2.0)));
+    jsonObj["spectrum"]["stopFrequency"] = centralFrequency + (binSize * double(floor(PanResponse->numBins / 2.0)));
+    jsonObj["spectrum"]["frequencyUnit"] = "MHz";
+    jsonObj["spectrum"]["binSize"] = binSize;
+    jsonObj["spectrum"]["binSizeUnit"] = "Hz";
+    jsonObj["spectrum"]["sweepData"] = std::string(reinterpret_cast<char*>(PanResponse->binData), PanResponse->numBins);
+    jsonObj["demod"]["nActiveAudioChannels"] = PanResponse->nActiveAudioChannels;
+    jsonObj["demod"]["audioPower"]["active"] = PanResponse->audioPower->active;
+    for (size_t i = 0; i < PanResponse->nActiveAudioChannels; ++i) {
+        jsonObj["demod"]["audioPower"][i]["powerdBm"] = PanResponse->audioPower[i].powerdBm;
+    }
+    jsonObj["spectrum"]["conversionFactorForFS"] = PanResponse->conversionFactorForFS;
 
+    struct SFrequencyVsChannelRespV0 // OCC_FREQUENCY_RESULT V0
+    {
+        inline operator SFrequencyVsChannelRespV1(void) const; // Convert to V1; defined below
+
+        SOccupancyHeader occHdr;
+        unsigned long frequencies[MAX_OCCCHANNELS];
+        int numBands;
+        unsigned long numChannels[MAX_OCCBANDS];
+        unsigned long saveIntermediateData;  // 0 - don't save; > 0 - save (RA3 data)
+        unsigned long useSecondaryThreshold;  // 0 = don't use  >0 = use
+        // following two parameters
+        //  the FIXED threshold (dBuV/m) is always in index 0
+        //  the NOISE threshold (dB) is always in index 1
+        //  which thresholds used are based upon thresholdMethod in command
+        long occPrimaryThreshold[2];
+        long occSecondaryThreshold[2]; // used only if useSecondaryThreshold >0
+        EAnt selectedAntenna;  //uses ANT1 & ANT2 defines in dsp_msg.h
+        unsigned long chanBandwidth;    // in Hz -- reserved -- currently not used
+        char hostName[32];
+    };
+
+    struct SFrequencyVsChannelRespV2; // Forward declaration
+
+        SOccupancyHeader occHdr;
+        EAnt selectedAntenna;  //uses ANT1 & ANT2 defines in dsp_msg.h
+        bool saveIntermediateData;
+        bool useSecondaryThreshold; // following two parameters: the FIXED threshold (dBuV/m) is always in index 0; the NOISE threshold (dB) is always in index 1. Which thresholds used are based upon thresholdMethod in command
+        short occPrimaryThreshold[2];
+        short occSecondaryThreshold[2]; // used only if useSecondaryThreshold >0
+        char hostName[32];
+        int numBands;
+        unsigned long numChannels[MAX_OCCBANDS_CSMS_V3p]; // Fixed length
+        Units::Frequency::Raw frequencies[MAX_OCCCHANNELS]; // Variable length up to MAX_OCCCHANNELS
+    };
+
+#ifndef SMS_SRV_BUILT
+    typedef SFrequencyVsChannelRespV2 SFrequencyVsChannelResp;
+#else
+    typedef SFrequencyVsChannelRespV1 SFrequencyVsChannelResp;
+#endif
+
+
+    struct SOccupancyHeader
+    {
+        ErrorCodes::EErrorCode	status;
+        SGpsResponse			gpsResponse;
+        unsigned long			numTotalChannels;
+        unsigned long			firstChannel;
+        unsigned long			numChannels;
+        unsigned long			numTimeOfDays;
+    };
+    */
 	    case ECSMSDllMsgType::OCCDF_FREQ_VS_CHANNEL:
             {
                 SEquipCtrlMsg::SFrequencyVsChannelResp* Response = (SEquipCtrlMsg::SFrequencyVsChannelResp*)data;
-                jsonObj["SFrequencyVsChannelResp"]["frequencies"]["internal"] = Response->frequencies->internal;
 
-                jsonObj["SFrequencyVsChannelResp"]["hostName"] = Response->hostName;
-                jsonObj["SFrequencyVsChannelResp"]["numBands"] = Response->numBands;
-                jsonObj["SFrequencyVsChannelResp"]["numChannels"] = Response->numChannels;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["firstChannel"] = Response->occHdr.firstChannel;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["dateTime"] = Response->occHdr.gpsResponse.dateTime;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["latitude"] = Response->occHdr.gpsResponse.latitude;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["longitude"] = Response->occHdr.gpsResponse.longitude;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["accuracy"] = (unsigned long)Response->occHdr.gpsResponse.status.accuracy;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["antenna"] = (unsigned long)Response->occHdr.gpsResponse.status.antenna;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["batVolt"] = (unsigned long)Response->occHdr.gpsResponse.status.batVolt;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["lockHist"] = (unsigned long)Response->occHdr.gpsResponse.status.lockHist;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["mode"] = (unsigned long)Response->occHdr.gpsResponse.status.mode;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["noGps"] = (unsigned long)Response->occHdr.gpsResponse.status.noGps;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["notTested"] = (unsigned long)Response->occHdr.gpsResponse.status.notTested;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["numSats"] = (unsigned long)Response->occHdr.gpsResponse.status.numSats;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["nvRam"] = (unsigned long)Response->occHdr.gpsResponse.status.nvRam;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["oscVolt"] = (unsigned long)Response->occHdr.gpsResponse.status.oscVolt;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["pllSynth"] = (unsigned long)Response->occHdr.gpsResponse.status.pllSynth;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["receiver"] = (unsigned long)Response->occHdr.gpsResponse.status.receiver;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["satLock"] = (unsigned long)Response->occHdr.gpsResponse.status.satLock;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["timErr1"] = (unsigned long)Response->occHdr.gpsResponse.status.timErr1;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["timErr2"] = (unsigned long)Response->occHdr.gpsResponse.status.timErr2;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["timSrce"] = (unsigned long)Response->occHdr.gpsResponse.status.timSrce;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["tracking"] = (unsigned long)Response->occHdr.gpsResponse.status.tracking;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["numChannels"] = Response->occHdr.numChannels;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["numTimeOfDays"] = Response->occHdr.numTimeOfDays;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["numTotalChannels"] = Response->occHdr.numTotalChannels;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["status"] = Response->occHdr.status;
-                jsonObj["SFrequencyVsChannelResp"]["occPrimaryThreshold"] = Response->occPrimaryThreshold;
-                jsonObj["SFrequencyVsChannelResp"]["occSecondaryThreshold"] = Response->occSecondaryThreshold;
-                jsonObj["SFrequencyVsChannelResp"]["saveIntermediateData"] = Response->saveIntermediateData;
-                jsonObj["SFrequencyVsChannelResp"]["selectedAntenna"] = Response->selectedAntenna;
-                jsonObj["SFrequencyVsChannelResp"]["useSecondaryThreshold"] = Response->useSecondaryThreshold;
+                jsonObj["equipment"]["hostName"] = Response->hostName;
+                jsonObj["equipment"]["selectedAntenna"] = eAntToString(Response->selectedAntenna);
+                jsonObj["site"] = ProcessGpsData(Response->occHdr.gpsResponse);
+                jsonObj["channel"]["numBands"] = Response->numBands;
+                jsonObj["channel"]["numChannels"] = Response->numChannels;
+                jsonObj["channel"]["occHdr"]["firstChannel"] = Response->occHdr.firstChannel;
+                jsonObj["channel"]["occHdr"]["numChannels"] = Response->occHdr.numChannels;
+                jsonObj["channel"]["occHdr"]["numTimeOfDays"] = Response->occHdr.numTimeOfDays;
+                jsonObj["channel"]["occHdr"]["numTotalChannels"] = Response->occHdr.numTotalChannels;
+				jsonObj["channel"]["occHdr"]["status"] = eErrorCodeToString(Response->occHdr.status);
+                jsonObj["channel"]["primaryThreshold"]["absolute"] = Response->occPrimaryThreshold[0];
+                jsonObj["channel"]["primaryThreshold"]["aboveNoise"] = Response->occPrimaryThreshold[1];
+                jsonObj["channel"]["secondaryThreshold"]["absolute"] = Response->occSecondaryThreshold[0];
+                jsonObj["channel"]["secondaryThreshold"]["aboveNoise"] = Response->occSecondaryThreshold[1];
+                jsonObj["channel"]["saveIntermediateData"] = bool(Response->saveIntermediateData);
+                jsonObj["channel"]["useSecondaryThreshold"] = bool(Response->useSecondaryThreshold);
+
+                for (int i = 0; i < Response->numBands; i++)
+                {
+                    jsonObj["channel"]["frequencies"].push_back(double(Response->frequencies[i].internal) / (mcs::FREQ_FACTOR * mcs::MHZ_MULTIPLIER));
+                }
+				for (int i = 0; i < Response->occHdr.numChannels; i++)
+				{
+					jsonObj["channel"]["Occupancy"].push_back(Response->numChannels[i]);
+				}
             }
             break;
-
+// TODO: Arrumar a chamada da função processFrequencies
         case ECSMSDllMsgType::OCCDF_SCANDF_VS_CHANNEL:
             {
                 SEquipCtrlMsg::SScanDfVsChannelResp* Response = (SEquipCtrlMsg::SScanDfVsChannelResp*)data;
@@ -811,30 +871,11 @@ std::string processOccupancyDFResponse(_In_ ECSMSDllMsgType respType, _In_ SEqui
                 jsonObj["SScanDfVsChannelResp"]["numAzimuths"] = Response->numAzimuths;
                 jsonObj["SScanDfVsChannelResp"]["numChannels"] = Response->numChannels;
                 jsonObj["SScanDfVsChannelResp"]["occHdr"]["firstChannel"] = Response->occHdr.firstChannel;
-                jsonObj["SScanDfVsChannelResp"]["occHdr"]["gpsResponse"]["dateTime"] = Response->occHdr.gpsResponse.dateTime;
-                jsonObj["SScanDfVsChannelResp"]["occHdr"]["gpsResponse"]["latitude"] = Response->occHdr.gpsResponse.latitude;
-                jsonObj["SScanDfVsChannelResp"]["occHdr"]["gpsResponse"]["longitude"] = Response->occHdr.gpsResponse.longitude;
-                jsonObj["SScanDfVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["accuracy"] = (unsigned long)Response->occHdr.gpsResponse.status.accuracy;
-                jsonObj["SScanDfVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["antenna"] = (unsigned long)Response->occHdr.gpsResponse.status.antenna;
-                jsonObj["SScanDfVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["batVolt"] = (unsigned long)Response->occHdr.gpsResponse.status.batVolt;
-                jsonObj["SScanDfVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["lockHist"] = (unsigned long)Response->occHdr.gpsResponse.status.lockHist;
-                jsonObj["SScanDfVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["mode"] = (unsigned long)Response->occHdr.gpsResponse.status.mode;
-                jsonObj["SScanDfVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["noGps"] = (unsigned long)Response->occHdr.gpsResponse.status.noGps;
-                jsonObj["SScanDfVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["notTested"] = (unsigned long)Response->occHdr.gpsResponse.status.notTested;
-                jsonObj["SScanDfVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["numSats"] = (unsigned long)Response->occHdr.gpsResponse.status.numSats;
-                jsonObj["SScanDfVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["nvRam"] = (unsigned long)Response->occHdr.gpsResponse.status.nvRam;
-                jsonObj["SScanDfVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["oscVolt"] = (unsigned long)Response->occHdr.gpsResponse.status.oscVolt;
-                jsonObj["SScanDfVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["pllSynth"] = (unsigned long)Response->occHdr.gpsResponse.status.pllSynth;
-                jsonObj["SScanDfVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["receiver"] = (unsigned long)Response->occHdr.gpsResponse.status.receiver;
-                jsonObj["SScanDfVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["satLock"] = (unsigned long)Response->occHdr.gpsResponse.status.satLock;
-                jsonObj["SScanDfVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["timErr1"] = (unsigned long)Response->occHdr.gpsResponse.status.timErr1;
-                jsonObj["SScanDfVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["timErr2"] = (unsigned long)Response->occHdr.gpsResponse.status.timErr2;
-                jsonObj["SScanDfVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["timSrce"] = (unsigned long)Response->occHdr.gpsResponse.status.timSrce;
-                jsonObj["SScanDfVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["tracking"] = (unsigned long)Response->occHdr.gpsResponse.status.tracking;
+                jsonObj["site"] = ProcessGpsData(Response->occHdr.gpsResponse);
                 jsonObj["SScanDfVsChannelResp"]["occHdr"]["numChannels"] = Response->occHdr.numChannels;
                 jsonObj["SScanDfVsChannelResp"]["occHdr"]["numTimeOfDays"] = Response->occHdr.numTimeOfDays;
                 jsonObj["SScanDfVsChannelResp"]["occHdr"]["numTotalChannels"] = Response->occHdr.numTotalChannels;
-                jsonObj["SScanDfVsChannelResp"]["occHdr"]["status"] = Response->occHdr.status;
+                jsonObj["SScanDfVsChannelResp"]["occHdr"]["status"] = eErrorCodeToString(Response->occHdr.status);
                 jsonObj["SScanDfVsChannelResp"]["scanDfData"] = Response->scanDfData;
             }
             break;
@@ -1057,4 +1098,35 @@ std::string ProcessRealTimeData(_In_ ECSMSDllMsgType respType, _In_ SSmsRealtime
             break;
 	}
 	return jsonObj.dump();
+}
+
+//
+// Convert response returned by callback OnGpsDataFunc in JSON
+//
+nlohmann::json ProcessGpsData(SSmsMsg::SGpsResponse gpsResponse)
+{
+    json jsonObj;
+
+    jsonObj["dateTime"] = double(gpsResponse.dateTime);
+    jsonObj["latitude"] = double(gpsResponse.latitude);
+    jsonObj["longitude"] = double(gpsResponse.longitude);
+    jsonObj["status"]["accuracy"] = int(gpsResponse.status.accuracy);
+    jsonObj["status"]["antenna"] = int(gpsResponse.status.antenna);
+    jsonObj["status"]["batVolt"] = int(gpsResponse.status.batVolt);
+    jsonObj["status"]["lockHist"] = int(gpsResponse.status.lockHist);
+    jsonObj["status"]["mode"] = int(gpsResponse.status.mode);
+    jsonObj["status"]["noGps"] = int(gpsResponse.status.noGps);
+    jsonObj["status"]["notTested"] = int(gpsResponse.status.notTested);
+    jsonObj["status"]["numSats"] = int(gpsResponse.status.numSats);
+    jsonObj["status"]["nvRam"] = int(gpsResponse.status.nvRam);
+    jsonObj["status"]["oscVolt"] = int(gpsResponse.status.oscVolt);
+    jsonObj["status"]["pllSynth"] = int(gpsResponse.status.pllSynth);
+    jsonObj["status"]["receiver"] = int(gpsResponse.status.receiver);
+    jsonObj["status"]["satLock"] = int(gpsResponse.status.satLock);
+    jsonObj["status"]["timErr1"] = int(gpsResponse.status.timErr1);
+    jsonObj["status"]["timErr2"] = int(gpsResponse.status.timErr2);
+    jsonObj["status"]["timSrce"] = int(gpsResponse.status.timSrce);
+    jsonObj["status"]["tracking"] = int(gpsResponse.status.tracking);
+
+	return jsonObj;
 }
