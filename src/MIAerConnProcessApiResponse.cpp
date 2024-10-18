@@ -1,9 +1,12 @@
-#include "MIAerConnProcessApiResponse.h"
+#include <MIAerConnProcessApiResponse.h>
 #include <MIAerConnConstants.h>
-#include "string"
+#include <string>
+#include <algorithm>
+#include <vector>
+#include <limits>
 #include <locale>
 #include <codecvt>
-#include "ExternalCodes.h"
+#include <ExternalCodes.h>
 #include <nlohmann/json.hpp>
 
 using json = nlohmann::json;
@@ -88,164 +91,164 @@ std::string processAutoViolateResponse(_In_ ECSMSDllMsgType respType, _In_ SEqui
         case ECSMSDllMsgType::AVD_STATE_RESPONSE:
 		case ECSMSDllMsgType::AVD_SOLICIT_STATE_RESPONSE:
             {
-                SEquipCtrlMsg::SStateResp* Response = (SEquipCtrlMsg::SStateResp*)data;
+                SEquipCtrlMsg::SStateResp* AVDResponse = (SEquipCtrlMsg::SStateResp*)data;
 
-                jsonObj["SStateResp"]["completionTime"] = double(Response->completionTime);
-				jsonObj["SStateResp"]["state"] = eStateRespToString(Response->state);
+                jsonObj["SStateResp"]["completionTime"] = double(AVDResponse->completionTime);
+				jsonObj["SStateResp"]["state"] = eStateRespToString(AVDResponse->state);
             }
             break;
 
         case ECSMSDllMsgType::AVD_FREQ_VS_CHANNEL:
             {
-                SEquipCtrlMsg::SFrequencyVsChannelResp* Response = (SEquipCtrlMsg::SFrequencyVsChannelResp*)data;
-                jsonObj["SFrequencyVsChannelResp"]["frequencies"]["internal"] = Response->frequencies->internal;
-                jsonObj["SFrequencyVsChannelResp"]["hostName"] = Response->hostName;
-                jsonObj["SFrequencyVsChannelResp"]["numBands"] = Response->numBands;
-                jsonObj["SFrequencyVsChannelResp"]["numChannels"] = Response->numChannels;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["firstChannel"] = Response->occHdr.firstChannel;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["dateTime"] = Response->occHdr.gpsResponse.dateTime;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["latitude"] = Response->occHdr.gpsResponse.latitude;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["longitude"] = Response->occHdr.gpsResponse.longitude;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["accuracy"] = (unsigned long)Response->occHdr.gpsResponse.status.accuracy;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["antenna"] = (unsigned long)Response->occHdr.gpsResponse.status.antenna;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["batVolt"] = (unsigned long)Response->occHdr.gpsResponse.status.batVolt;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["lockHist"] = (unsigned long)Response->occHdr.gpsResponse.status.lockHist;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["mode"] = (unsigned long)Response->occHdr.gpsResponse.status.mode;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["noGps"] = (unsigned long)Response->occHdr.gpsResponse.status.noGps;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["notTested"] = (unsigned long)Response->occHdr.gpsResponse.status.notTested;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["numSats"] = (unsigned long)Response->occHdr.gpsResponse.status.numSats;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["nvRam"] = (unsigned long)Response->occHdr.gpsResponse.status.nvRam;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["oscVolt"] = (unsigned long)Response->occHdr.gpsResponse.status.oscVolt;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["pllSynth"] = (unsigned long)Response->occHdr.gpsResponse.status.pllSynth;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["receiver"] = (unsigned long)Response->occHdr.gpsResponse.status.receiver;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["satLock"] = (unsigned long)Response->occHdr.gpsResponse.status.satLock;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["timErr1"] = (unsigned long)Response->occHdr.gpsResponse.status.timErr1;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["timErr2"] = (unsigned long)Response->occHdr.gpsResponse.status.timErr2;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["timSrce"] = (unsigned long)Response->occHdr.gpsResponse.status.timSrce;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["tracking"] = (unsigned long)Response->occHdr.gpsResponse.status.tracking;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["numChannels"] = Response->occHdr.numChannels;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["numTimeOfDays"] = Response->occHdr.numTimeOfDays;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["numTotalChannels"] = Response->occHdr.numTotalChannels;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["status"] = Response->occHdr.status;
-                jsonObj["SFrequencyVsChannelResp"]["occPrimaryThreshold"] = Response->occPrimaryThreshold;
-                jsonObj["SFrequencyVsChannelResp"]["occSecondaryThreshold"] = Response->occSecondaryThreshold;
-                jsonObj["SFrequencyVsChannelResp"]["saveIntermediateData"] = Response->saveIntermediateData;
-                jsonObj["SFrequencyVsChannelResp"]["selectedAntenna"] = Response->selectedAntenna;
-                jsonObj["SFrequencyVsChannelResp"]["useSecondaryThreshold"] = Response->useSecondaryThreshold;
+                SEquipCtrlMsg::SFrequencyVsChannelResp* AVDResponse = (SEquipCtrlMsg::SFrequencyVsChannelResp*)data;
+                jsonObj["SFrequencyVsChannelResp"]["frequencies"]["internal"] = AVDResponse->frequencies->internal;
+                jsonObj["SFrequencyVsChannelResp"]["hostName"] = AVDResponse->hostName;
+                jsonObj["SFrequencyVsChannelResp"]["numBands"] = AVDResponse->numBands;
+                jsonObj["SFrequencyVsChannelResp"]["numChannels"] = AVDResponse->numChannels;
+                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["firstChannel"] = AVDResponse->occHdr.firstChannel;
+                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["dateTime"] = AVDResponse->occHdr.gpsResponse.dateTime;
+                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["latitude"] = AVDResponse->occHdr.gpsResponse.latitude;
+                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["longitude"] = AVDResponse->occHdr.gpsResponse.longitude;
+                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["accuracy"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.accuracy;
+                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["antenna"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.antenna;
+                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["batVolt"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.batVolt;
+                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["lockHist"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.lockHist;
+                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["mode"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.mode;
+                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["noGps"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.noGps;
+                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["notTested"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.notTested;
+                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["numSats"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.numSats;
+                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["nvRam"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.nvRam;
+                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["oscVolt"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.oscVolt;
+                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["pllSynth"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.pllSynth;
+                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["receiver"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.receiver;
+                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["satLock"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.satLock;
+                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["timErr1"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.timErr1;
+                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["timErr2"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.timErr2;
+                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["timSrce"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.timSrce;
+                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["tracking"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.tracking;
+                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["numChannels"] = AVDResponse->occHdr.numChannels;
+                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["numTimeOfDays"] = AVDResponse->occHdr.numTimeOfDays;
+                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["numTotalChannels"] = AVDResponse->occHdr.numTotalChannels;
+                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["status"] = AVDResponse->occHdr.status;
+                jsonObj["SFrequencyVsChannelResp"]["occPrimaryThreshold"] = AVDResponse->occPrimaryThreshold;
+                jsonObj["SFrequencyVsChannelResp"]["occSecondaryThreshold"] = AVDResponse->occSecondaryThreshold;
+                jsonObj["SFrequencyVsChannelResp"]["saveIntermediateData"] = AVDResponse->saveIntermediateData;
+                jsonObj["SFrequencyVsChannelResp"]["selectedAntenna"] = AVDResponse->selectedAntenna;
+                jsonObj["SFrequencyVsChannelResp"]["useSecondaryThreshold"] = AVDResponse->useSecondaryThreshold;
             }
             break;
 
         case ECSMSDllMsgType::AVD_FREQ_MEAS:
             {
-                SEquipCtrlMsg::SAvdMeasureResult* Response = (SEquipCtrlMsg::SAvdMeasureResult*)data;
+                SEquipCtrlMsg::SAvdMeasureResult* AVDResponse = (SEquipCtrlMsg::SAvdMeasureResult*)data;
 // TODO #16: Check the origin of the loop total. Why 1000?
                 for (size_t i = 0; i < 1000; ++i) {
-                    jsonObj["SAvdMeasureResult"]["measData"][i]["result"] = Response->measData[i].result;
-                    jsonObj["SAvdMeasureResult"]["measData"][i]["stdDev"] = Response->measData[i].stdDev;
+                    jsonObj["SAvdMeasureResult"]["measData"][i]["result"] = AVDResponse->measData[i].result;
+                    jsonObj["SAvdMeasureResult"]["measData"][i]["stdDev"] = AVDResponse->measData[i].stdDev;
                 }
-                jsonObj["SAvdMeasureResult"]["occHdr"]["firstChannel"] = Response->occHdr.firstChannel;
-                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["dateTime"] = Response->occHdr.gpsResponse.dateTime;
-                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["latitude"] = Response->occHdr.gpsResponse.latitude;
-                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["longitude"] = Response->occHdr.gpsResponse.longitude;
-                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["accuracy"] = (unsigned long)Response->occHdr.gpsResponse.status.accuracy;
-                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["antenna"] = (unsigned long)Response->occHdr.gpsResponse.status.antenna;
-                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["batVolt"] = (unsigned long)Response->occHdr.gpsResponse.status.batVolt;
-                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["lockHist"] = (unsigned long)Response->occHdr.gpsResponse.status.lockHist;
-                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["mode"] = (unsigned long)Response->occHdr.gpsResponse.status.mode;
-                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["noGps"] = (unsigned long)Response->occHdr.gpsResponse.status.noGps;
-                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["notTested"] = (unsigned long)Response->occHdr.gpsResponse.status.notTested;
-                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["numSats"] = (unsigned long)Response->occHdr.gpsResponse.status.numSats;
-                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["nvRam"] = (unsigned long)Response->occHdr.gpsResponse.status.nvRam;
-                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["oscVolt"] = (unsigned long)Response->occHdr.gpsResponse.status.oscVolt;
-                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["pllSynth"] = (unsigned long)Response->occHdr.gpsResponse.status.pllSynth;
-                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["receiver"] = (unsigned long)Response->occHdr.gpsResponse.status.receiver;
-                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["satLock"] = (unsigned long)Response->occHdr.gpsResponse.status.satLock;
-                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["timErr1"] = (unsigned long)Response->occHdr.gpsResponse.status.timErr1;
-                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["timErr2"] = (unsigned long)Response->occHdr.gpsResponse.status.timErr2;
-                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["timSrce"] = (unsigned long)Response->occHdr.gpsResponse.status.timSrce;
-                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["tracking"] = (unsigned long)Response->occHdr.gpsResponse.status.tracking;
-                jsonObj["SAvdMeasureResult"]["occHdr"]["numChannels"] = Response->occHdr.numChannels;
-                jsonObj["SAvdMeasureResult"]["occHdr"]["numTimeOfDays"] = Response->occHdr.numTimeOfDays;
-                jsonObj["SAvdMeasureResult"]["occHdr"]["numTotalChannels"] = Response->occHdr.numTotalChannels;
-                jsonObj["SAvdMeasureResult"]["occHdr"]["status"] = Response->occHdr.status;
+                jsonObj["SAvdMeasureResult"]["occHdr"]["firstChannel"] = AVDResponse->occHdr.firstChannel;
+                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["dateTime"] = AVDResponse->occHdr.gpsResponse.dateTime;
+                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["latitude"] = AVDResponse->occHdr.gpsResponse.latitude;
+                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["longitude"] = AVDResponse->occHdr.gpsResponse.longitude;
+                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["accuracy"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.accuracy;
+                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["antenna"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.antenna;
+                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["batVolt"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.batVolt;
+                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["lockHist"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.lockHist;
+                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["mode"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.mode;
+                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["noGps"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.noGps;
+                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["notTested"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.notTested;
+                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["numSats"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.numSats;
+                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["nvRam"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.nvRam;
+                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["oscVolt"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.oscVolt;
+                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["pllSynth"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.pllSynth;
+                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["receiver"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.receiver;
+                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["satLock"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.satLock;
+                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["timErr1"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.timErr1;
+                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["timErr2"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.timErr2;
+                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["timSrce"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.timSrce;
+                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["tracking"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.tracking;
+                jsonObj["SAvdMeasureResult"]["occHdr"]["numChannels"] = AVDResponse->occHdr.numChannels;
+                jsonObj["SAvdMeasureResult"]["occHdr"]["numTimeOfDays"] = AVDResponse->occHdr.numTimeOfDays;
+                jsonObj["SAvdMeasureResult"]["occHdr"]["numTotalChannels"] = AVDResponse->occHdr.numTotalChannels;
+                jsonObj["SAvdMeasureResult"]["occHdr"]["status"] = AVDResponse->occHdr.status;
             }
             break;
 
         case ECSMSDllMsgType::AVD_BW_MEAS:
             {
-                SEquipCtrlMsg::SAvdMeasureResult* Response = (SEquipCtrlMsg::SAvdMeasureResult*)data;
+                SEquipCtrlMsg::SAvdMeasureResult* AVDResponse = (SEquipCtrlMsg::SAvdMeasureResult*)data;
                 for (size_t i = 0; i < 1000; ++i) {
-                    jsonObj["SAvdMeasureResult"]["measData"][i]["result"] = Response->measData[i].result;
-                    jsonObj["SAvdMeasureResult"]["measData"][i]["stdDev"] = Response->measData[i].stdDev;
+                    jsonObj["SAvdMeasureResult"]["measData"][i]["result"] = AVDResponse->measData[i].result;
+                    jsonObj["SAvdMeasureResult"]["measData"][i]["stdDev"] = AVDResponse->measData[i].stdDev;
                 }
-                jsonObj["SAvdMeasureResult"]["occHdr"]["firstChannel"] = Response->occHdr.firstChannel;
-                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["dateTime"] = Response->occHdr.gpsResponse.dateTime;
-                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["latitude"] = Response->occHdr.gpsResponse.latitude;
-                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["longitude"] = Response->occHdr.gpsResponse.longitude;
-                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["accuracy"] = (unsigned long)Response->occHdr.gpsResponse.status.accuracy;
-                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["antenna"] = (unsigned long)Response->occHdr.gpsResponse.status.antenna;
-                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["batVolt"] = (unsigned long)Response->occHdr.gpsResponse.status.batVolt;
-                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["lockHist"] = (unsigned long)Response->occHdr.gpsResponse.status.lockHist;
-                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["mode"] = (unsigned long)Response->occHdr.gpsResponse.status.mode;
-                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["noGps"] = (unsigned long)Response->occHdr.gpsResponse.status.noGps;
-                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["notTested"] = (unsigned long)Response->occHdr.gpsResponse.status.notTested;
-                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["numSats"] = (unsigned long)Response->occHdr.gpsResponse.status.numSats;
-                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["nvRam"] = (unsigned long)Response->occHdr.gpsResponse.status.nvRam;
-                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["oscVolt"] = (unsigned long)Response->occHdr.gpsResponse.status.oscVolt;
-                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["pllSynth"] = (unsigned long)Response->occHdr.gpsResponse.status.pllSynth;
-                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["receiver"] = (unsigned long)Response->occHdr.gpsResponse.status.receiver;
-                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["satLock"] = (unsigned long)Response->occHdr.gpsResponse.status.satLock;
-                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["timErr1"] = (unsigned long)Response->occHdr.gpsResponse.status.timErr1;
-                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["timErr2"] = (unsigned long)Response->occHdr.gpsResponse.status.timErr2;
-                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["timSrce"] = (unsigned long)Response->occHdr.gpsResponse.status.timSrce;
-                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["tracking"] = (unsigned long)Response->occHdr.gpsResponse.status.tracking;
-                jsonObj["SAvdMeasureResult"]["occHdr"]["numChannels"] = Response->occHdr.numChannels;
-                jsonObj["SAvdMeasureResult"]["occHdr"]["numTimeOfDays"] = Response->occHdr.numTimeOfDays;
-                jsonObj["SAvdMeasureResult"]["occHdr"]["numTotalChannels"] = Response->occHdr.numTotalChannels;
-                jsonObj["SAvdMeasureResult"]["occHdr"]["status"] = Response->occHdr.status;
+                jsonObj["SAvdMeasureResult"]["occHdr"]["firstChannel"] = AVDResponse->occHdr.firstChannel;
+                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["dateTime"] = AVDResponse->occHdr.gpsResponse.dateTime;
+                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["latitude"] = AVDResponse->occHdr.gpsResponse.latitude;
+                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["longitude"] = AVDResponse->occHdr.gpsResponse.longitude;
+                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["accuracy"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.accuracy;
+                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["antenna"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.antenna;
+                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["batVolt"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.batVolt;
+                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["lockHist"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.lockHist;
+                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["mode"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.mode;
+                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["noGps"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.noGps;
+                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["notTested"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.notTested;
+                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["numSats"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.numSats;
+                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["nvRam"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.nvRam;
+                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["oscVolt"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.oscVolt;
+                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["pllSynth"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.pllSynth;
+                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["receiver"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.receiver;
+                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["satLock"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.satLock;
+                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["timErr1"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.timErr1;
+                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["timErr2"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.timErr2;
+                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["timSrce"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.timSrce;
+                jsonObj["SAvdMeasureResult"]["occHdr"]["gpsResponse"]["status"]["tracking"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.tracking;
+                jsonObj["SAvdMeasureResult"]["occHdr"]["numChannels"] = AVDResponse->occHdr.numChannels;
+                jsonObj["SAvdMeasureResult"]["occHdr"]["numTimeOfDays"] = AVDResponse->occHdr.numTimeOfDays;
+                jsonObj["SAvdMeasureResult"]["occHdr"]["numTotalChannels"] = AVDResponse->occHdr.numTotalChannels;
+                jsonObj["SAvdMeasureResult"]["occHdr"]["status"] = AVDResponse->occHdr.status;
             }
             break;
 
         case ECSMSDllMsgType::AVD_STATUS:
             {
-                SEquipCtrlMsg::SEquipTaskStatusResp* Response = (SEquipCtrlMsg::SEquipTaskStatusResp*)data;
-                jsonObj["SEquipTaskStatusResp"]["dateTime"] = Response->dateTime;
-                jsonObj["SEquipTaskStatusResp"]["key"] = Response->key;
-                jsonObj["SEquipTaskStatusResp"]["status"] = Response->status;
-                jsonObj["SEquipTaskStatusResp"]["taskId"] = Response->taskId;
+                SEquipCtrlMsg::SEquipTaskStatusResp* AVDResponse = (SEquipCtrlMsg::SEquipTaskStatusResp*)data;
+                jsonObj["SEquipTaskStatusResp"]["dateTime"] = AVDResponse->dateTime;
+                jsonObj["SEquipTaskStatusResp"]["key"] = AVDResponse->key;
+                jsonObj["SEquipTaskStatusResp"]["status"] = AVDResponse->status;
+                jsonObj["SEquipTaskStatusResp"]["taskId"] = AVDResponse->taskId;
             }
             break;
 
         case ECSMSDllMsgType::AVD_OCC_CHANNEL_RESULT:
             {
-                SEquipCtrlMsg::SOccResult* Response = (SEquipCtrlMsg::SOccResult*)data;
-                jsonObj["SOccResult"]["occHdr"]["firstChannel"] = Response->occHdr.firstChannel;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["dateTime"] = Response->occHdr.gpsResponse.dateTime;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["latitude"] = Response->occHdr.gpsResponse.latitude;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["longitude"] = Response->occHdr.gpsResponse.longitude;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["accuracy"] = (unsigned long)Response->occHdr.gpsResponse.status.accuracy;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["antenna"] = (unsigned long)Response->occHdr.gpsResponse.status.antenna;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["batVolt"] = (unsigned long)Response->occHdr.gpsResponse.status.batVolt;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["lockHist"] = (unsigned long)Response->occHdr.gpsResponse.status.lockHist;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["mode"] = (unsigned long)Response->occHdr.gpsResponse.status.mode;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["noGps"] = (unsigned long)Response->occHdr.gpsResponse.status.noGps;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["notTested"] = (unsigned long)Response->occHdr.gpsResponse.status.notTested;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["numSats"] = (unsigned long)Response->occHdr.gpsResponse.status.numSats;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["nvRam"] = (unsigned long)Response->occHdr.gpsResponse.status.nvRam;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["oscVolt"] = (unsigned long)Response->occHdr.gpsResponse.status.oscVolt;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["pllSynth"] = (unsigned long)Response->occHdr.gpsResponse.status.pllSynth;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["receiver"] = (unsigned long)Response->occHdr.gpsResponse.status.receiver;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["satLock"] = (unsigned long)Response->occHdr.gpsResponse.status.satLock;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["timErr1"] = (unsigned long)Response->occHdr.gpsResponse.status.timErr1;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["timErr2"] = (unsigned long)Response->occHdr.gpsResponse.status.timErr2;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["timSrce"] = (unsigned long)Response->occHdr.gpsResponse.status.timSrce;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["tracking"] = (unsigned long)Response->occHdr.gpsResponse.status.tracking;
-                jsonObj["SOccResult"]["occHdr"]["numChannels"] = Response->occHdr.numChannels;
-                jsonObj["SOccResult"]["occHdr"]["numTimeOfDays"] = Response->occHdr.numTimeOfDays;
-                jsonObj["SOccResult"]["occHdr"]["numTotalChannels"] = Response->occHdr.numTotalChannels;
-                jsonObj["SOccResult"]["occHdr"]["status"] = Response->occHdr.status;
-                jsonObj["SOccResult"]["resultData"]["avg"] = Response->resultData->avg;
-                jsonObj["SOccResult"]["resultData"]["avg"] = Response->resultData->max;
+                SEquipCtrlMsg::SOccResult* AVDResponse = (SEquipCtrlMsg::SOccResult*)data;
+                jsonObj["SOccResult"]["occHdr"]["firstChannel"] = AVDResponse->occHdr.firstChannel;
+                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["dateTime"] = AVDResponse->occHdr.gpsResponse.dateTime;
+                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["latitude"] = AVDResponse->occHdr.gpsResponse.latitude;
+                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["longitude"] = AVDResponse->occHdr.gpsResponse.longitude;
+                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["accuracy"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.accuracy;
+                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["antenna"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.antenna;
+                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["batVolt"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.batVolt;
+                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["lockHist"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.lockHist;
+                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["mode"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.mode;
+                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["noGps"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.noGps;
+                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["notTested"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.notTested;
+                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["numSats"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.numSats;
+                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["nvRam"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.nvRam;
+                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["oscVolt"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.oscVolt;
+                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["pllSynth"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.pllSynth;
+                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["receiver"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.receiver;
+                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["satLock"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.satLock;
+                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["timErr1"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.timErr1;
+                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["timErr2"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.timErr2;
+                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["timSrce"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.timSrce;
+                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["tracking"] = (unsigned long)AVDResponse->occHdr.gpsResponse.status.tracking;
+                jsonObj["SOccResult"]["occHdr"]["numChannels"] = AVDResponse->occHdr.numChannels;
+                jsonObj["SOccResult"]["occHdr"]["numTimeOfDays"] = AVDResponse->occHdr.numTimeOfDays;
+                jsonObj["SOccResult"]["occHdr"]["numTotalChannels"] = AVDResponse->occHdr.numTotalChannels;
+                jsonObj["SOccResult"]["occHdr"]["status"] = AVDResponse->occHdr.status;
+                jsonObj["SOccResult"]["resultData"]["avg"] = AVDResponse->resultData->avg;
+                jsonObj["SOccResult"]["resultData"]["avg"] = AVDResponse->resultData->max;
             }
             break;
 
@@ -270,14 +273,14 @@ std::string processMeasResponse(_In_ ECSMSDllMsgType respType, _In_ unsigned lon
     {
         case ECSMSDllMsgType::VALIDATE_MEAS:
             {
-                SEquipCtrlMsg::SValidateMeasurementResp* DwellResponse = (SEquipCtrlMsg::SValidateMeasurementResp*)data;
-                jsonObj["SValidateMeasurementResp"]["bwDwellTime"] = DwellResponse->bwDwellTime;
-                jsonObj["SValidateMeasurementResp"]["dfDwellTime"] = DwellResponse->dfDwellTime;
-                jsonObj["SValidateMeasurementResp"]["fieldStrengthDwellTime"] = DwellResponse->fieldStrengthDwellTime;
-                jsonObj["SValidateMeasurementResp"]["freqDwellTime"] = DwellResponse->freqDwellTime;
-                jsonObj["SValidateMeasurementResp"]["modulationDwellTime"] = DwellResponse->modulationDwellTime;
-                jsonObj["SValidateMeasurementResp"]["status"] = DwellResponse->status;
-                jsonObj["SValidateMeasurementResp"]["totalTime"] = DwellResponse->totalTime;
+                SEquipCtrlMsg::SValidateMeasurementResp* MeasResponse = (SEquipCtrlMsg::SValidateMeasurementResp*)data;
+                jsonObj["SValidateMeasurementResp"]["bwDwellTime"] = MeasResponse->bwDwellTime;
+                jsonObj["SValidateMeasurementResp"]["dfDwellTime"] = MeasResponse->dfDwellTime;
+                jsonObj["SValidateMeasurementResp"]["fieldStrengthDwellTime"] = MeasResponse->fieldStrengthDwellTime;
+                jsonObj["SValidateMeasurementResp"]["freqDwellTime"] = MeasResponse->freqDwellTime;
+                jsonObj["SValidateMeasurementResp"]["modulationDwellTime"] = MeasResponse->modulationDwellTime;
+                jsonObj["SValidateMeasurementResp"]["status"] = MeasResponse->status;
+                jsonObj["SValidateMeasurementResp"]["totalTime"] = MeasResponse->totalTime;
             }
             break;
 	    case ECSMSDllMsgType::GET_MEAS:
@@ -397,7 +400,6 @@ std::string processPanResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg
         // jsonObj["SGetPanResp"]["binDataEscaped"] = true;
 }
 
-
 //
 // Convert response of types OCC_MSGLEN_DIST_RESPONSE, OCC_FREQ_VS_CHANNEL, OCC_CHANNEL_RESULT, OCC_STATUS, OCC_STATE_RESPONSE, OCC_SOLICIT_STATE_RESPONSE, OCC_SPECTRUM_RESPONSE, OCC_TIMEOFDAY_RESULT, OCC_EFLD_CHANNEL_RESULT, OCC_MSGLEN_CHANNEL_RESULT, OCC_EFLD_TIMEOFDAY_RESULT in JSON
 //
@@ -411,324 +413,178 @@ std::string processOccupancyResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipC
     {
         case ECSMSDllMsgType::OCC_MSGLEN_DIST_RESPONSE:
             {
-                SEquipCtrlMsg::SMsgLengthDistributionResp* Response = (SEquipCtrlMsg::SMsgLengthDistributionResp*)data;
+                SEquipCtrlMsg::SMsgLengthDistributionResp* OCCResponse = (SEquipCtrlMsg::SMsgLengthDistributionResp*)data;
 
-                jsonObj["SMsgLengthDistributionResp"]["histData"]["channel"] = Response->histData->channel;
-                jsonObj["SMsgLengthDistributionResp"]["histData"]["length"] = Response->histData->length;
-                jsonObj["SMsgLengthDistributionResp"]["occHdr"]["firstChannel"] = Response->occHdr.firstChannel;
-                jsonObj["SMsgLengthDistributionResp"]["occHdr"]["gpsResponse"]["dateTime"] = Response->occHdr.gpsResponse.dateTime;
-                jsonObj["SMsgLengthDistributionResp"]["occHdr"]["gpsResponse"]["latitude"] = Response->occHdr.gpsResponse.latitude;
-                jsonObj["SMsgLengthDistributionResp"]["occHdr"]["gpsResponse"]["longitude"] = Response->occHdr.gpsResponse.longitude;
-                jsonObj["SMsgLengthDistributionResp"]["occHdr"]["gpsResponse"]["status"]["accuracy"] = (unsigned long)Response->occHdr.gpsResponse.status.accuracy;
-                jsonObj["SMsgLengthDistributionResp"]["occHdr"]["gpsResponse"]["status"]["antenna"] = (unsigned long)Response->occHdr.gpsResponse.status.antenna;
-                jsonObj["SMsgLengthDistributionResp"]["occHdr"]["gpsResponse"]["status"]["batVolt"] = (unsigned long)Response->occHdr.gpsResponse.status.batVolt;
-                jsonObj["SMsgLengthDistributionResp"]["occHdr"]["gpsResponse"]["status"]["lockHist"] = (unsigned long)Response->occHdr.gpsResponse.status.lockHist;
-                jsonObj["SMsgLengthDistributionResp"]["occHdr"]["gpsResponse"]["status"]["mode"] = (unsigned long)Response->occHdr.gpsResponse.status.mode;
-                jsonObj["SMsgLengthDistributionResp"]["occHdr"]["gpsResponse"]["status"]["noGps"] = (unsigned long)Response->occHdr.gpsResponse.status.noGps;
-                jsonObj["SMsgLengthDistributionResp"]["occHdr"]["gpsResponse"]["status"]["notTested"] = (unsigned long)Response->occHdr.gpsResponse.status.notTested;
-                jsonObj["SMsgLengthDistributionResp"]["occHdr"]["gpsResponse"]["status"]["numSats"] = (unsigned long)Response->occHdr.gpsResponse.status.numSats;
-                jsonObj["SMsgLengthDistributionResp"]["occHdr"]["gpsResponse"]["status"]["nvRam"] = (unsigned long)Response->occHdr.gpsResponse.status.nvRam;
-                jsonObj["SMsgLengthDistributionResp"]["occHdr"]["gpsResponse"]["status"]["oscVolt"] = (unsigned long)Response->occHdr.gpsResponse.status.oscVolt;
-                jsonObj["SMsgLengthDistributionResp"]["occHdr"]["gpsResponse"]["status"]["pllSynth"] = (unsigned long)Response->occHdr.gpsResponse.status.pllSynth;
-                jsonObj["SMsgLengthDistributionResp"]["occHdr"]["gpsResponse"]["status"]["receiver"] = (unsigned long)Response->occHdr.gpsResponse.status.receiver;
-                jsonObj["SMsgLengthDistributionResp"]["occHdr"]["gpsResponse"]["status"]["satLock"] = (unsigned long)Response->occHdr.gpsResponse.status.satLock;
-                jsonObj["SMsgLengthDistributionResp"]["occHdr"]["gpsResponse"]["status"]["timErr1"] = (unsigned long)Response->occHdr.gpsResponse.status.timErr1;
-                jsonObj["SMsgLengthDistributionResp"]["occHdr"]["gpsResponse"]["status"]["timErr2"] = (unsigned long)Response->occHdr.gpsResponse.status.timErr2;
-                jsonObj["SMsgLengthDistributionResp"]["occHdr"]["gpsResponse"]["status"]["timSrce"] = (unsigned long)Response->occHdr.gpsResponse.status.timSrce;
-                jsonObj["SMsgLengthDistributionResp"]["occHdr"]["gpsResponse"]["status"]["tracking"] = (unsigned long)Response->occHdr.gpsResponse.status.tracking;
+                jsonObj["SMsgLengthDistributionResp"]["histData"]["channel"] = OCCResponse->histData->channel;
+                jsonObj["SMsgLengthDistributionResp"]["histData"]["length"] = OCCResponse->histData->length;
+                jsonObj["SMsgLengthDistributionResp"]["occHdr"]["firstChannel"] = OCCResponse->occHdr.firstChannel;
+                jsonObj["site"] = ProcessGpsData(&(OCCResponse->occHdr.gpsResponse));
             }
             break;
 
         case ECSMSDllMsgType::OCC_SPECTRUM_RESPONSE:
             {
-                SEquipCtrlMsg::SOccResult* Response = (SEquipCtrlMsg::SOccResult*)data;
-                jsonObj["SOccResult"]["occHdr"]["firstChannel"] = Response->occHdr.firstChannel;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["dateTime"] = Response->occHdr.gpsResponse.dateTime;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["latitude"] = Response->occHdr.gpsResponse.latitude;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["longitude"] = Response->occHdr.gpsResponse.longitude;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["accuracy"] = (unsigned long)Response->occHdr.gpsResponse.status.accuracy;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["antenna"] = (unsigned long)Response->occHdr.gpsResponse.status.antenna;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["batVolt"] = (unsigned long)Response->occHdr.gpsResponse.status.batVolt;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["lockHist"] = (unsigned long)Response->occHdr.gpsResponse.status.lockHist;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["mode"] = (unsigned long)Response->occHdr.gpsResponse.status.mode;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["noGps"] = (unsigned long)Response->occHdr.gpsResponse.status.noGps;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["notTested"] = (unsigned long)Response->occHdr.gpsResponse.status.notTested;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["numSats"] = (unsigned long)Response->occHdr.gpsResponse.status.numSats;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["nvRam"] = (unsigned long)Response->occHdr.gpsResponse.status.nvRam;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["oscVolt"] = (unsigned long)Response->occHdr.gpsResponse.status.oscVolt;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["pllSynth"] = (unsigned long)Response->occHdr.gpsResponse.status.pllSynth;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["receiver"] = (unsigned long)Response->occHdr.gpsResponse.status.receiver;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["satLock"] = (unsigned long)Response->occHdr.gpsResponse.status.satLock;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["timErr1"] = (unsigned long)Response->occHdr.gpsResponse.status.timErr1;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["timErr2"] = (unsigned long)Response->occHdr.gpsResponse.status.timErr2;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["timSrce"] = (unsigned long)Response->occHdr.gpsResponse.status.timSrce;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["tracking"] = (unsigned long)Response->occHdr.gpsResponse.status.tracking;
-                jsonObj["SOccResult"]["occHdr"]["numChannels"] = (unsigned long)Response->occHdr.numChannels;
-                jsonObj["SOccResult"]["occHdr"]["numTimeOfDays"] = (unsigned long)Response->occHdr.numTimeOfDays;
-                jsonObj["SOccResult"]["occHdr"]["numTotalChannels"] = (unsigned long)Response->occHdr.numTotalChannels;
-                jsonObj["SOccResult"]["occHdr"]["status"] = (unsigned long)Response->occHdr.status;
-                jsonObj["SOccResult"]["resultData"] = (unsigned long)Response->resultData;
+                SEquipCtrlMsg::SOccResult* OCCResponse = (SEquipCtrlMsg::SOccResult*)data;
+
+                jsonObj["site"] = ProcessGpsData(&(OCCResponse->occHdr.gpsResponse));
+                jsonObj["SOccResult"]["occHdr"]["firstChannel"] = OCCResponse->occHdr.firstChannel;
+                jsonObj["SOccResult"]["occHdr"]["numChannels"] = (unsigned long)OCCResponse->occHdr.numChannels;
+                jsonObj["SOccResult"]["occHdr"]["numTimeOfDays"] = (unsigned long)OCCResponse->occHdr.numTimeOfDays;
+                jsonObj["SOccResult"]["occHdr"]["numTotalChannels"] = (unsigned long)OCCResponse->occHdr.numTotalChannels;
+                jsonObj["SOccResult"]["occHdr"]["status"] = (unsigned long)OCCResponse->occHdr.status;
+                jsonObj["SOccResult"]["resultData"] = (unsigned long)OCCResponse->resultData;
             }
             break;
 
         case ECSMSDllMsgType::OCC_STATE_RESPONSE: /* Fallback to apply the same processing to both cases */
         case ECSMSDllMsgType::OCC_SOLICIT_STATE_RESPONSE:
             {
-                SEquipCtrlMsg::SStateResp* Response = (SEquipCtrlMsg::SStateResp*)data;
-                jsonObj["SStateResp"]["completionTime"] = (unsigned long)Response->completionTime;
-                jsonObj["SStateResp"]["state"] = (unsigned long)Response->state;
+                SEquipCtrlMsg::SStateResp* OCCResponse = (SEquipCtrlMsg::SStateResp*)data;
+                jsonObj["SStateResp"]["completionTime"] = (unsigned long)OCCResponse->completionTime;
+                jsonObj["SStateResp"]["state"] = eStateRespToString(Response->state);
             }
             break;
 
         case ECSMSDllMsgType::OCC_FREQ_VS_CHANNEL:
             {
-                SEquipCtrlMsg::SFrequencyVsChannelResp* Response = (SEquipCtrlMsg::SFrequencyVsChannelResp*)data;
-                jsonObj["SFrequencyVsChannelResp"]["frequencies"]["internal"] = Response->frequencies->internal;
+                SEquipCtrlMsg::SFrequencyVsChannelResp* OCCResponse = (SEquipCtrlMsg::SFrequencyVsChannelResp*)data;
 
-                jsonObj["SFrequencyVsChannelResp"]["hostName"] = Response->hostName;
-                jsonObj["SFrequencyVsChannelResp"]["numBands"] = Response->numBands;
-                jsonObj["SFrequencyVsChannelResp"]["numChannels"] = Response->numChannels;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["firstChannel"] = Response->occHdr.firstChannel;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["dateTime"] = Response->occHdr.gpsResponse.dateTime;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["latitude"] = Response->occHdr.gpsResponse.latitude;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["longitude"] = Response->occHdr.gpsResponse.longitude;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["accuracy"] = (unsigned long)Response->occHdr.gpsResponse.status.accuracy;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["antenna"] = (unsigned long)Response->occHdr.gpsResponse.status.antenna;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["batVolt"] = (unsigned long)Response->occHdr.gpsResponse.status.batVolt;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["lockHist"] = (unsigned long)Response->occHdr.gpsResponse.status.lockHist;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["mode"] = (unsigned long)Response->occHdr.gpsResponse.status.mode;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["noGps"] = (unsigned long)Response->occHdr.gpsResponse.status.noGps;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["notTested"] = (unsigned long)Response->occHdr.gpsResponse.status.notTested;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["numSats"] = (unsigned long)Response->occHdr.gpsResponse.status.numSats;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["nvRam"] = (unsigned long)Response->occHdr.gpsResponse.status.nvRam;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["oscVolt"] = (unsigned long)Response->occHdr.gpsResponse.status.oscVolt;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["pllSynth"] = (unsigned long)Response->occHdr.gpsResponse.status.pllSynth;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["receiver"] = (unsigned long)Response->occHdr.gpsResponse.status.receiver;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["satLock"] = (unsigned long)Response->occHdr.gpsResponse.status.satLock;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["timErr1"] = (unsigned long)Response->occHdr.gpsResponse.status.timErr1;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["timErr2"] = (unsigned long)Response->occHdr.gpsResponse.status.timErr2;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["timSrce"] = (unsigned long)Response->occHdr.gpsResponse.status.timSrce;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["gpsResponse"]["status"]["tracking"] = (unsigned long)Response->occHdr.gpsResponse.status.tracking;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["numChannels"] = Response->occHdr.numChannels;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["numTimeOfDays"] = Response->occHdr.numTimeOfDays;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["numTotalChannels"] = Response->occHdr.numTotalChannels;
-                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["status"] = Response->occHdr.status;
-                jsonObj["SFrequencyVsChannelResp"]["occPrimaryThreshold"] = Response->occPrimaryThreshold;
-                jsonObj["SFrequencyVsChannelResp"]["occSecondaryThreshold"] = Response->occSecondaryThreshold;
-                jsonObj["SFrequencyVsChannelResp"]["saveIntermediateData"] = Response->saveIntermediateData;
-                jsonObj["SFrequencyVsChannelResp"]["selectedAntenna"] = Response->selectedAntenna;
-                jsonObj["SFrequencyVsChannelResp"]["useSecondaryThreshold"] = Response->useSecondaryThreshold;
+                jsonObj["SFrequencyVsChannelResp"]["frequencies"]["internal"] = OCCResponse->frequencies->internal;
+                jsonObj["SFrequencyVsChannelResp"]["hostName"] = OCCResponse->hostName;
+                jsonObj["site"] = ProcessGpsData(&(OCCResponse->occHdr.gpsResponse));
+                jsonObj["SFrequencyVsChannelResp"]["numBands"] = OCCResponse->numBands;
+                jsonObj["SFrequencyVsChannelResp"]["numChannels"] = OCCResponse->numChannels;
+                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["firstChannel"] = OCCResponse->occHdr.firstChannel;
+                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["numChannels"] = OCCResponse->occHdr.numChannels;
+                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["numTimeOfDays"] = OCCResponse->occHdr.numTimeOfDays;
+                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["numTotalChannels"] = OCCResponse->occHdr.numTotalChannels;
+                jsonObj["SFrequencyVsChannelResp"]["occHdr"]["status"] = OCCResponse->occHdr.status;
+                jsonObj["SFrequencyVsChannelResp"]["occPrimaryThreshold"] = OCCResponse->occPrimaryThreshold;
+                jsonObj["SFrequencyVsChannelResp"]["occSecondaryThreshold"] = OCCResponse->occSecondaryThreshold;
+                jsonObj["SFrequencyVsChannelResp"]["saveIntermediateData"] = OCCResponse->saveIntermediateData;
+                jsonObj["SFrequencyVsChannelResp"]["selectedAntenna"] = OCCResponse->selectedAntenna;
+                jsonObj["SFrequencyVsChannelResp"]["useSecondaryThreshold"] = OCCResponse->useSecondaryThreshold;
             }
             break;
 
         case ECSMSDllMsgType::OCC_CHANNEL_RESULT:
             {
-                SEquipCtrlMsg::SOccResult* Response = (SEquipCtrlMsg::SOccResult*)data;
-                jsonObj["SOccResult"]["occHdr"]["firstChannel"] = Response->occHdr.firstChannel;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["dateTime"] = Response->occHdr.gpsResponse.dateTime;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["latitude"] = Response->occHdr.gpsResponse.latitude;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["longitude"] = Response->occHdr.gpsResponse.longitude;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["accuracy"] = (unsigned long)Response->occHdr.gpsResponse.status.accuracy;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["antenna"] = (unsigned long)Response->occHdr.gpsResponse.status.antenna;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["batVolt"] = (unsigned long)Response->occHdr.gpsResponse.status.batVolt;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["lockHist"] = (unsigned long)Response->occHdr.gpsResponse.status.lockHist;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["mode"] = (unsigned long)Response->occHdr.gpsResponse.status.mode;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["noGps"] = (unsigned long)Response->occHdr.gpsResponse.status.noGps;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["notTested"] = (unsigned long)Response->occHdr.gpsResponse.status.notTested;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["numSats"] = (unsigned long)Response->occHdr.gpsResponse.status.numSats;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["nvRam"] = (unsigned long)Response->occHdr.gpsResponse.status.nvRam;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["oscVolt"] = (unsigned long)Response->occHdr.gpsResponse.status.oscVolt;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["pllSynth"] = (unsigned long)Response->occHdr.gpsResponse.status.pllSynth;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["receiver"] = (unsigned long)Response->occHdr.gpsResponse.status.receiver;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["satLock"] = (unsigned long)Response->occHdr.gpsResponse.status.satLock;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["timErr1"] = (unsigned long)Response->occHdr.gpsResponse.status.timErr1;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["timErr2"] = (unsigned long)Response->occHdr.gpsResponse.status.timErr2;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["timSrce"] = (unsigned long)Response->occHdr.gpsResponse.status.timSrce;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["tracking"] = (unsigned long)Response->occHdr.gpsResponse.status.tracking;
-                jsonObj["SOccResult"]["occHdr"]["numChannels"] = (unsigned long)Response->occHdr.numChannels;
-                jsonObj["SOccResult"]["occHdr"]["numTimeOfDays"] = (unsigned long)Response->occHdr.numTimeOfDays;
-                jsonObj["SOccResult"]["occHdr"]["numTotalChannels"] = (unsigned long)Response->occHdr.numTotalChannels;
-                jsonObj["SOccResult"]["occHdr"]["status"] = (unsigned long)Response->occHdr.status;
-                jsonObj["SOccResult"]["resultData"] = (unsigned long)Response->resultData;
+                SEquipCtrlMsg::SOccResult* OCCResponse = (SEquipCtrlMsg::SOccResult*)data;
+
+                jsonObj["site"] = ProcessGpsData(&(OCCResponse->occHdr.gpsResponse));
+                jsonObj["SOccResult"]["occHdr"]["firstChannel"] = OCCResponse->occHdr.firstChannel;
+                jsonObj["SOccResult"]["occHdr"]["numChannels"] = (unsigned long)OCCResponse->occHdr.numChannels;
+                jsonObj["SOccResult"]["occHdr"]["numTimeOfDays"] = (unsigned long)OCCResponse->occHdr.numTimeOfDays;
+                jsonObj["SOccResult"]["occHdr"]["numTotalChannels"] = (unsigned long)OCCResponse->occHdr.numTotalChannels;
+                jsonObj["SOccResult"]["occHdr"]["status"] = (unsigned long)OCCResponse->occHdr.status;
+                jsonObj["SOccResult"]["resultData"] = (unsigned long)OCCResponse->resultData;
             }
             break;
 
         case ECSMSDllMsgType::OCC_EFLD_CHANNEL_RESULT:
             {
-                SEquipCtrlMsg::SOccResult* Response = (SEquipCtrlMsg::SOccResult*)data;
-                jsonObj["SOccResult"]["occHdr"]["firstChannel"] = Response->occHdr.firstChannel;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["dateTime"] = Response->occHdr.gpsResponse.dateTime;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["latitude"] = Response->occHdr.gpsResponse.latitude;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["longitude"] = Response->occHdr.gpsResponse.longitude;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["accuracy"] = (unsigned long)Response->occHdr.gpsResponse.status.accuracy;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["antenna"] = (unsigned long)Response->occHdr.gpsResponse.status.antenna;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["batVolt"] = (unsigned long)Response->occHdr.gpsResponse.status.batVolt;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["lockHist"] = (unsigned long)Response->occHdr.gpsResponse.status.lockHist;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["mode"] = (unsigned long)Response->occHdr.gpsResponse.status.mode;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["noGps"] = (unsigned long)Response->occHdr.gpsResponse.status.noGps;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["notTested"] = (unsigned long)Response->occHdr.gpsResponse.status.notTested;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["numSats"] = (unsigned long)Response->occHdr.gpsResponse.status.numSats;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["nvRam"] = (unsigned long)Response->occHdr.gpsResponse.status.nvRam;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["oscVolt"] = (unsigned long)Response->occHdr.gpsResponse.status.oscVolt;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["pllSynth"] = (unsigned long)Response->occHdr.gpsResponse.status.pllSynth;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["receiver"] = (unsigned long)Response->occHdr.gpsResponse.status.receiver;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["satLock"] = (unsigned long)Response->occHdr.gpsResponse.status.satLock;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["timErr1"] = (unsigned long)Response->occHdr.gpsResponse.status.timErr1;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["timErr2"] = (unsigned long)Response->occHdr.gpsResponse.status.timErr2;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["timSrce"] = (unsigned long)Response->occHdr.gpsResponse.status.timSrce;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["tracking"] = (unsigned long)Response->occHdr.gpsResponse.status.tracking;
-                jsonObj["SOccResult"]["occHdr"]["numChannels"] = (unsigned long)Response->occHdr.numChannels;
-                jsonObj["SOccResult"]["occHdr"]["numTimeOfDays"] = (unsigned long)Response->occHdr.numTimeOfDays;
-                jsonObj["SOccResult"]["occHdr"]["numTotalChannels"] = (unsigned long)Response->occHdr.numTotalChannels;
-                jsonObj["SOccResult"]["occHdr"]["status"] = (unsigned long)Response->occHdr.status;
-                jsonObj["SOccResult"]["resultData"] = (unsigned long)Response->resultData;
+                SEquipCtrlMsg::SOccResult* OCCResponse = (SEquipCtrlMsg::SOccResult*)data;
+
+                jsonObj["site"] = ProcessGpsData(&(OCCResponse->occHdr.gpsResponse));
+                jsonObj["SOccResult"]["occHdr"]["firstChannel"] = OCCResponse->occHdr.firstChannel;
+                jsonObj["SOccResult"]["occHdr"]["numChannels"] = (unsigned long)OCCResponse->occHdr.numChannels;
+                jsonObj["SOccResult"]["occHdr"]["numTimeOfDays"] = (unsigned long)OCCResponse->occHdr.numTimeOfDays;
+                jsonObj["SOccResult"]["occHdr"]["numTotalChannels"] = (unsigned long)OCCResponse->occHdr.numTotalChannels;
+                jsonObj["SOccResult"]["occHdr"]["status"] = (unsigned long)OCCResponse->occHdr.status;
+                jsonObj["SOccResult"]["resultData"] = (unsigned long)OCCResponse->resultData;
             }
             break;
 
         case ECSMSDllMsgType::OCC_TIMEOFDAY_RESULT:
             {
-                SEquipCtrlMsg::SOccResult* Response = (SEquipCtrlMsg::SOccResult*)data;
-                jsonObj["SOccResult"]["occHdr"]["firstChannel"] = Response->occHdr.firstChannel;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["dateTime"] = Response->occHdr.gpsResponse.dateTime;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["latitude"] = Response->occHdr.gpsResponse.latitude;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["longitude"] = Response->occHdr.gpsResponse.longitude;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["accuracy"] = (unsigned long)Response->occHdr.gpsResponse.status.accuracy;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["antenna"] = (unsigned long)Response->occHdr.gpsResponse.status.antenna;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["batVolt"] = (unsigned long)Response->occHdr.gpsResponse.status.batVolt;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["lockHist"] = (unsigned long)Response->occHdr.gpsResponse.status.lockHist;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["mode"] = (unsigned long)Response->occHdr.gpsResponse.status.mode;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["noGps"] = (unsigned long)Response->occHdr.gpsResponse.status.noGps;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["notTested"] = (unsigned long)Response->occHdr.gpsResponse.status.notTested;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["numSats"] = (unsigned long)Response->occHdr.gpsResponse.status.numSats;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["nvRam"] = (unsigned long)Response->occHdr.gpsResponse.status.nvRam;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["oscVolt"] = (unsigned long)Response->occHdr.gpsResponse.status.oscVolt;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["pllSynth"] = (unsigned long)Response->occHdr.gpsResponse.status.pllSynth;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["receiver"] = (unsigned long)Response->occHdr.gpsResponse.status.receiver;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["satLock"] = (unsigned long)Response->occHdr.gpsResponse.status.satLock;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["timErr1"] = (unsigned long)Response->occHdr.gpsResponse.status.timErr1;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["timErr2"] = (unsigned long)Response->occHdr.gpsResponse.status.timErr2;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["timSrce"] = (unsigned long)Response->occHdr.gpsResponse.status.timSrce;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["tracking"] = (unsigned long)Response->occHdr.gpsResponse.status.tracking;
-                jsonObj["SOccResult"]["occHdr"]["numChannels"] = (unsigned long)Response->occHdr.numChannels;
-                jsonObj["SOccResult"]["occHdr"]["numTimeOfDays"] = (unsigned long)Response->occHdr.numTimeOfDays;
-                jsonObj["SOccResult"]["occHdr"]["numTotalChannels"] = (unsigned long)Response->occHdr.numTotalChannels;
-                jsonObj["SOccResult"]["occHdr"]["status"] = (unsigned long)Response->occHdr.status;
-                jsonObj["SOccResult"]["resultData"] = (unsigned long)Response->resultData;
+                SEquipCtrlMsg::SOccResult* OCCResponse = (SEquipCtrlMsg::SOccResult*)data;
+
+                jsonObj["site"] = ProcessGpsData(&(OCCResponse->occHdr.gpsResponse));
+                jsonObj["SOccResult"]["occHdr"]["firstChannel"] = OCCResponse->occHdr.firstChannel;
+                jsonObj["SOccResult"]["occHdr"]["numChannels"] = (unsigned long)OCCResponse->occHdr.numChannels;
+                jsonObj["SOccResult"]["occHdr"]["numTimeOfDays"] = (unsigned long)OCCResponse->occHdr.numTimeOfDays;
+                jsonObj["SOccResult"]["occHdr"]["numTotalChannels"] = (unsigned long)OCCResponse->occHdr.numTotalChannels;
+                jsonObj["SOccResult"]["occHdr"]["status"] = (unsigned long)OCCResponse->occHdr.status;
+                jsonObj["SOccResult"]["resultData"] = (unsigned long)OCCResponse->resultData;
             }
             break;
 
         case ECSMSDllMsgType::OCC_MSGLEN_CHANNEL_RESULT:
             {
-                SEquipCtrlMsg::SOccResult* Response = (SEquipCtrlMsg::SOccResult*)data;
-                jsonObj["SOccResult"]["occHdr"]["firstChannel"] = Response->occHdr.firstChannel;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["dateTime"] = Response->occHdr.gpsResponse.dateTime;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["latitude"] = Response->occHdr.gpsResponse.latitude;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["longitude"] = Response->occHdr.gpsResponse.longitude;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["accuracy"] = (unsigned long)Response->occHdr.gpsResponse.status.accuracy;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["antenna"] = (unsigned long)Response->occHdr.gpsResponse.status.antenna;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["batVolt"] = (unsigned long)Response->occHdr.gpsResponse.status.batVolt;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["lockHist"] = (unsigned long)Response->occHdr.gpsResponse.status.lockHist;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["mode"] = (unsigned long)Response->occHdr.gpsResponse.status.mode;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["noGps"] = (unsigned long)Response->occHdr.gpsResponse.status.noGps;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["notTested"] = (unsigned long)Response->occHdr.gpsResponse.status.notTested;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["numSats"] = (unsigned long)Response->occHdr.gpsResponse.status.numSats;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["nvRam"] = (unsigned long)Response->occHdr.gpsResponse.status.nvRam;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["oscVolt"] = (unsigned long)Response->occHdr.gpsResponse.status.oscVolt;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["pllSynth"] = (unsigned long)Response->occHdr.gpsResponse.status.pllSynth;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["receiver"] = (unsigned long)Response->occHdr.gpsResponse.status.receiver;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["satLock"] = (unsigned long)Response->occHdr.gpsResponse.status.satLock;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["timErr1"] = (unsigned long)Response->occHdr.gpsResponse.status.timErr1;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["timErr2"] = (unsigned long)Response->occHdr.gpsResponse.status.timErr2;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["timSrce"] = (unsigned long)Response->occHdr.gpsResponse.status.timSrce;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["tracking"] = (unsigned long)Response->occHdr.gpsResponse.status.tracking;
-                jsonObj["SOccResult"]["occHdr"]["numChannels"] = (unsigned long)Response->occHdr.numChannels;
-                jsonObj["SOccResult"]["occHdr"]["numTimeOfDays"] = (unsigned long)Response->occHdr.numTimeOfDays;
-                jsonObj["SOccResult"]["occHdr"]["numTotalChannels"] = (unsigned long)Response->occHdr.numTotalChannels;
-                jsonObj["SOccResult"]["occHdr"]["status"] = (unsigned long)Response->occHdr.status;
-                jsonObj["SOccResult"]["resultData"] = (unsigned long)Response->resultData;
+                SEquipCtrlMsg::SOccResult* OCCResponse = (SEquipCtrlMsg::SOccResult*)data;
+
+                jsonObj["site"] = ProcessGpsData(&(OCCResponse->occHdr.gpsResponse));
+                jsonObj["SOccResult"]["occHdr"]["firstChannel"] = OCCResponse->occHdr.firstChannel;
+                jsonObj["SOccResult"]["occHdr"]["numChannels"] = (unsigned long)OCCResponse->occHdr.numChannels;
+                jsonObj["SOccResult"]["occHdr"]["numTimeOfDays"] = (unsigned long)OCCResponse->occHdr.numTimeOfDays;
+                jsonObj["SOccResult"]["occHdr"]["numTotalChannels"] = (unsigned long)OCCResponse->occHdr.numTotalChannels;
+                jsonObj["SOccResult"]["occHdr"]["status"] = (unsigned long)OCCResponse->occHdr.status;
+                jsonObj["SOccResult"]["resultData"] = (unsigned long)OCCResponse->resultData;
             }
             break;
 
         case ECSMSDllMsgType::OCC_EFLD_TIMEOFDAY_RESULT:
             {
-                SEquipCtrlMsg::SOccResult* Response = (SEquipCtrlMsg::SOccResult*)data;
-                jsonObj["SOccResult"]["occHdr"]["firstChannel"] = Response->occHdr.firstChannel;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["dateTime"] = Response->occHdr.gpsResponse.dateTime;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["latitude"] = Response->occHdr.gpsResponse.latitude;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["longitude"] = Response->occHdr.gpsResponse.longitude;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["accuracy"] = (unsigned long)Response->occHdr.gpsResponse.status.accuracy;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["antenna"] = (unsigned long)Response->occHdr.gpsResponse.status.antenna;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["batVolt"] = (unsigned long)Response->occHdr.gpsResponse.status.batVolt;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["lockHist"] = (unsigned long)Response->occHdr.gpsResponse.status.lockHist;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["mode"] = (unsigned long)Response->occHdr.gpsResponse.status.mode;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["noGps"] = (unsigned long)Response->occHdr.gpsResponse.status.noGps;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["notTested"] = (unsigned long)Response->occHdr.gpsResponse.status.notTested;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["numSats"] = (unsigned long)Response->occHdr.gpsResponse.status.numSats;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["nvRam"] = (unsigned long)Response->occHdr.gpsResponse.status.nvRam;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["oscVolt"] = (unsigned long)Response->occHdr.gpsResponse.status.oscVolt;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["pllSynth"] = (unsigned long)Response->occHdr.gpsResponse.status.pllSynth;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["receiver"] = (unsigned long)Response->occHdr.gpsResponse.status.receiver;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["satLock"] = (unsigned long)Response->occHdr.gpsResponse.status.satLock;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["timErr1"] = (unsigned long)Response->occHdr.gpsResponse.status.timErr1;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["timErr2"] = (unsigned long)Response->occHdr.gpsResponse.status.timErr2;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["timSrce"] = (unsigned long)Response->occHdr.gpsResponse.status.timSrce;
-                jsonObj["SOccResult"]["occHdr"]["gpsResponse"]["status"]["tracking"] = (unsigned long)Response->occHdr.gpsResponse.status.tracking;
-                jsonObj["SOccResult"]["occHdr"]["numChannels"] = (unsigned long)Response->occHdr.numChannels;
-                jsonObj["SOccResult"]["occHdr"]["numTimeOfDays"] = (unsigned long)Response->occHdr.numTimeOfDays;
-                jsonObj["SOccResult"]["occHdr"]["numTotalChannels"] = (unsigned long)Response->occHdr.numTotalChannels;
-                jsonObj["SOccResult"]["occHdr"]["status"] = (unsigned long)Response->occHdr.status;
-                jsonObj["SOccResult"]["resultData"] = (unsigned long)Response->resultData;
+                SEquipCtrlMsg::SOccResult* OCCResponse = (SEquipCtrlMsg::SOccResult*)data;
+
+                jsonObj["site"] = ProcessGpsData(&(OCCResponse->occHdr.gpsResponse));
+                jsonObj["SOccResult"]["occHdr"]["firstChannel"] = OCCResponse->occHdr.firstChannel;
+                jsonObj["SOccResult"]["occHdr"]["numChannels"] = (unsigned long)OCCResponse->occHdr.numChannels;
+                jsonObj["SOccResult"]["occHdr"]["numTimeOfDays"] = (unsigned long)OCCResponse->occHdr.numTimeOfDays;
+                jsonObj["SOccResult"]["occHdr"]["numTotalChannels"] = (unsigned long)OCCResponse->occHdr.numTotalChannels;
+                jsonObj["SOccResult"]["occHdr"]["status"] = (unsigned long)OCCResponse->occHdr.status;
+                jsonObj["SOccResult"]["resultData"] = (unsigned long)OCCResponse->resultData;
             }
             break;
 
         case ECSMSDllMsgType::OCC_STATUS:
             {
-                SEquipCtrlMsg::SEquipTaskStatusResp* Response = (SEquipCtrlMsg::SEquipTaskStatusResp*)data;
-                jsonObj["SEquipTaskStatusResp"]["dateTime"] = Response->dateTime;
-                jsonObj["SEquipTaskStatusResp"]["key"] = Response->key;
-                jsonObj["SEquipTaskStatusResp"]["status"] = Response->status;
-                jsonObj["SEquipTaskStatusResp"]["taskId"] = Response->taskId;
+                SEquipCtrlMsg::SEquipTaskStatusResp* OCCResponse = (SEquipCtrlMsg::SEquipTaskStatusResp*)data;
+                jsonObj["SEquipTaskStatusResp"]["dateTime"] = OCCResponse->dateTime;
+                jsonObj["SEquipTaskStatusResp"]["key"] = OCCResponse->key;
+                jsonObj["SEquipTaskStatusResp"]["status"] = OCCResponse->status;
+                jsonObj["SEquipTaskStatusResp"]["taskId"] = OCCResponse->taskId;
             }
             break;
 
         case ECSMSDllMsgType::VALIDATE_OCCUPANCY:
             {
-                SEquipCtrlMsg::SValidateOccupancyResp* Response = (SEquipCtrlMsg::SValidateOccupancyResp*)data;
-                jsonObj["SValidateOccupancyResp"]["occCmd"]["ant"] = Response->occCmd.ant;
-                jsonObj["SValidateOccupancyResp"]["occCmd"]["band"]["channelBandwidth"]["internal"] = Response->occCmd.band[0].channelBandwidth.internal;
-                jsonObj["SValidateOccupancyResp"]["occCmd"]["band"]["exclude"] = Response->occCmd.band[0].exclude;
-                jsonObj["SValidateOccupancyResp"]["occCmd"]["band"]["highFrequency"]["internal"] = Response->occCmd.band[0].highFrequency.internal;
-                jsonObj["SValidateOccupancyResp"]["occCmd"]["band"]["lowFrequency"]["internal"] = Response->occCmd.band[0].lowFrequency.internal;
-                jsonObj["SValidateOccupancyResp"]["occCmd"]["band"]["sType"]["signalType"]["horizPol"] = (unsigned long)Response->occCmd.band[0].sType.signalType.horizPol;
-                jsonObj["SValidateOccupancyResp"]["occCmd"]["band"]["sType"]["signalType"]["narrow"] = (unsigned long)Response->occCmd.band[0].sType.signalType.narrow;
-                jsonObj["SValidateOccupancyResp"]["occCmd"]["band"]["sType"]["signalType"]["unused0"] = (unsigned long)Response->occCmd.band[0].sType.signalType.unused0;
-                jsonObj["SValidateOccupancyResp"]["occCmd"]["band"]["sType"]["signalType"]["unused1"] = (unsigned long)Response->occCmd.band[0].sType.signalType.unused1;
-                jsonObj["SValidateOccupancyResp"]["occCmd"]["confidenceLevel"] = Response->occCmd.confidenceLevel;
-                jsonObj["SValidateOccupancyResp"]["occCmd"]["desiredAccuracy"] = Response->occCmd.desiredAccuracy;
-                jsonObj["SValidateOccupancyResp"]["occCmd"]["durationMethod"] = Response->occCmd.durationMethod;
-                jsonObj["SValidateOccupancyResp"]["occCmd"]["measurementTime"] = Response->occCmd.measurementTime;
-                jsonObj["SValidateOccupancyResp"]["occCmd"]["numBands"] = Response->occCmd.numBands;
-                jsonObj["SValidateOccupancyResp"]["occCmd"]["occPrimaryThreshold"] = Response->occCmd.occPrimaryThreshold;
-                jsonObj["SValidateOccupancyResp"]["occCmd"]["occSecondaryThreshold"] = Response->occCmd.occSecondaryThreshold;
-                jsonObj["SValidateOccupancyResp"]["occCmd"]["occupancyMinGap"] = Response->occCmd.occupancyMinGap;
-                jsonObj["SValidateOccupancyResp"]["occCmd"]["output"]["eFieldVsChannel"] = Response->occCmd.output.eFieldVsChannel;
-                jsonObj["SValidateOccupancyResp"]["occCmd"]["output"]["msglengthDistribution"] = Response->occCmd.output.msglengthDistribution;
-                jsonObj["SValidateOccupancyResp"]["occCmd"]["output"]["msglengthVsChannel"] = Response->occCmd.output.msglengthVsChannel;
-                jsonObj["SValidateOccupancyResp"]["occCmd"]["output"]["occupancyFlag"]["flag"]["adjustAgcThres"] = (unsigned char)Response->occCmd.output.occupancyFlag.flag.adjustAgcThres;
-                jsonObj["SValidateOccupancyResp"]["occCmd"]["output"]["occupancyFlag"]["flag"]["eFieldVsTOD"] = (unsigned char)Response->occCmd.output.occupancyFlag.flag.eFieldVsTOD;
-                jsonObj["SValidateOccupancyResp"]["occCmd"]["output"]["occupancyFlag"]["flag"]["gainMode"] = (unsigned char)Response->occCmd.output.occupancyFlag.flag.gainMode;
-                jsonObj["SValidateOccupancyResp"]["occCmd"]["output"]["occupancyFlag"]["flag"]["spurTest"] = (unsigned char)Response->occCmd.output.occupancyFlag.flag.spurTest;
-                jsonObj["SValidateOccupancyResp"]["occCmd"]["output"]["occupancyFlag"]["flag"]["unused"] = (unsigned char)Response->occCmd.output.occupancyFlag.flag.unused;
-                jsonObj["SValidateOccupancyResp"]["occCmd"]["output"]["occupancyFlag"]["zeroFlag"] = (unsigned char)Response->occCmd.output.occupancyFlag.zeroFlag;
-                jsonObj["SValidateOccupancyResp"]["occCmd"]["output"]["occupancyVsChannel"] = (unsigned char)Response->occCmd.output.occupancyVsChannel;
-                jsonObj["SValidateOccupancyResp"]["occCmd"]["output"]["occupancyVsTimeOfDay"] = (unsigned char)Response->occCmd.output.occupancyVsTimeOfDay;
-                jsonObj["SValidateOccupancyResp"]["occCmd"]["output"]["spectrogram"] = (unsigned char)Response->occCmd.output.spectrogram;
-                jsonObj["SValidateOccupancyResp"]["occCmd"]["output"]["timegram"] = (unsigned char)Response->occCmd.output.timegram;
-                jsonObj["SValidateOccupancyResp"]["occCmd"]["saveIntermediateData"] = Response->occCmd.saveIntermediateData;
-                jsonObj["SValidateOccupancyResp"]["occCmd"]["storageTime"] = Response->occCmd.storageTime;
-                jsonObj["SValidateOccupancyResp"]["occCmd"]["thresholdMethod"] = Response->occCmd.thresholdMethod;
-                jsonObj["SValidateOccupancyResp"]["occCmd"]["useSecondaryThreshold"] = Response->occCmd.useSecondaryThreshold;
-                jsonObj["SValidateOccupancyResp"]["status"] = Response->status;
+                SEquipCtrlMsg::SValidateOccupancyResp* OCCResponse = (SEquipCtrlMsg::SValidateOccupancyResp*)data;
+                jsonObj["SValidateOccupancyResp"]["occCmd"]["ant"] = OCCResponse->occCmd.ant;
+                jsonObj["SValidateOccupancyResp"]["occCmd"]["band"]["channelBandwidth"]["internal"] = OCCResponse->occCmd.band[0].channelBandwidth.internal;
+                jsonObj["SValidateOccupancyResp"]["occCmd"]["band"]["exclude"] = OCCResponse->occCmd.band[0].exclude;
+                jsonObj["SValidateOccupancyResp"]["occCmd"]["band"]["highFrequency"]["internal"] = OCCResponse->occCmd.band[0].highFrequency.internal;
+                jsonObj["SValidateOccupancyResp"]["occCmd"]["band"]["lowFrequency"]["internal"] = OCCResponse->occCmd.band[0].lowFrequency.internal;
+                jsonObj["SValidateOccupancyResp"]["occCmd"]["band"]["sType"]["signalType"]["horizPol"] = (unsigned long)OCCResponse->occCmd.band[0].sType.signalType.horizPol;
+                jsonObj["SValidateOccupancyResp"]["occCmd"]["band"]["sType"]["signalType"]["narrow"] = (unsigned long)OCCResponse->occCmd.band[0].sType.signalType.narrow;
+                jsonObj["SValidateOccupancyResp"]["occCmd"]["band"]["sType"]["signalType"]["unused0"] = (unsigned long)OCCResponse->occCmd.band[0].sType.signalType.unused0;
+                jsonObj["SValidateOccupancyResp"]["occCmd"]["band"]["sType"]["signalType"]["unused1"] = (unsigned long)OCCResponse->occCmd.band[0].sType.signalType.unused1;
+                jsonObj["SValidateOccupancyResp"]["occCmd"]["confidenceLevel"] = OCCResponse->occCmd.confidenceLevel;
+                jsonObj["SValidateOccupancyResp"]["occCmd"]["desiredAccuracy"] = OCCResponse->occCmd.desiredAccuracy;
+                jsonObj["SValidateOccupancyResp"]["occCmd"]["durationMethod"] = OCCResponse->occCmd.durationMethod;
+                jsonObj["SValidateOccupancyResp"]["occCmd"]["measurementTime"] = OCCResponse->occCmd.measurementTime;
+                jsonObj["SValidateOccupancyResp"]["occCmd"]["numBands"] = OCCResponse->occCmd.numBands;
+                jsonObj["SValidateOccupancyResp"]["occCmd"]["occPrimaryThreshold"] = OCCResponse->occCmd.occPrimaryThreshold;
+                jsonObj["SValidateOccupancyResp"]["occCmd"]["occSecondaryThreshold"] = OCCResponse->occCmd.occSecondaryThreshold;
+                jsonObj["SValidateOccupancyResp"]["occCmd"]["occupancyMinGap"] = OCCResponse->occCmd.occupancyMinGap;
+                jsonObj["SValidateOccupancyResp"]["occCmd"]["output"]["eFieldVsChannel"] = OCCResponse->occCmd.output.eFieldVsChannel;
+                jsonObj["SValidateOccupancyResp"]["occCmd"]["output"]["msglengthDistribution"] = OCCResponse->occCmd.output.msglengthDistribution;
+                jsonObj["SValidateOccupancyResp"]["occCmd"]["output"]["msglengthVsChannel"] = OCCResponse->occCmd.output.msglengthVsChannel;
+                jsonObj["SValidateOccupancyResp"]["occCmd"]["output"]["occupancyFlag"]["flag"]["adjustAgcThres"] = (unsigned char)OCCResponse->occCmd.output.occupancyFlag.flag.adjustAgcThres;
+                jsonObj["SValidateOccupancyResp"]["occCmd"]["output"]["occupancyFlag"]["flag"]["eFieldVsTOD"] = (unsigned char)OCCResponse->occCmd.output.occupancyFlag.flag.eFieldVsTOD;
+                jsonObj["SValidateOccupancyResp"]["occCmd"]["output"]["occupancyFlag"]["flag"]["gainMode"] = (unsigned char)OCCResponse->occCmd.output.occupancyFlag.flag.gainMode;
+                jsonObj["SValidateOccupancyResp"]["occCmd"]["output"]["occupancyFlag"]["flag"]["spurTest"] = (unsigned char)OCCResponse->occCmd.output.occupancyFlag.flag.spurTest;
+                jsonObj["SValidateOccupancyResp"]["occCmd"]["output"]["occupancyFlag"]["flag"]["unused"] = (unsigned char)OCCResponse->occCmd.output.occupancyFlag.flag.unused;
+                jsonObj["SValidateOccupancyResp"]["occCmd"]["output"]["occupancyFlag"]["zeroFlag"] = (unsigned char)OCCResponse->occCmd.output.occupancyFlag.zeroFlag;
+                jsonObj["SValidateOccupancyResp"]["occCmd"]["output"]["occupancyVsChannel"] = (unsigned char)OCCResponse->occCmd.output.occupancyVsChannel;
+                jsonObj["SValidateOccupancyResp"]["occCmd"]["output"]["occupancyVsTimeOfDay"] = (unsigned char)OCCResponse->occCmd.output.occupancyVsTimeOfDay;
+                jsonObj["SValidateOccupancyResp"]["occCmd"]["output"]["spectrogram"] = (unsigned char)OCCResponse->occCmd.output.spectrogram;
+                jsonObj["SValidateOccupancyResp"]["occCmd"]["output"]["timegram"] = (unsigned char)OCCResponse->occCmd.output.timegram;
+                jsonObj["SValidateOccupancyResp"]["occCmd"]["saveIntermediateData"] = OCCResponse->occCmd.saveIntermediateData;
+                jsonObj["SValidateOccupancyResp"]["occCmd"]["storageTime"] = OCCResponse->occCmd.storageTime;
+                jsonObj["SValidateOccupancyResp"]["occCmd"]["thresholdMethod"] = OCCResponse->occCmd.thresholdMethod;
+                jsonObj["SValidateOccupancyResp"]["occCmd"]["useSecondaryThreshold"] = OCCResponse->occCmd.useSecondaryThreshold;
+                jsonObj["SValidateOccupancyResp"]["status"] = OCCResponse->status;
             }
             break;
 
@@ -742,7 +598,7 @@ std::string processOccupancyResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipC
 //
 // Convert response of types OCCDF_FREQ_VS_CHANNEL, OCCDF_SCANDF_VS_CHANNEL, OCCDF_STATUS, OCCDF_STATE_RESPONSE and OCCDF_SOLICIT_STATE_RESPONSE in JSON
 //
-json processOccupancyDFResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody* data)
+std::string processOccupancyDFResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody* data)
 {
 	json jsonObj;
 
@@ -753,140 +609,94 @@ json processOccupancyDFResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMs
         case ECSMSDllMsgType::OCCDF_STATE_RESPONSE: /* Fall through to apply the same processing to both cases */
         case ECSMSDllMsgType::OCCDF_SOLICIT_STATE_RESPONSE:
             {
-                SEquipCtrlMsg::SStateResp* Response = (SEquipCtrlMsg::SStateResp*)data;
-                jsonObj["SStateResp"]["completionTime"] = Response->completionTime;
-                jsonObj["SStateResp"]["state"] = Response->state;
+                //SEquipCtrlMsg::SStateResp* OCCDFResponse = (SEquipCtrlMsg::SStateResp*)data;
+			    SEquipCtrlMsg::SStateResp* OCCDFResponse = reinterpret_cast<SEquipCtrlMsg::SStateResp*>(data);
+
+                jsonObj["SStateResp"]["completionTime"] = OCCDFResponse->completionTime;
+				jsonObj["SStateResp"]["state"] = eStateRespToString(OCCDFResponse->state);
             }
             break;
-/* 
-    jsonObj["measure"]["status"] = PanResponse->status;
-    jsonObj["measure"]["dateTime"] = PanResponse->dateTime;
-    jsonObj["measure"]["powerDbm"] = PanResponse->powerDbm;
-    jsonObj["setting"]["attenuation"] = PanResponse->rcvrAtten;
-    jsonObj["spectrum"]["numBins"] = PanResponse->numBins;
-    double centralFrequency = double(PanResponse->freq.internal) / ( mcs::FREQ_FACTOR * mcs::MHZ_MULTIPLIER );
-    double binSize = double(PanResponse->binSize.internal) / mcs::FREQ_FACTOR;
-    jsonObj["spectrum"]["startFrequency"] = centralFrequency - (binSize * double(floor(PanResponse->numBins / 2.0)));
-    jsonObj["spectrum"]["stopFrequency"] = centralFrequency + (binSize * double(floor(PanResponse->numBins / 2.0)));
-    jsonObj["spectrum"]["frequencyUnit"] = "MHz";
-    jsonObj["spectrum"]["binSize"] = binSize;
-    jsonObj["spectrum"]["binSizeUnit"] = "Hz";
-    jsonObj["spectrum"]["sweepData"] = std::string(reinterpret_cast<char*>(PanResponse->binData), PanResponse->numBins);
-    jsonObj["demod"]["nActiveAudioChannels"] = PanResponse->nActiveAudioChannels;
-    jsonObj["demod"]["audioPower"]["active"] = PanResponse->audioPower->active;
-    for (size_t i = 0; i < PanResponse->nActiveAudioChannels; ++i) {
-        jsonObj["demod"]["audioPower"][i]["powerdBm"] = PanResponse->audioPower[i].powerdBm;
-    }
-    jsonObj["spectrum"]["conversionFactorForFS"] = PanResponse->conversionFactorForFS;
 
-    struct SFrequencyVsChannelRespV0 // OCC_FREQUENCY_RESULT V0
-    {
-        inline operator SFrequencyVsChannelRespV1(void) const; // Convert to V1; defined below
-
-        SOccupancyHeader occHdr;
-        unsigned long frequencies[MAX_OCCCHANNELS];
-        int numBands;
-        unsigned long numChannels[MAX_OCCBANDS];
-        unsigned long saveIntermediateData;  // 0 - don't save; > 0 - save (RA3 data)
-        unsigned long useSecondaryThreshold;  // 0 = don't use  >0 = use
-        // following two parameters
-        //  the FIXED threshold (dBuV/m) is always in index 0
-        //  the NOISE threshold (dB) is always in index 1
-        //  which thresholds used are based upon thresholdMethod in command
-        long occPrimaryThreshold[2];
-        long occSecondaryThreshold[2]; // used only if useSecondaryThreshold >0
-        EAnt selectedAntenna;  //uses ANT1 & ANT2 defines in dsp_msg.h
-        unsigned long chanBandwidth;    // in Hz -- reserved -- currently not used
-        char hostName[32];
-    };
-
-    struct SFrequencyVsChannelRespV2; // Forward declaration
-
-        SOccupancyHeader occHdr;
-        EAnt selectedAntenna;  //uses ANT1 & ANT2 defines in dsp_msg.h
-        bool saveIntermediateData;
-        bool useSecondaryThreshold; // following two parameters: the FIXED threshold (dBuV/m) is always in index 0; the NOISE threshold (dB) is always in index 1. Which thresholds used are based upon thresholdMethod in command
-        short occPrimaryThreshold[2];
-        short occSecondaryThreshold[2]; // used only if useSecondaryThreshold >0
-        char hostName[32];
-        int numBands;
-        unsigned long numChannels[MAX_OCCBANDS_CSMS_V3p]; // Fixed length
-        Units::Frequency::Raw frequencies[MAX_OCCCHANNELS]; // Variable length up to MAX_OCCCHANNELS
-    };
-
-#ifndef SMS_SRV_BUILT
-    typedef SFrequencyVsChannelRespV2 SFrequencyVsChannelResp;
-#else
-    typedef SFrequencyVsChannelRespV1 SFrequencyVsChannelResp;
-#endif
-
-
-    struct SOccupancyHeader
-    {
-        ErrorCodes::EErrorCode	status;
-        SGpsResponse			gpsResponse;
-        unsigned long			numTotalChannels;
-        unsigned long			firstChannel;
-        unsigned long			numChannels;
-        unsigned long			numTimeOfDays;
-    };
-    */
 	    case ECSMSDllMsgType::OCCDF_FREQ_VS_CHANNEL:
             {
-                SEquipCtrlMsg::SFrequencyVsChannelResp* Response = (SEquipCtrlMsg::SFrequencyVsChannelResp*)data;
+                //SEquipCtrlMsg::SFrequencyVsChannelResp* OCCDFResponse = (SEquipCtrlMsg::SFrequencyVsChannelResp*)data;
+                SEquipCtrlMsg::SFrequencyVsChannelResp* OCCDFResponse = reinterpret_cast<SEquipCtrlMsg::SFrequencyVsChannelResp*>(data);
 
-                jsonObj["equipment"]["hostName"] = Response->hostName;
-                jsonObj["equipment"]["selectedAntenna"] = eAntToString(Response->selectedAntenna);
-                jsonObj["site"] = ProcessGpsData(Response->occHdr.gpsResponse);
-                jsonObj["channel"]["numBands"] = Response->numBands;
-                jsonObj["channel"]["numChannels"] = Response->numChannels;
-                jsonObj["channel"]["occHdr"]["firstChannel"] = Response->occHdr.firstChannel;
-                jsonObj["channel"]["occHdr"]["numChannels"] = Response->occHdr.numChannels;
-                jsonObj["channel"]["occHdr"]["numTimeOfDays"] = Response->occHdr.numTimeOfDays;
-                jsonObj["channel"]["occHdr"]["numTotalChannels"] = Response->occHdr.numTotalChannels;
-				jsonObj["channel"]["occHdr"]["status"] = eErrorCodeToString(Response->occHdr.status);
-                jsonObj["channel"]["primaryThreshold"]["absolute"] = Response->occPrimaryThreshold[0];
-                jsonObj["channel"]["primaryThreshold"]["aboveNoise"] = Response->occPrimaryThreshold[1];
-                jsonObj["channel"]["secondaryThreshold"]["absolute"] = Response->occSecondaryThreshold[0];
-                jsonObj["channel"]["secondaryThreshold"]["aboveNoise"] = Response->occSecondaryThreshold[1];
-                jsonObj["channel"]["saveIntermediateData"] = bool(Response->saveIntermediateData);
-                jsonObj["channel"]["useSecondaryThreshold"] = bool(Response->useSecondaryThreshold);
+                std::vector<float> freqVsChanData(OCCDFResponse->occHdr.numTotalChannels);
+                float maxValue = std::numeric_limits<float>::max();
+				float minValue = -maxValue;
 
-                for (int i = 0; i < Response->numBands; i++)
-                {
-                    jsonObj["channel"]["frequencies"].push_back(double(Response->frequencies[i].internal) / (mcs::FREQ_FACTOR * mcs::MHZ_MULTIPLIER));
-                }
-				for (int i = 0; i < Response->occHdr.numChannels; i++)
+                int j = (int)OCCDFResponse->occHdr.firstChannel;
+                for (int i = 0; i < int(OCCDFResponse->occHdr.numChannels); i++, j++)
 				{
-					jsonObj["channel"]["Occupancy"].push_back(Response->numChannels[i]);
+                    freqVsChanData[j] = static_cast<float>(Units::Frequency(OCCDFResponse->frequencies[i]).Hz<double>() / mcs::MHZ_MULTIPLIER);
+                    if (freqVsChanData[j] < minValue) minValue = freqVsChanData[j];
+                    if (freqVsChanData[j] > maxValue) maxValue = freqVsChanData[j];
 				}
+
+                jsonObj["site"] = ProcessGpsData(&(OCCDFResponse->occHdr.gpsResponse));
+
+                jsonObj["equipment"]["hostName"] = OCCDFResponse->hostName;
+                jsonObj["equipment"]["selectedAntenna"] = eAntToString(OCCDFResponse->selectedAntenna);
+
+                jsonObj["channel"]["Occupancy"]["status"] = eErrorCodeToString(OCCDFResponse->occHdr.status);
+				jsonObj["channel"]["Occupancy"]["firstChannel"] = OCCDFResponse->occHdr.firstChannel;
+                jsonObj["channel"]["Occupancy"]["lastChannel"] = j;
+				jsonObj["channel"]["Occupancy"]["numChannels"] = OCCDFResponse->occHdr.numChannels;
+                jsonObj["channel"]["Occupancy"]["numTotalChannels"] = OCCDFResponse->occHdr.numTotalChannels;
+				jsonObj["channel"]["Occupancy"]["numTimeOfDays"] = OCCDFResponse->occHdr.numTimeOfDays;
+				jsonObj["channel"]["Occupancy"]["numBands"] = OCCDFResponse->numBands;
+				jsonObj["channel"]["Occupancy"]["maxValue"] = maxValue;
+				jsonObj["channel"]["Occupancy"]["minValue"] = minValue;
+                jsonObj["channel"]["Occupancy"]["Unit"] =  "MHz";
+				jsonObj["channel"]["Occupancy"]["frequencyData"] = freqVsChanData;
+
+                jsonObj["settings"]["primaryThreshold"]["absolute"] = OCCDFResponse->occPrimaryThreshold[0];
+                jsonObj["settings"]["primaryThreshold"]["aboveNoise"] = OCCDFResponse->occPrimaryThreshold[1];
+                jsonObj["settings"]["secondaryThreshold"]["absolute"] = OCCDFResponse->occSecondaryThreshold[0];
+                jsonObj["settings"]["secondaryThreshold"]["aboveNoise"] = OCCDFResponse->occSecondaryThreshold[1];
+                jsonObj["settings"]["saveIntermediateData"] = bool(OCCDFResponse->saveIntermediateData);
+                jsonObj["settings"]["useSecondaryThreshold"] = bool(OCCDFResponse->useSecondaryThreshold);
             }
             break;
-// TODO: Arrumar a chamada da função processFrequencies
+
         case ECSMSDllMsgType::OCCDF_SCANDF_VS_CHANNEL:
             {
-                SEquipCtrlMsg::SScanDfVsChannelResp* Response = (SEquipCtrlMsg::SScanDfVsChannelResp*)data;
-                jsonObj["SScanDfVsChannelResp"]["aveFldStr"] = Response->aveFldStr;
-                jsonObj["SScanDfVsChannelResp"]["aveRange"] = Response->aveRange;
-                jsonObj["SScanDfVsChannelResp"]["numAzimuths"] = Response->numAzimuths;
-                jsonObj["SScanDfVsChannelResp"]["numChannels"] = Response->numChannels;
-                jsonObj["SScanDfVsChannelResp"]["occHdr"]["firstChannel"] = Response->occHdr.firstChannel;
-                jsonObj["site"] = ProcessGpsData(Response->occHdr.gpsResponse);
-                jsonObj["SScanDfVsChannelResp"]["occHdr"]["numChannels"] = Response->occHdr.numChannels;
-                jsonObj["SScanDfVsChannelResp"]["occHdr"]["numTimeOfDays"] = Response->occHdr.numTimeOfDays;
-                jsonObj["SScanDfVsChannelResp"]["occHdr"]["numTotalChannels"] = Response->occHdr.numTotalChannels;
-                jsonObj["SScanDfVsChannelResp"]["occHdr"]["status"] = eErrorCodeToString(Response->occHdr.status);
-                jsonObj["SScanDfVsChannelResp"]["scanDfData"] = Response->scanDfData;
+                // SEquipCtrlMsg::SScanDfVsChannelResp* OCCDFResponse = (SEquipCtrlMsg::SScanDfVsChannelResp*)data;
+			    SEquipCtrlMsg::SScanDfVsChannelResp* OCCDFResponse = reinterpret_cast<SEquipCtrlMsg::SScanDfVsChannelResp*>(data);
+
+                std::vector<unsigned long> chanData(OCCDFResponse->occHdr.numTotalChannels);
+
+                std::copy(OCCDFResponse->scanDfData,
+                    OCCDFResponse->scanDfData + OCCDFResponse->occHdr.numChannels,
+                    chanData.begin() + OCCDFResponse->occHdr.firstChannel);
+
+                jsonObj["site"] = ProcessGpsData(&(OCCDFResponse->occHdr.gpsResponse));
+
+                jsonObj["channel"]["Occupancy"]["data"] = chanData;
+                
+                jsonObj["channel"]["Occupancy"]["status"] = eErrorCodeToString(OCCDFResponse->occHdr.status); 
+                jsonObj["channel"]["Occupancy"]["firstChannel"] = OCCDFResponse->occHdr.firstChannel;
+                jsonObj["channel"]["Occupancy"]["numChannels"] = OCCDFResponse->occHdr.numChannels;
+                jsonObj["channel"]["Occupancy"]["numTotalChannels"] = OCCDFResponse->occHdr.numTotalChannels;
+                jsonObj["channel"]["Occupancy"]["numTimeOfDays"] = OCCDFResponse->occHdr.numTimeOfDays;
+                jsonObj["channel"]["Occupancy"]["aveFldStr"] = OCCDFResponse->aveFldStr;
+                jsonObj["channel"]["Occupancy"]["aveRange"] = OCCDFResponse->aveRange;
+                jsonObj["channel"]["Occupancy"]["numAzimuths"] = OCCDFResponse->numAzimuths;
+                // jsonObj["channel"]["Occupancy"]["numChannels"] = OCCDFResponse->numChannels;
+                jsonObj["channel"]["Occupancy"]["azimuthData"] = chanData;
             }
             break;
 
         case ECSMSDllMsgType::OCCDF_STATUS:
             {
-                SEquipCtrlMsg::SEquipTaskStatusResp* Response = (SEquipCtrlMsg::SEquipTaskStatusResp*)data;
-                jsonObj["SEquipTaskStatusResp"]["dateTime"] = Response->dateTime;
-                jsonObj["SEquipTaskStatusResp"]["key"] = Response->key;
-                jsonObj["SEquipTaskStatusResp"]["status"] = Response->status;
-                jsonObj["SEquipTaskStatusResp"]["taskId"] = Response->taskId;
+                // SEquipCtrlMsg::SEquipTaskStatusResp* OCCDFResponse = (SEquipCtrlMsg::SEquipTaskStatusResp*)data;
+			    SEquipCtrlMsg::SEquipTaskStatusResp* OCCDFResponse = reinterpret_cast<SEquipCtrlMsg::SEquipTaskStatusResp*>(data);
+
+                jsonObj["SEquipTaskStatusResp"]["dateTime"] = OCCDFResponse->dateTime;
+                jsonObj["SEquipTaskStatusResp"]["key"] = OCCDFResponse->key;
+				jsonObj["SEquipTaskStatusResp"]["status"] = eStatusToString(OCCDFResponse->status);
+                jsonObj["SEquipTaskStatusResp"]["taskId"] = OCCDFResponse->taskId;
             }
             break;
 
@@ -911,17 +721,17 @@ std::string ProcessRealTimeData(_In_ ECSMSDllMsgType respType, _In_ SSmsRealtime
 	{
         case ECSMSDllMsgType::RT_SPECTRUM_START:
             {
-                const SSmsRealtimeMsg::SStartV2* pData = (SSmsRealtimeMsg::SStartV2*)data;
+                const SSmsRealtimeMsg::SStartV2* RTResponse = (SSmsRealtimeMsg::SStartV2*)data;
                 unsigned int i;
 
-                jsonObj["SStart"]["taskId"] = pData->taskId;
-                jsonObj["SStart"]["numBands"] = pData->numBands;		
-                for (i = 0; i < pData->numBands; i++)
+                jsonObj["SStart"]["taskId"] = RTResponse->taskId;
+                jsonObj["SStart"]["numBands"] = RTResponse->numBands;		
+                for (i = 0; i < RTResponse->numBands; i++)
                 {
                     json bandObj;
-                    bandObj["binSize"] = pData->band[i].chanSize.internal;
-                    bandObj["startFreq"] = pData->band[i].firstChanFreq.internal;
-                    bandObj["numChan"] = pData->band[i].numChan;
+                    bandObj["binSize"] = RTResponse->band[i].chanSize.internal;
+                    bandObj["startFreq"] = RTResponse->band[i].firstChanFreq.internal;
+                    bandObj["numChan"] = RTResponse->band[i].numChan;
                     jsonObj["SStart"]["band"].push_back(bandObj);
                 }
             }
@@ -929,68 +739,68 @@ std::string ProcessRealTimeData(_In_ ECSMSDllMsgType respType, _In_ SSmsRealtime
 
         case ECSMSDllMsgType::RT_SPECTRUM_STOP:
             {
-                const SSmsRealtimeMsg::SStop* pData = (const SSmsRealtimeMsg::SStop*)data;
-                jsonObj["SStop"]["taskId"] = pData->taskId;
+                const SSmsRealtimeMsg::SStop* RTResponse = (const SSmsRealtimeMsg::SStop*)data;
+                jsonObj["SStop"]["taskId"] = RTResponse->taskId;
             }
             break;
 
         case ECSMSDllMsgType::RT_SPECTRUM_V1RESPONSE:
             {
-                const SSmsRealtimeMsg::SSpectrum* pData = (SSmsRealtimeMsg::SSpectrum*)data;
+                const SSmsRealtimeMsg::SSpectrum* RTResponse = (SSmsRealtimeMsg::SSpectrum*)data;
 
-                jsonObj["Spectrum"]["taskId"] = pData->taskId; 
-                jsonObj["Spectrum"]["bandIndex"] = pData->bandIndex;
-                jsonObj["Spectrum"]["startFreq"] = pData->firstChanFreq;
-                jsonObj["Spectrum"]["binSize"] = pData->chanSize;
-                jsonObj["Spectrum"]["numChan"] = pData->numChan;
-                jsonObj["Spectrum"]["noiseFloor"] = pData->noiseFloor;
-                jsonObj["Spectrum"]["levelData"] = std::string(reinterpret_cast<const char*>(pData->chanData), pData->numChan);
+                jsonObj["Spectrum"]["taskId"] = RTResponse->taskId; 
+                jsonObj["Spectrum"]["bandIndex"] = RTResponse->bandIndex;
+                jsonObj["Spectrum"]["startFreq"] = RTResponse->firstChanFreq;
+                jsonObj["Spectrum"]["binSize"] = RTResponse->chanSize;
+                jsonObj["Spectrum"]["numChan"] = RTResponse->numChan;
+                jsonObj["Spectrum"]["noiseFloor"] = RTResponse->noiseFloor;
+                jsonObj["Spectrum"]["levelData"] = std::string(reinterpret_cast<const char*>(RTResponse->chanData), RTResponse->numChan);
             }
             break;
 
         case ECSMSDllMsgType::RT_SPECTRUM_V2RESPONSE:
             {
-                const SSmsRealtimeMsg::SSpectrumV2* pData = (SSmsRealtimeMsg::SSpectrumV2*)data;
+                const SSmsRealtimeMsg::SSpectrumV2* RTResponse = (SSmsRealtimeMsg::SSpectrumV2*)data;
 
-                jsonObj["Spectrum"]["taskId"] = pData->taskId;
-                jsonObj["Spectrum"]["bandIndex"] = pData->bandIndex;
-                jsonObj["Spectrum"]["startFreq"]["internal"] = pData->firstChanFreq.internal;
-                jsonObj["Spectrum"]["binSize"]["internal"] = pData->chanSize.internal;
-                jsonObj["Spectrum"]["numChan"] = pData->numChan;
-                jsonObj["Spectrum"]["noiseFloor"] = pData->noiseFloor;		
-                jsonObj["Spectrum"]["levelData"] = std::string(reinterpret_cast<const char*>(pData->chanData), pData->numChan);
+                jsonObj["Spectrum"]["taskId"] = RTResponse->taskId;
+                jsonObj["Spectrum"]["bandIndex"] = RTResponse->bandIndex;
+                jsonObj["Spectrum"]["startFreq"]["internal"] = RTResponse->firstChanFreq.internal;
+                jsonObj["Spectrum"]["binSize"]["internal"] = RTResponse->chanSize.internal;
+                jsonObj["Spectrum"]["numChan"] = RTResponse->numChan;
+                jsonObj["Spectrum"]["noiseFloor"] = RTResponse->noiseFloor;		
+                jsonObj["Spectrum"]["levelData"] = std::string(reinterpret_cast<const char*>(RTResponse->chanData), RTResponse->numChan);
             }
             break;
         case ECSMSDllMsgType::RT_SPECTRUM_RESPONSE:
             {
-                const SSmsRealtimeMsg::SSpectrumV3* pData = (SSmsRealtimeMsg::SSpectrumV3*)data;
+                const SSmsRealtimeMsg::SSpectrumV3* RTResponse = (SSmsRealtimeMsg::SSpectrumV3*)data;
 
-                jsonObj["Spectrum"]["taskId"] = pData->taskId; 
-                jsonObj["Spectrum"]["bandIndex"] = pData->bandIndex;
-                jsonObj["Spectrum"]["startFreq"]["internal"] = pData->firstChanFreq.internal;
-                jsonObj["Spectrum"]["binSize"]["internal"] = pData->chanSize.internal;
-                jsonObj["Spectrum"]["numChan"] = pData->numChan;
-                jsonObj["Spectrum"]["noiseFloor"] = pData->noiseFloor;
-                jsonObj["Spectrum"]["efield"] = pData->efield;
-                jsonObj["Spectrum"]["zeroVal"] = pData->zeroVal;
-                jsonObj["Spectrum"]["levelData"] = std::string(reinterpret_cast<const char*>(pData->chanData), pData->numChan);
+                jsonObj["Spectrum"]["taskId"] = RTResponse->taskId; 
+                jsonObj["Spectrum"]["bandIndex"] = RTResponse->bandIndex;
+                jsonObj["Spectrum"]["startFreq"]["internal"] = RTResponse->firstChanFreq.internal;
+                jsonObj["Spectrum"]["binSize"]["internal"] = RTResponse->chanSize.internal;
+                jsonObj["Spectrum"]["numChan"] = RTResponse->numChan;
+                jsonObj["Spectrum"]["noiseFloor"] = RTResponse->noiseFloor;
+                jsonObj["Spectrum"]["efield"] = RTResponse->efield;
+                jsonObj["Spectrum"]["zeroVal"] = RTResponse->zeroVal;
+                jsonObj["Spectrum"]["levelData"] = std::string(reinterpret_cast<const char*>(RTResponse->chanData), RTResponse->numChan);
             }
             break;
 
         case ECSMSDllMsgType::RT_DF_START:
             {
-                const SSmsRealtimeMsg::SStartV2* pData = (SSmsRealtimeMsg::SStartV2*)data;
+                const SSmsRealtimeMsg::SStartV2* RTResponse = (SSmsRealtimeMsg::SStartV2*)data;
                 unsigned int i;
                 
-                jsonObj["RTDFStart"]["taskId"] = pData->taskId;
-                jsonObj["RTDFStart"]["numBands"] = pData->numBands;
+                jsonObj["RTDFStart"]["taskId"] = RTResponse->taskId;
+                jsonObj["RTDFStart"]["numBands"] = RTResponse->numBands;
 
-                for (i = 0; i < pData->numBands; i++)
+                for (i = 0; i < RTResponse->numBands; i++)
                 {
                     json bandObj;
-                    bandObj["binSize"] = pData->band[i].chanSize.internal;
-                    bandObj["startFreq"] = pData->band[i].firstChanFreq.internal;
-                    bandObj["numChan"] = pData->band[i].numChan;
+                    bandObj["binSize"] = RTResponse->band[i].chanSize.internal;
+                    bandObj["startFreq"] = RTResponse->band[i].firstChanFreq.internal;
+                    bandObj["numChan"] = RTResponse->band[i].numChan;
                     jsonObj["RTDFStart"]["band"].push_back(bandObj);
                 }
             }
@@ -998,18 +808,18 @@ std::string ProcessRealTimeData(_In_ ECSMSDllMsgType respType, _In_ SSmsRealtime
 
         case ECSMSDllMsgType::RT_DF_STARTV1:
             {
-                const SSmsRealtimeMsg::SStart* pData = (SSmsRealtimeMsg::SStart*)data;
+                const SSmsRealtimeMsg::SStart* RTResponse = (SSmsRealtimeMsg::SStart*)data;
                 unsigned int i;
 
-                jsonObj["RTDFStart"]["taskId"] = pData->taskId;
-                jsonObj["RTDFStart"]["numBands"] = pData->numBands;
-                jsonObj["RTDFStart"]["MAX_OCCBANDS"] = pData->MAX_OCCBANDS;
-                for (i = 0; i < pData->numBands; i++)
+                jsonObj["RTDFStart"]["taskId"] = RTResponse->taskId;
+                jsonObj["RTDFStart"]["numBands"] = RTResponse->numBands;
+                jsonObj["RTDFStart"]["MAX_OCCBANDS"] = RTResponse->MAX_OCCBANDS;
+                for (i = 0; i < RTResponse->numBands; i++)
                 {
                     json bandObj;
-                    bandObj["binSize"]["internal"] = pData->chanSize[i];
-                    bandObj["startFreq"]["internal"] = pData->firstChanFreq[i];
-                    bandObj["numChan"] = pData->numChan[i];
+                    bandObj["binSize"]["internal"] = RTResponse->chanSize[i];
+                    bandObj["startFreq"]["internal"] = RTResponse->firstChanFreq[i];
+                    bandObj["numChan"] = RTResponse->numChan[i];
                     jsonObj["RTDFStart"]["band"].push_back(bandObj);
                 }		
             }
@@ -1017,79 +827,79 @@ std::string ProcessRealTimeData(_In_ ECSMSDllMsgType respType, _In_ SSmsRealtime
 
         case ECSMSDllMsgType::RT_DF_STOP:
             {
-                const SSmsRealtimeMsg::SStop* pData = (SSmsRealtimeMsg::SStop*)data;
-                jsonObj["SStop"]["taskId"] = pData->taskId;
+                const SSmsRealtimeMsg::SStop* RTResponse = (SSmsRealtimeMsg::SStop*)data;
+                jsonObj["SStop"]["taskId"] = RTResponse->taskId;
             }
             break;
 
         case ECSMSDllMsgType::RT_DF_DATAV1:
             {
-                const SSmsRealtimeMsg::SDfData* pData = (SSmsRealtimeMsg::SDfData*)data;
-                jsonObj["SDfData"]["bandIndex"] = pData->bandIndex;
-                jsonObj["SDfData"]["chanData"]["azimData"] = pData->chanData->azimData;
-                jsonObj["SDfData"]["chanData"]["specData"] = pData->chanData->specData;
-                jsonObj["SDfData"]["chanSize"] = pData->chanSize;
-                jsonObj["SDfData"]["firstChanFreq"] = pData->firstChanFreq;
-                jsonObj["SDfData"]["noiseFloor"] = pData->noiseFloor;
-                jsonObj["SDfData"]["numChan"] = pData->numChan;
-                jsonObj["SDfData"]["taskId"] = pData->taskId;
+                const SSmsRealtimeMsg::SDfData* RTResponse = (SSmsRealtimeMsg::SDfData*)data;
+                jsonObj["SDfData"]["bandIndex"] = RTResponse->bandIndex;
+                jsonObj["SDfData"]["chanData"]["azimData"] = RTResponse->chanData->azimData;
+                jsonObj["SDfData"]["chanData"]["specData"] = RTResponse->chanData->specData;
+                jsonObj["SDfData"]["chanSize"] = RTResponse->chanSize;
+                jsonObj["SDfData"]["firstChanFreq"] = RTResponse->firstChanFreq;
+                jsonObj["SDfData"]["noiseFloor"] = RTResponse->noiseFloor;
+                jsonObj["SDfData"]["numChan"] = RTResponse->numChan;
+                jsonObj["SDfData"]["taskId"] = RTResponse->taskId;
             }
             break;
 
         case ECSMSDllMsgType::RT_DF_DATAV2:
             {
-                const SSmsRealtimeMsg::SDfDataV2* pData = (SSmsRealtimeMsg::SDfDataV2*)data;
-                jsonObj["SDfDataV2"]["bandIndex"] = pData->bandIndex;
-                jsonObj["SDfDataV2"]["chanData"]["azimData"] = pData->chanData->azimData;
-                jsonObj["SDfDataV2"]["chanData"]["specData"] = pData->chanData->specData;
-                jsonObj["SDfDataV2"]["chanSize"] = pData->chanSize;
-                jsonObj["SDfDataV2"]["firstChanFreq"] = pData->firstChanFreq;
-                jsonObj["SDfDataV2"]["noiseFloor"] = pData->noiseFloor;
-                jsonObj["SDfDataV2"]["numChan"] = pData->numChan;
-                jsonObj["SDfDataV2"]["taskId"] = pData->taskId;
-                jsonObj["SDfDataV2"]["horizPol"] = pData->horizPol;
+                const SSmsRealtimeMsg::SDfDataV2* RTResponse = (SSmsRealtimeMsg::SDfDataV2*)data;
+                jsonObj["SDfDataV2"]["bandIndex"] = RTResponse->bandIndex;
+                jsonObj["SDfDataV2"]["chanData"]["azimData"] = RTResponse->chanData->azimData;
+                jsonObj["SDfDataV2"]["chanData"]["specData"] = RTResponse->chanData->specData;
+                jsonObj["SDfDataV2"]["chanSize"] = RTResponse->chanSize;
+                jsonObj["SDfDataV2"]["firstChanFreq"] = RTResponse->firstChanFreq;
+                jsonObj["SDfDataV2"]["noiseFloor"] = RTResponse->noiseFloor;
+                jsonObj["SDfDataV2"]["numChan"] = RTResponse->numChan;
+                jsonObj["SDfDataV2"]["taskId"] = RTResponse->taskId;
+                jsonObj["SDfDataV2"]["horizPol"] = RTResponse->horizPol;
             }
             break;
 
         case ECSMSDllMsgType::RT_DF_DATA:
             {
-                const SSmsRealtimeMsg::SDfDataV3* pData = (SSmsRealtimeMsg::SDfDataV3*)data;
-                jsonObj["SDfDataV3"]["bandIndex"] = pData->bandIndex;
-                jsonObj["SDfDataV3"]["chanData"]["azimData"] = pData->chanData->azimData;
-                jsonObj["SDfDataV3"]["chanData"]["specData"] = pData->chanData->specData;
-                jsonObj["SDfDataV3"]["chanSize"]["internal"] = pData->chanSize.internal;
-                jsonObj["SDfDataV3"]["firstChanFreq"]["internal"] = pData->firstChanFreq.internal;
-                jsonObj["SDfDataV3"]["noiseFloor"] = pData->noiseFloor;
-                jsonObj["SDfDataV3"]["numChan"] = pData->numChan;
-                jsonObj["SDfDataV3"]["taskId"] = pData->taskId;
-                jsonObj["SDfDataV3"]["horizPol"] = pData->horizPol;
+                const SSmsRealtimeMsg::SDfDataV3* RTResponse = (SSmsRealtimeMsg::SDfDataV3*)data;
+                jsonObj["SDfDataV3"]["bandIndex"] = RTResponse->bandIndex;
+                jsonObj["SDfDataV3"]["chanData"]["azimData"] = RTResponse->chanData->azimData;
+                jsonObj["SDfDataV3"]["chanData"]["specData"] = RTResponse->chanData->specData;
+                jsonObj["SDfDataV3"]["chanSize"]["internal"] = RTResponse->chanSize.internal;
+                jsonObj["SDfDataV3"]["firstChanFreq"]["internal"] = RTResponse->firstChanFreq.internal;
+                jsonObj["SDfDataV3"]["noiseFloor"] = RTResponse->noiseFloor;
+                jsonObj["SDfDataV3"]["numChan"] = RTResponse->numChan;
+                jsonObj["SDfDataV3"]["taskId"] = RTResponse->taskId;
+                jsonObj["SDfDataV3"]["horizPol"] = RTResponse->horizPol;
             }
             break;
 
         case ECSMSDllMsgType::RT_IQ_DATA:
             {
-                SSmsRealtimeMsg::SIqDataV4* iqData = (SSmsRealtimeMsg::SIqDataV4*)data; // v5 should be sent to rds app
-                jsonObj["SIqDataV4"]["actualBW"]["internal"] = iqData->actualBW.internal;
-                jsonObj["SIqDataV4"]["actualSampleRate"] = iqData->actualSampleRate;
-                jsonObj["SIqDataV4"]["dataType"] = iqData->dataType;
-                jsonObj["SIqDataV4"]["ddcChannel"] = iqData->ddcChannel;
-                jsonObj["SIqDataV4"]["EOS"] = iqData->EOS;
-                jsonObj["SIqDataV4"]["freq"]["internal"] = iqData->freq.internal;
-                jsonObj["SIqDataV4"]["inputPort"] = iqData->inputPort;
-                jsonObj["SIqDataV4"]["MAX_SAMPLES"] = iqData->MAX_SAMPLES;
-                jsonObj["SIqDataV4"]["numSamples"] = iqData->numSamples;
-                jsonObj["SIqDataV4"]["rxAtten"] = iqData->rxAtten;
-                jsonObj["SIqDataV4"]["sampleOffset"] = iqData->sampleOffset;
-                jsonObj["SIqDataV4"]["scaleFactor"] = iqData->scaleFactor;
-                jsonObj["SIqDataV4"]["seqNumber"] = iqData->seqNumber;
-                jsonObj["SIqDataV4"]["SIq"]["samplesFloat32"]["im"] = iqData->SIq.samplesFloat32->im;
-                jsonObj["SIqDataV4"]["SIq"]["samplesFloat32"]["re"] = iqData->SIq.samplesFloat32->re;
-                jsonObj["SIqDataV4"]["SIq"]["samplesInt16"]["im"] = iqData->SIq.samplesInt16->im;
-                jsonObj["SIqDataV4"]["SIq"]["samplesInt16"]["re"] = iqData->SIq.samplesInt16->re;
-                jsonObj["SIqDataV4"]["SIq"]["samplesInt32"]["im"] = iqData->SIq.samplesInt32->im;
-                jsonObj["SIqDataV4"]["SIq"]["samplesInt32"]["re"] = iqData->SIq.samplesInt32->re;
-                jsonObj["SIqDataV4"]["streamID"] = iqData->streamID;
-                jsonObj["SIqDataV4"]["streamStartTime"]["timestamp"] = iqData->streamStartTime.timestamp;
+                SSmsRealtimeMsg::SIqDataV4* RTResponse = (SSmsRealtimeMsg::SIqDataV4*)data; // v5 should be sent to rds app
+                jsonObj["SIqDataV4"]["actualBW"]["internal"] = RTResponse->actualBW.internal;
+                jsonObj["SIqDataV4"]["actualSampleRate"] = RTResponse->actualSampleRate;
+                jsonObj["SIqDataV4"]["dataType"] = RTResponse->dataType;
+                jsonObj["SIqDataV4"]["ddcChannel"] = RTResponse->ddcChannel;
+                jsonObj["SIqDataV4"]["EOS"] = RTResponse->EOS;
+                jsonObj["SIqDataV4"]["freq"]["internal"] = RTResponse->freq.internal;
+                jsonObj["SIqDataV4"]["inputPort"] = RTResponse->inputPort;
+                jsonObj["SIqDataV4"]["MAX_SAMPLES"] = RTResponse->MAX_SAMPLES;
+                jsonObj["SIqDataV4"]["numSamples"] = RTResponse->numSamples;
+                jsonObj["SIqDataV4"]["rxAtten"] = RTResponse->rxAtten;
+                jsonObj["SIqDataV4"]["sampleOffset"] = RTResponse->sampleOffset;
+                jsonObj["SIqDataV4"]["scaleFactor"] = RTResponse->scaleFactor;
+                jsonObj["SIqDataV4"]["seqNumber"] = RTResponse->seqNumber;
+                jsonObj["SIqDataV4"]["SIq"]["samplesFloat32"]["im"] = RTResponse->SIq.samplesFloat32->im;
+                jsonObj["SIqDataV4"]["SIq"]["samplesFloat32"]["re"] = RTResponse->SIq.samplesFloat32->re;
+                jsonObj["SIqDataV4"]["SIq"]["samplesInt16"]["im"] = RTResponse->SIq.samplesInt16->im;
+                jsonObj["SIqDataV4"]["SIq"]["samplesInt16"]["re"] = RTResponse->SIq.samplesInt16->re;
+                jsonObj["SIqDataV4"]["SIq"]["samplesInt32"]["im"] = RTResponse->SIq.samplesInt32->im;
+                jsonObj["SIqDataV4"]["SIq"]["samplesInt32"]["re"] = RTResponse->SIq.samplesInt32->re;
+                jsonObj["SIqDataV4"]["streamID"] = RTResponse->streamID;
+                jsonObj["SIqDataV4"]["streamStartTime"]["timestamp"] = RTResponse->streamStartTime.timestamp;
             }
             break;
 
@@ -1103,30 +913,61 @@ std::string ProcessRealTimeData(_In_ ECSMSDllMsgType respType, _In_ SSmsRealtime
 //
 // Convert response returned by callback OnGpsDataFunc in JSON
 //
-nlohmann::json ProcessGpsData(SSmsMsg::SGpsResponse gpsResponse)
+nlohmann::json ProcessGpsData(SEquipCtrlMsg::SGpsResponse* gpsResponse)
 {
     json jsonObj;
 
-    jsonObj["dateTime"] = double(gpsResponse.dateTime);
-    jsonObj["latitude"] = double(gpsResponse.latitude);
-    jsonObj["longitude"] = double(gpsResponse.longitude);
-    jsonObj["status"]["accuracy"] = int(gpsResponse.status.accuracy);
-    jsonObj["status"]["antenna"] = int(gpsResponse.status.antenna);
-    jsonObj["status"]["batVolt"] = int(gpsResponse.status.batVolt);
-    jsonObj["status"]["lockHist"] = int(gpsResponse.status.lockHist);
-    jsonObj["status"]["mode"] = int(gpsResponse.status.mode);
-    jsonObj["status"]["noGps"] = int(gpsResponse.status.noGps);
-    jsonObj["status"]["notTested"] = int(gpsResponse.status.notTested);
-    jsonObj["status"]["numSats"] = int(gpsResponse.status.numSats);
-    jsonObj["status"]["nvRam"] = int(gpsResponse.status.nvRam);
-    jsonObj["status"]["oscVolt"] = int(gpsResponse.status.oscVolt);
-    jsonObj["status"]["pllSynth"] = int(gpsResponse.status.pllSynth);
-    jsonObj["status"]["receiver"] = int(gpsResponse.status.receiver);
-    jsonObj["status"]["satLock"] = int(gpsResponse.status.satLock);
-    jsonObj["status"]["timErr1"] = int(gpsResponse.status.timErr1);
-    jsonObj["status"]["timErr2"] = int(gpsResponse.status.timErr2);
-    jsonObj["status"]["timSrce"] = int(gpsResponse.status.timSrce);
-    jsonObj["status"]["tracking"] = int(gpsResponse.status.tracking);
+    jsonObj["dateTime"] = double(gpsResponse->dateTime);
+    jsonObj["latitude"] = double(gpsResponse->latitude);
+    jsonObj["longitude"] = double(gpsResponse->longitude);
+    jsonObj["status"]["accuracy"] = int(gpsResponse->status.accuracy);
+    jsonObj["status"]["antenna"] = int(gpsResponse->status.antenna);
+    jsonObj["status"]["batVolt"] = int(gpsResponse->status.batVolt);
+    jsonObj["status"]["lockHist"] = int(gpsResponse->status.lockHist);
+    jsonObj["status"]["mode"] = int(gpsResponse->status.mode);
+    jsonObj["status"]["noGps"] = int(gpsResponse->status.noGps);
+    jsonObj["status"]["notTested"] = int(gpsResponse->status.notTested);
+    jsonObj["status"]["numSats"] = int(gpsResponse->status.numSats);
+    jsonObj["status"]["nvRam"] = int(gpsResponse->status.nvRam);
+    jsonObj["status"]["oscVolt"] = int(gpsResponse->status.oscVolt);
+    jsonObj["status"]["pllSynth"] = int(gpsResponse->status.pllSynth);
+    jsonObj["status"]["receiver"] = int(gpsResponse->status.receiver);
+    jsonObj["status"]["satLock"] = int(gpsResponse->status.satLock);
+    jsonObj["status"]["timErr1"] = int(gpsResponse->status.timErr1);
+    jsonObj["status"]["timErr2"] = int(gpsResponse->status.timErr2);
+    jsonObj["status"]["timSrce"] = int(gpsResponse->status.timSrce);
+    jsonObj["status"]["tracking"] = int(gpsResponse->status.tracking);
 
 	return jsonObj;
+}
+
+int ScanDataExpand(int ninput, int* input, int noutput, int* output)
+{
+    // expands the compressed data in the input[ninput] array into the
+    // the array output[noutput]
+    // if successful, returns the actual number of elements in the output array
+    // if unsuccessful, returns -1  (output array overrun)
+    // input and output arrays can not be the same
+
+    int* outend = output + noutput;
+    int i;
+    int* in = input;
+    int* out = output;
+
+    for (i = 0; i < ninput; i++, in++)
+    {
+        if (*in > 0)	// copy this element to output
+        {
+            if (out >= outend) return (-1);	// output overrun
+            *out++ = *in;
+        }
+        else	// insert required number of zeroes into output
+        {
+            int zerocount = -(*in);
+            if (out + zerocount > outend) return (-1);	// output overrun
+            for (int* j = out; j < out + zerocount; j++) *j = 0;
+            out += zerocount;
+        }
+    }
+    return (out - output);
 }

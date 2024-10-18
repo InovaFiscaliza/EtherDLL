@@ -1,5 +1,6 @@
 #include "MIAerConnUtils.h"
 
+// Core processing functions
 std::string processBITEResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody* respdata);
 std::string ProcessAntListResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody* data);
 std::string processAutoViolateResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody* data);
@@ -9,4 +10,7 @@ std::string processPanResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg
 std::string processOccupancyResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody* data);
 std::string processOccupancyDFResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody* data);
 std::string ProcessRealTimeData(_In_ ECSMSDllMsgType respType, _In_ SSmsRealtimeMsg::UBody* data);
-nlohmann::json ProcessGpsData(SSmsMsg::SGpsResponse* gpsResponse);
+
+// Anxilary functions
+nlohmann::json ProcessGpsData(SEquipCtrlMsg::SGpsResponse* gpsResponse);
+int ScanDataExpand(int ninput, int* input, int noutput, int* output);
