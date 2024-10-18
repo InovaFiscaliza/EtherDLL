@@ -33,6 +33,8 @@
 #pragma comment (lib, "Ws2_32.lib")
 #pragma comment (lib, "Mswsock.lib")
 
+#pragma comment (lib, "AdvApi32.lib")
+
 /*
 * Felipe Machado - 29/08/2024
 * In debug and release the name of ScorpioAPI is different, so checking is necessary to know which one to call
@@ -47,8 +49,6 @@
 		#pragma comment (lib, "ScorpioAPIDlld.lib") //DEBUG 64Bits
 	#endif
 #endif
-
-#pragma comment (lib, "AdvApi32.lib")
 
 // For convenience
 using json = nlohmann::json;
