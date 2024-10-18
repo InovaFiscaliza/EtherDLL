@@ -216,216 +216,6 @@ std::string eStateRespToString(SEquipCtrlMsg::SStateResp::EState code)
 	}
 }
 
-/*
-namespace ErrorCodes
-{
-	enum EErrorCode
-#ifdef _MSC_VER
-#if _MSC_VER >= 1400
-	: long
-#endif
-#else
-	 : long
-#endif
-	{
-		SUCCESS =				0,
-		ERROR_PRIORITY_BUMP =	1,
-		ERROR_REJECTED_CONNECT =	2,
-		ERROR_NO_CONNECTION =	3,
-		ERROR_INVALID_KEY =		4,
-		INVALIDMSGTYPE =		5,
-		INVALIDSUBTYPE =		6,
-		INVALIDTASKID =			7,
-		INVALIDTASKKEY =		8,
-		TASKALREADYEXISTS =		9,
-		NOERROR_SIMULATE =		10,
-		NOERROR_OUTPUT_NONE =	11,
-		NOERROR_DFNOTINIT =		12,
-		INVALIDVERSION =		13,
-		DUPLICATETASKID =		101,
-		EQUIPCONTROLTIMEOUT =	102,
-		EQUIPMENTTIMEOUT =		103,
-		INVALIDFREQUENCY =		104,
-		INVALIDBANDWIDTH =		105,
-		HARDWARENOTPRESENT =	106,
-		HARDWAREDOWN =			107,
-		HARDWAREBUSY =			108,
-		INVALIDDWELLTIME =		109,
-		INVALIDBETAPARAM =		110,
-		INVALIDYPARAM =			111,
-		INVALIDX1PARAM =		112,
-		INVALIDX2PARAM =		113,
-		INVALIDREPEATCOUNT =	114,
-		INVALIDAVEMETHOD =		115,
-		INVALIDFREQMETHOD =		116,
-		INVALIDSAMPLESIZE =		117,
-		INVALIDFIELDMETHOD =	118,
-		INVALIDCONFTHRESHOLD =	119,
-		INVALIDDFBANDWIDTH =	120,
-		INVALIDDETMODE =		121,
-		INVALIDAGCTIME =		122,
-		INVALIDBFO =			123,
-		INVALIDRFATTEN =		124,
-		OCCUPANCYFAILURE =		130,
-		INVALIDFREQUENCYBAND =	131,
-		INVALIDSWEEPWIDTH =		132,
-		OCCUPANCYTOOMANYCHANS =	133,
-		OCCUPANCYTOOMANYBANDS =	134,
-		OCCUPANCYNOOUTPUTREQUEST =	135,
-		OCCUPANCYTOOMANYACTIONS =	136,
-		INVALIDOCCDATA =		137,
-		OCCUPANCYNOBANDS =		138,
-		OCCINVALIDCONFLEVEL =	139,
-		OCCINVALIDACCURACY =	140,
-		INVALIDDURATIONMETHOD =	141,
-		INVALIDSTORAGETIME =	142,
-		INVALIDTHRESHOLDMETHOD =	143,
-		OCCNORESPONSEDEFINED =	144,
-		OCCNORESULTDEFINED =	145,
-		OCCNORESTARTDEFINED =	146,
-		INVALIDGETDWELLDATA =	147,
-		MEASUREMENTNOTACTIVE =	148,
-		STARTUPINPROGRESS =		149,
-		SCANDFACTIVE =			150,
-		SCANDFTOOMANYBANDS =	151,
-		SCANDFNOBANDS =			152,
-		SCANDFTOOMANYCHANS =	153,
-		UNABLETOGETDATA =		154,
-		AUDIOSWCMDERROR =		155,
-		CMDINVALIDSTDMODE =		156,
-		CMDINVALIDFASTMODE =	157,
-		CMDINVALIDFASTRUNNING =	158,
-		CMDINVALIDFASTSTOPPED =	159,
-		INVALIDANTENNAID =		160,
-		INVALIDSIGNALTYPE =		161,
-		INVALIDBWFACTOR =		162,
-		FREQUENCYRESTRICTED =   163,
-		PRECISIONTIMEUNAVAILABLE = 164,
-		INVALIDAUDIOCHANNEL =	165,
-		NOFREEAUDIOCHANNEL = 	166,
-		INVALIDAUDIOFREQUENCY =	167,
-		AUDIOCHANNELNOTFOUND =	168,
-		CMDINVALIDVCPMODE 	=	169,
-		INVALIDVCPPARAMETER = 	170,
-		RXTUNEERROR =			171,
-		RXATTENERROR =			172,
-		RXCALGENERROR = 		173,
-		RXCALGENFREQERROR =		174,
-		RXOCXOERROR = 			175,
-		RXTEMPSERROR =			176,
-		DIGITEMPSERROR =		177,
-		DIGIVOLTSERROR =		178,
-		NOTDFSYSTEMERROR =		179,
-		VMEBUSPROBLEM =			200,
-		DSPBUSY =				202,
-		DSPNOTINITIALIZED =		204,
-		DSPMALLOCFAILED =		216,
-		DSPHFSAMPTIMEOUT =		217,
-		DSPAGCTIMEOUT =			218,
-		DSPVHFSAMPERR =			219,
-		DSPILLEGALBINS =		220,
-		DSPILLEGALBANDWIDTH =	221,
-		DSPBadDFAlgorFreq =		222,
-		DSPDFAlgorNoInit =		223,
-		DSPTooManyFewAnts =		224,
-		DSPTooManyPhases =		225,
-		DSPDivideByZero =		226,
-		DSPZeroVoltageVector =	227,
-		DSPPatternNotFound =	228,
-		DSPVMEReadWriteError =	229,
-		DSPCmdDataBoundsErr =	230,
-		DSPUartTimeout =		231,
-		DSPSENDINITFAILURE =	232,
-		DSPNoPBCal =			233,
-		DSPFieldStrengthNoInit =	234,
-		DSPWrongUHFSwitch =		235,
-		DSPVHFAntCalBadPower =	236,
-		VMEOPENERROR =			251,
-		VMENOTMAPPED =			252,
-		NETWRITEFAILED =		301,
-		NETWORKNOTENABLED =		302,
-		PAT_MASTERFILEOPENERR =	331,
-		PAT_MASTERFILEREADERR =	332,
-		PAT_CTRLFILEOPENERR =	333,
-		PAT_CTRLFILEREADERR =	334,
-		PAT_PATFILEOPENERR =	335,
-		PAT_PATFILEREADERR =	336,
-		MALLOCERROR =			337,
-		SHAREDRAMWRITEERROR =	338,
-		CAL_NOERROR =			400,
-		CAL_ACKNOWLEDGE =		401,
-		CAL_CORRECTIONFACTOR =	402,
-		UNCALIBRATED =			410,
-		CAL_NORESPONSE =		411,
-		CAL_NOTACKNOWLEDGE =	412,
-		CAL_BADRESPONSE =		413,
-		CAL_PLLERROR =			414,
-		CAL_10MHZERROR =		415,
-		CAL_PLL_10MHZERROR =	416,
-		FLUXGATEWRITEERROR =	431,
-		FLUXGATEREADERROR =		432,
-		FLUXGATEDATAERROR =		433,
-		REQUEST_TIME_OVERLAP =	500,	// Overlap with scheduled event.
-		MEASURE_REQUEST_ERROR =	501,	// Incorrect request format or values
-		REQUEST_INVALID_TIME =	502,	// Time(s) in invalid format
-		REQUEST_INVALID_TIMESPAN = 503,	// Timespan exceeds limits (min or max)
-		REQUEST_PRIORITY_FAIL =	504,	// Timespan scheduled by higher priority request
-		MEASURE_ALLOC_FAIL =	505,	// No allocation equipment not available
-		REQUEST_FAIL_DATABASE =	506,	// Unable to open/append to db
-		REQUEST_UNKNOWN =		507,	// Unknown failure
-		REQUEST_FAIL_DELETE =	508,	// Unable to delete requested record.
-		REQUEST_FAIL_NOT_FOUND = 509,	// ID of record not found in db.
-		MEASURE_REQUEST_PAST_TIME = 510,	// Requested time in the past.
-		MEASURE_DATA_NOT_STORED = 511,	// Results not stored in database, fail on store.
-		MEASURE_NOT_ONTIME_FINI = 512,	// The equip did not complete measurement by time scheduled.
-		REQUEST_FAIL_NETWORK =	513,	// The request fail due to network not enabled.
-		REQUEST_COLLIDE =		514,	// Overlap with concurrent request for same time slot.(try again)
-		MEASURE_CANCELLED =		515,	// Measurement cancelled.
-		REQUEST_FAIL_CALENDAR =	516,	// Calendar service not running
-		SERVER_NOT_SYNC =		517,	// Server not syncd with client by over one minute.
-		SERVER_FAIL_WORKLOAD =	518,	// Server Workload cannot be determined
-		HIGHER_PRIORITY_RUNNING = 519,	// A Client has 'Taken Priority" unable to retrieve measurement.
-		AVDTOOMANYCHANS =		533,
-		AVDTOOMANYBANDS =		534,
-		AVDNOOUTPUTREQUEST =	535,
-		AVDTOOMANYACTIONS =		536,
-		INVALIDAVDDATA =		537,
-		AVDNOBANDS =			538,
-		AVDINVALIDCONFLEVEL =	539,
-		AVDINVALIDACCURACY =	540,
-		AVDNORESPONSEDEFINED =	544,
-		AVDNORESULTDEFINED =	545,
-		AVDNORESTARTDEFINED =	546,
-		PRIORITY_NOT_TAKEN	= 	547,
-		PRIORITY_TAKEN_MANUAL = 548,
-		PRIORITY_TASK_RUNNING = 549,
-		INVALIDDATA			=	550,
-		SU_ALREADY_IN_USE   =   551,
-		SU_SIGN_IN_FAILED_UNKNOWN = 552,
-		SU_SIGN_OUT_NO_USER   = 553,
-		SU_SIGN_OUT_BY_IMPOSTER = 554,
-		SU_WHO_NONE =           555,
-		PRIORITY_REQ_BY_NON_SU= 556,
-		COMMAND_FROM_NON_SU   = 560,
-		TASK_COMPLETED =		600,	//  request completed successfully, no errors.
-		MEASURE_SCHEDULED =		601,	//	measurement req scheduled OK.
-		MEASURE_ALLOC_PARTIAL =	602,	//	request filled for one or more requests
-		MEASURE_TIME_ADJUST =	603,	//	timespan adjusted for one or more requested timespans
-		MEASURE_TIME_REDUCT =	604,	//  timespan reduced for one or more requested timespan
-		MEASURE_IN_PROGRESS =	605,	//	request for results which are not complete
-		CALENDAR_FREE =			606,	//  calendar is free for request
-		CMDINVALIDDDRMODE = 	607,	//
-		INVALID_DM_CMD=         608,
-		ANT_ROTATOR_CONTENTION= 609,
-		INVALID_DF_ANTENNA    = 610,
-		BANDWIDTH_EXCEED_SHFEXT	= 611,	//Bandwidth specified exceeded Hardware capability.
-		DATABASE_IS_FULL	  = 612,
-		ERROR_SIMULATE =		1001,
-		NOFLUXGATE =			0x01000000
-	};
-}
-*/
-
 //
 // Function to convert EErrorCode to string
 //
@@ -631,6 +421,18 @@ std::string eErrorCodeToString(ErrorCodes::EErrorCode code)
 	}
 }
 
-			
-
-
+//
+// Function to convert EStatus to string
+//
+std::string eStatusToString(unsigned long code)
+{
+	switch (code)
+	{
+		case 1: return "Started. Code " + std::to_string(code);
+		case 2: return "Completed. Code " + std::to_string(code);
+		case 3: return "Terminated. Code " + std::to_string(code);
+		case 4: return "Restarted. Code " + std::to_string(code);
+		case 5: return "Active. Code " + std::to_string(code);
+		default: return "Unknown status. Code " + std::to_string(code);
+	}
+}

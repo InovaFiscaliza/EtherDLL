@@ -12,3 +12,4 @@ std::string eAntToString(SSmsMsg::EAnt code);
 std::string eAntPolToString(SSmsMsg::EAntPol code);
 std::string eStateRespToString(SEquipCtrlMsg::SStateResp::EState code);
 std::string eErrorCodeToString(ErrorCodes::EErrorCode code);
+std::string eStatusToString(unsigned long code);
