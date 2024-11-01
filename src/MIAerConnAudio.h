@@ -32,7 +32,7 @@ public:
 
     HRESULT StopCaptureAsync();
     void handleSocketConnection(SOCKET _clientSocket, std::string name);
-    
+
     METHODASYNCCALLBACK(CLoopbackCapture, StartCapture, OnStartCapture);
     METHODASYNCCALLBACK(CLoopbackCapture, StopCapture, OnStopCapture);
     METHODASYNCCALLBACK(CLoopbackCapture, SampleReady, OnSampleReady);

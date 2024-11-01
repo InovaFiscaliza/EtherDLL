@@ -8,6 +8,7 @@
 #include <codecvt>
 #include <ExternalCodes.h>
 #include <nlohmann/json.hpp>
+#include "base64.h"
 
 using json = nlohmann::json;
 
@@ -387,7 +388,8 @@ std::string processPanResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg
 	jsonObj["spectrum"]["frequencyUnit"] = "MHz";
 	jsonObj["spectrum"]["binSize"] = binSize;
 	jsonObj["spectrum"]["binSizeUnit"] = "Hz";
-    jsonObj["spectrum"]["sweepData"] = std::string(reinterpret_cast<char*>(PanResponse->binData), PanResponse->numBins);
+    jsonObj["spectrum"]["sweepData"] = base64_encode(PanResponse->binData, PanResponse->numBins);
+    //jsonObj["spectrum"]["sweepData"] = std::string(reinterpret_cast<char*>(PanResponse->binData), PanResponse->numBins);
 	jsonObj["demod"]["nActiveAudioChannels"] = PanResponse->nActiveAudioChannels;
     jsonObj["demod"]["audioPower"]["active"] = PanResponse->audioPower->active;
     for (size_t i = 0; i < PanResponse->nActiveAudioChannels; ++i) {
@@ -441,7 +443,7 @@ std::string processOccupancyResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipC
             {
                 SEquipCtrlMsg::SStateResp* OCCResponse = (SEquipCtrlMsg::SStateResp*)data;
                 jsonObj["SStateResp"]["completionTime"] = (unsigned long)OCCResponse->completionTime;
-                jsonObj["SStateResp"]["state"] = eStateRespToString(Response->state);
+                jsonObj["SStateResp"]["state"] = eStateRespToString(OCCResponse->state);
             }
             break;
 

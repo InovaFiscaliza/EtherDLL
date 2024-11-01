@@ -692,20 +692,23 @@ int main() {
 					logMIAer.logCommandExec(ret, "SetAudio");
 					if (ret == ERetCode::API_SUCCESS) {
 						DWORD processId = wcstoul(L"123", nullptr, 0);
-						HRESULT hr = loopbackCapture.StartCaptureAsync(processId, false, L"saida.wav");
+						HRESULT hr = loopbackCapture.StartCaptureAsync(processId, false, L"audio");
 						if (FAILED(hr))
 						{
 							logMIAer.error("Failed to start audio capture");
+						} else {
+							logMIAer.info("Capturing audio.");
 						}
-						logMIAer.info("Capturing audio.");
 					}
 					break;
 				}
 				case ECSMSDllMsgType::FREE_AUDIO_CHANNEL:
+				{
 					logMIAer.logCommandExec(FreeAudio(APIserverId, jsonObj["channel"].get<unsigned long>(), &requestID), "FreeAudio");
 					loopbackCapture.StopCaptureAsync();
 					logMIAer.info("Finished audio capture.");
 					break;
+				}
 				case ECSMSDllMsgType::SET_PAN_PARAMS:
 					logMIAer.logCommandExec(SetPanParams(APIserverId, jsonToSPanParams(jsonObj["panParams"]), &requestID), "SetPanParams");
 					break;

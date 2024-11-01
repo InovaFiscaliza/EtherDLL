@@ -78,7 +78,7 @@ SAudioParams jsonToSAudioParams(nlohmann::json jsonObj) {
 		structSO.bandwidth = Units::Frequency(jsonObj["bandwidth"].get<unsigned long>()).GetRaw();
 	}
 	if (jsonObj["bfo"].is_null() == false) {
-		structSO.bandwidth = Units::Frequency(jsonObj["bfo"].get<unsigned long>()).GetRaw();
+		structSO.bfo = Units::Frequency(jsonObj["bfo"].get<unsigned long>()).GetRaw();
 	}
 	structSO.channel = jsonObj["channel"].is_null() == true ? NULL : jsonObj["channel"].get<unsigned long>();
 	structSO.detMode = jsonObj["detMode"].is_null() == true ? (SSmsMsg::SRcvrCtrlCmdV1::EDetMode)NULL : jsonObj["detMode"].get<SSmsMsg::SRcvrCtrlCmdV1::EDetMode>();
@@ -89,7 +89,7 @@ SAudioParams jsonToSAudioParams(nlohmann::json jsonObj) {
 	}
 	
 	structSO.streamID = jsonObj["streamID"].is_null() == true ? NULL : jsonObj["streamID"].get<unsigned long>();
-
+	strcpy_s(structSO.ipAddressRDSRadio, "");
 	return structSO;
 }
 
