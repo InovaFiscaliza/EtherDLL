@@ -130,12 +130,12 @@ HRESULT CLoopbackCapture::ActivateCompleted(IActivateAudioInterfaceAsyncOperatio
             m_CaptureFormat.nAvgBytesPerSec = m_CaptureFormat.nSamplesPerSec * m_CaptureFormat.nBlockAlign;
 
             // Initialize the AudioClient in Shared Mode with the user specified buffer
-            RETURN_IF_FAILED(m_AudioClient->Initialize(AUDCLNT_SHAREMODE_SHARED,
+            m_AudioClient->Initialize(AUDCLNT_SHAREMODE_SHARED,
                 AUDCLNT_STREAMFLAGS_LOOPBACK | AUDCLNT_STREAMFLAGS_EVENTCALLBACK,
                 200000,
                 AUDCLNT_STREAMFLAGS_AUTOCONVERTPCM,
                 &m_CaptureFormat,
-                nullptr));
+                nullptr);
 
             // Get the maximum size of the AudioClient Buffer
             RETURN_IF_FAILED(m_AudioClient->GetBufferSize(&m_BufferFrames));
@@ -147,8 +147,8 @@ HRESULT CLoopbackCapture::ActivateCompleted(IActivateAudioInterfaceAsyncOperatio
             RETURN_IF_FAILED(MFCreateAsyncResult(nullptr, &m_xSampleReady, nullptr, &m_SampleReadyAsyncResult));
 
             // Tell the system which event handle it should signal when an audio buffer is ready to be processed by the client
-            RETURN_IF_FAILED(m_AudioClient->SetEventHandle(m_SampleReadyEvent.get()));
-
+            //RETURN_IF_FAILED(m_AudioClient->SetEventHandle(m_SampleReadyEvent.get()));
+            m_AudioClient->SetEventHandle(m_SampleReadyEvent.get());
             // Creates the WAV file.
             RETURN_IF_FAILED(CreateWAVFile());
 
@@ -172,10 +172,9 @@ HRESULT CLoopbackCapture::CreateWAVFile()
 {
     return SetDeviceStateErrorIfFailed([&]()->HRESULT
         {
-            m_hFile.reset(CreateFile(m_outputFileName, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL));
-            RETURN_LAST_ERROR_IF(!m_hFile);
-
             // Create and write the WAV header
+            //m_hFile.reset(CreateFile(m_outputFileName, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL));
+            //RETURN_LAST_ERROR_IF(!m_hFile);
 
                 // 1. RIFF chunk descriptor
             DWORD header[] = {
@@ -213,7 +212,6 @@ HRESULT CLoopbackCapture::StartCaptureAsync(DWORD processId, bool includeProcess
 {
     m_outputFileName = outputFileName;
     auto resetOutputFileName = wil::scope_exit([&] { m_outputFileName = nullptr; });
-
     RETURN_IF_FAILED(InitializeLoopbackCapture());
     RETURN_IF_FAILED(ActivateAudioInterface(processId, includeProcessTree));
 
@@ -260,6 +258,7 @@ HRESULT CLoopbackCapture::StopCaptureAsync()
     RETURN_IF_FAILED(MFPutWorkItem2(MFASYNC_CALLBACK_QUEUE_MULTITHREADED, 0, &m_xStopCapture, nullptr));
 
     // Wait for capture to stop
+    send(clientSocket, "##CLOSESOCKET##", 15, 0);
     m_hCaptureStopped.wait();
 
     return S_OK;
@@ -305,9 +304,11 @@ HRESULT CLoopbackCapture::FinishCaptureAsync()
 HRESULT CLoopbackCapture::OnFinishCapture(IMFAsyncResult* pResult)
 {
     m_DeviceState = DeviceState::Stopped;
-
+    if (m_dwQueueID != 0)
+    {
+        MFUnlockWorkQueue(m_dwQueueID);
+    }
     m_hCaptureStopped.SetEvent();
-    closesocket(clientSocket);
     return S_OK;
 }
 
