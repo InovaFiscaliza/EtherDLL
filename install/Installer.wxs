@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Product
+        Id="MiaerConnProduct"
+        Name="Configuração MIAer"
+        Language="1046"
+        Version="0.0.1"
+        Manufacturer="ANATEL - Agência Nacional de Telecomunicações"
+        UpgradeCode="7ad42e0e-bd69-4d9c-b7cf-642c0da6e69a">
+    <Package InstallerVersion="500" Compressed="yes" InstallScope="perMachine" />
+
+    <MajorUpgrade DowngradeErrorMessage="Uma versão mais nova já está instalada. Nada será feito. Para downgrade, desinstale a versão atualmente instalada e tente novamente."
+                    AllowSameVersionUpgrades="yes" />
+    <!-- Allow sane version will check only the 3 first verion levels -->
+
+    <Media Id="1" Cabinet="product.cab" EmbedCab="yes" />
+ 
+    <Feature Id="Complete" Title="Instalação Completa" Level="1">
+      <Feature Id="InstallOpenVPN" Title="Instala OpenVPN" Level="2">
+        <ComponentGroupRef Id="ProductComponents" />
+      </Feature>
+    </Feature>
+
+    <StandardDirectory Id="ProgramFilesFolder">
+        <Directory Id="OVPNPROGFOLDER" Name="OpenVPN">
+            <Directory Id="OVPNCONFIGAUTO" Name="config-auto" />
+        </Directory>
+    </StandardDirectory>
+
+    <ComponentGroup Id="ProductComponents">
+        <!-- Temporary result file -->
+        <Component Id="OpenVPNCheckResult" Directory="OVPNFOLDER" Guid="PUT-GUID-HERE">
+            <File Id="OpenVPNCheckResultFile" Name="OpenVPNCheckResult.txt" KeyPath="yes" />
+        </Component>
+    </ComponentGroup>
+
+    <!-- Define a property to capture TUN interface number -->
+    <Property Id="WIXUI_INSTALLDIR" Value="INSTALLDIR" />
+    <Property Id="INTERFACE_NUMBER" Secure="yes" />
+
+    <UIRef Id="WixUI_Mondo" />
+    <UIRef Id="WixUI_ErrorProgressText" />
+
+    <!-- Reference custom UI dialog -->
+    <UI>
+      <Dialog Id="SelectVPNDialog" Width="370" Height="270" Title="Select VPN Configuration">
+        <Control Id="Title" Type="Text" X="20" Y="15" Width="330" Height="30" Transparent="yes" NoPrefix="yes" Text="Select a VPN configuration:" />
+        <Control Id="Next" Type="PushButton" X="220" Y="243" Width="60" Height="17" Default="yes" Text="Next">
+          <Publish Event="EndDialog" Value="Return">1</Publish>
+        </Control>
+        <Control Id="Back" Type="PushButton" X="150" Y="243" Width="60" Height="17" Cancel="yes" Text="Back">
+          <Publish Event="NewDialog" Value="WelcomeDlg">1</Publish>
+        </Control>
+        
+        <!-- Radio Button Group -->
+        <Control Id="VPNSelection" Type="RadioButtonGroup" X="50" Y="60" Width="250" Height="100" Property="VPNConfigURL">
+          <RadioButtonGroup Property="VPNConfigURL">
+            <RadioButton Text="MIAer PR" Value="https://onedrive.link/config1.ovpn" X="0" Y="0" Width="200" Height="17" />
+            <RadioButton Text="MIAer MG" Value="https://onedrive.link/config2.ovpn" X="0" Y="20" Width="200" Height="17" />
+            <RadioButton Text="MIAer ES" Value="https://onedrive.link/config3.ovpn" X="0" Y="40" Width="200" Height="17" />
+            <RadioButton Text="MIAer PE" Value="https://onedrive.link/config4.ovpn" X="0" Y="60" Width="200" Height="17" />
+            <RadioButton Text="MIAer CE" Value="https://onedrive.link/config5.ovpn" X="0" Y="80" Width="200" Height="17" />
+            <RadioButton Text="MIAer PA" Value="https://onedrive.link/config6.ovpn" X="0" Y="100" Width="200" Height="17" />
+            <RadioButton Text="MIAer AM" Value="https://onedrive.link/config7.ovpn" X="0" Y="120" Width="200" Height="17" />
+          </RadioButtonGroup>
+        </Control>
+      </Dialog>
+
+      <!-- Sequence -->
+      <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="SelectVPNDialog">1</Publish>
+      <Publish Dialog="SelectVPNDialog" Control="Next" Event="EndDialog" Value="Return">1</Publish>
+    </UI>
+
+    <!-- Custom Actions Execution -->
+    <InstallExecuteSequence>
+    
+        <Custom Action="InstallOpenVPN" Before="InstallFinalize">NOT Installed</Custom>
+
+        <Custom Action="DownloadConfig" After="InstallOpenVPN">NOT Installed</Custom>
+        
+        <Custom Action="CheckOpenVPN" Before="InstallFinalize">NOT Installed</Custom>
+
+        <!-- Run Firewall and Proxy Config only if CheckOpenVPN succeeds -->
+        <Custom Action="RunFirewallConfig" After="CheckOpenVPN">INTERFACE_NUMBER</Custom>
+        <Custom Action="RunProxyConfig" After="RunFirewallConfig">INTERFACE_NUMBER</Custom>
+    </InstallExecuteSequence>    
+
+  </Product>
+</Wix>

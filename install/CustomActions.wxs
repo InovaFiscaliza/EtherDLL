@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Fragment>
+    <!-- Content that will be used for installation but not retained -->
+    <Binary Id="OpenVPNMSI" SourceFile="OpenVPN-2.6.12-I001-amd64.msi" />
+    <Binary Id="DownloadConfigScript" SourceFile="DownloadConfig.ps1" />
+    <Binary Id="FirewallConfigScript" SourceFile="FirewallConfig.ps1" />
+    <Binary Id="ProxyConfigScript" SourceFile="ProxyConfig.ps1" />
+    <Binary Id="CheckOpenVPNScript" SourceFile="CheckOpenVPN.ps1" />
+
+    <!-- Install OpenVPN -->
+    <CustomAction Id="InstallOpenVPN"
+                  FileKey="OpenVPNFile"
+                  Execute="deferred"
+                  Impersonate="no"
+                  ExeCommand="/qn"
+                  Return="check" />
+
+    <CustomAction Id="DownloadConfig"
+                  BinaryKey="DownloadConfigScript"
+                  Execute="deferred"
+                  Impersonate="no"
+                  ExeCommand="powershell.exe -ExecutionPolicy Bypass -File [BinaryPath]DownloadConfig.ps1 -SharedLink '[VPNConfigURL]' -TargetDirectory '[OVPNCONFIGAUTO]'" />
+
+    <!-- Run PowerShell Scripts -->
+    <CustomAction Id="CheckOpenVPN"
+                  BinaryKey="CheckOpenVPNScript"
+                  Execute="deferred"
+                  Impersonate="no"
+                  ExeCommand="powershell.exe -ExecutionPolicy Bypass -File [BinaryPath]CheckOpenVPN.ps1 -ResultFilePath '[INSTALLDIR]OpenVPNCheckResult.txt'" />
+
+    <CustomAction Id="RunFirewallConfig"
+                  BinaryKey="FirewallConfigScript"
+                  Execute="deferred"
+                  Impersonate="no"
+                  ExeCommand="powershell.exe -ExecutionPolicy Bypass -File [BinaryPath]FirewallConfig.ps1" />
+
+    <CustomAction Id="RunProxyConfig"
+                  BinaryKey="ProxyConfigScript"
+                  Execute="deferred"
+                  Impersonate="no"
+                  ExeCommand="powershell.exe -ExecutionPolicy Bypass -File [BinaryPath]ProxyConfig.ps1" />
+  </Fragment>
+</Wix>

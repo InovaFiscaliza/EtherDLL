@@ -1,0 +1,11 @@
+<Configuration>
+    <MappedFolders>
+        <MappedFolder>
+            <HostFolder>C:\Users\Fabio\Documents\GitHub\MIAerConnVS\test\SandBoxShare</HostFolder>
+            <SandBoxFolder>C:\HostShare</SandBoxFolder>
+        </MappedFolder>
+    </MappedFolders>
+    <LogonCommand>
+        <Command>C:\HostShare\start.cmd</Command>
+    </LogonCommand>
+</Configuration>
