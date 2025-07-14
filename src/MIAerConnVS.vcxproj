@@ -92,11 +92,12 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EntryPointSymbol>mainCRTStartup</EntryPointSymbol>
-      <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>C:\Program Files %28x86%29\TCI\Scorpio API\lib</AdditionalLibraryDirectories>
+      <AdditionalDependencies>ScorpioAPIDlld.lib;wsock32.lib;gpib-32.obj;ws2_32.lib;version.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(MSBuildProgramFiles32)\TCI\Scorpio API\lib</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="base64.h" />
     <ClInclude Include="MIAerConnAudio.h" />
     <ClInclude Include="MIAerConnAudioCommon.h" />
     <ClInclude Include="MIAerConnConstants.h" />
@@ -106,12 +107,17 @@
     <ClInclude Include="MIAerConnUtils.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="base64.cpp" />
     <ClCompile Include="ExternalCodes.cpp" />
+    <ClCompile Include="MIAConnAudio.cpp" />
     <ClCompile Include="MIAerConn.cpp" />
     <ClCompile Include="MIAerConnAudio.cpp" />
     <ClCompile Include="MIAerConnProcessApiResponse.cpp" />
     <ClCompile Include="MIAerConnUtils.cpp" />
     <ClCompile Include="MIAerLog.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="config.json" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
