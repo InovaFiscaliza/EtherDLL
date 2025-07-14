@@ -1,11 +1,11 @@
-#include "MIAerLog.h"
+#include "EtherDLLLog.h"
 
 spdlog::logger logger = spdlog::logger("");
 
 /*
 * Start log in console and file
 */
-void MIAerLog::start(std::string name, bool consoleEnable, bool fileEnable, std::string consoleLevel, std::string logFilename, std::string fileLevel) {
+void EtherDLLLog::start(std::string name, bool consoleEnable, bool fileEnable, std::string consoleLevel, std::string logFilename, std::string fileLevel) {
 	
 	logger = spdlog::logger(name);
 	logger.sinks().clear();
@@ -81,7 +81,7 @@ void MIAerLog::start(std::string name, bool consoleEnable, bool fileEnable, std:
 * 
 * Log return of Scorpio API function called
 */
-void MIAerLog::logCommandExec(ERetCode errCode, std::string command) {
+void EtherDLLLog::logCommandExec(ERetCode errCode, std::string command) {
 	if (errCode != ERetCode::API_SUCCESS)
 	{
 		logger.error("[" + command + "] ERROR. " + ERetCodeToString(errCode));
@@ -97,7 +97,7 @@ void MIAerLog::logCommandExec(ERetCode errCode, std::string command) {
 *
 * Informations
 */
-void MIAerLog::info(std::string str) {
+void EtherDLLLog::info(std::string str) {
 	logger.info(str);
 }
 
@@ -106,7 +106,7 @@ void MIAerLog::info(std::string str) {
 *
 * Warnings occured in application
 */
-void MIAerLog::warn(std::string str) {
+void EtherDLLLog::warn(std::string str) {
 	logger.warn(str);
 }
 
@@ -115,10 +115,10 @@ void MIAerLog::warn(std::string str) {
 *
 * Errors occured in application
 */
-void MIAerLog::error(std::string str) {
+void EtherDLLLog::error(std::string str) {
 	logger.error(str);
 }
 
-MIAerLog::~MIAerLog() {
+EtherDLLLog::~EtherDLLLog() {
 	logger.flush();
 }

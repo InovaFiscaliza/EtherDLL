@@ -1,4 +1,4 @@
-#include "MIAerConnUtils.h"
+#include "EtherDLLUtils.h"
 
 // Core processing functions
 std::string processBITEResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody* respdata);

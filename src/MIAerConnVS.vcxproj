@@ -16,7 +16,7 @@
     <ProjectGuid>{e1e8fdb6-e330-4479-b6d0-c276cdfd8095}</ProjectGuid>
     <RootNamespace>MIAerConnVS</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
-    <ProjectName>MIAerConn</ProjectName>
+    <ProjectName>EtherDLL</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
@@ -98,23 +98,23 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="base64.h" />
-    <ClInclude Include="MIAerConnAudio.h" />
-    <ClInclude Include="MIAerConnAudioCommon.h" />
-    <ClInclude Include="MIAerConnConstants.h" />
+    <ClInclude Include="EtherDLLAudio.h" />
+    <ClInclude Include="EtherDLLAudioCommon.h" />
+    <ClInclude Include="EtherDLLConstants.h" />
     <ClInclude Include="ExternalCodes.h" />
-    <ClInclude Include="MIAerConnProcessApiResponse.h" />
-    <ClInclude Include="MIAerLog.h" />
-    <ClInclude Include="MIAerConnUtils.h" />
+    <ClInclude Include="EtherDLLProcessApiResponse.h" />
+    <ClInclude Include="EtherDLLLog.h" />
+    <ClInclude Include="EtherDLLUtils.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="base64.cpp" />
     <ClCompile Include="ExternalCodes.cpp" />
-    <ClCompile Include="MIAConnAudio.cpp" />
-    <ClCompile Include="MIAerConn.cpp" />
-    <ClCompile Include="MIAerConnAudio.cpp" />
-    <ClCompile Include="MIAerConnProcessApiResponse.cpp" />
-    <ClCompile Include="MIAerConnUtils.cpp" />
-    <ClCompile Include="MIAerLog.cpp" />
+    <ClCompile Include="EtherDLLAudio%282%29.cpp" />
+    <ClCompile Include="EtherDLL.cpp" />
+    <ClCompile Include="EtherDLLAudio.cpp" />
+    <ClCompile Include="EtherDLLProcessApiResponse.cpp" />
+    <ClCompile Include="EtherDLLUtils.cpp" />
+    <ClCompile Include="EtherDLLLog.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="config.json" />

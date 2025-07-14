@@ -1,5 +1,5 @@
-#ifndef MIAERLOG_H
-#define MIAERLOG_H
+#ifndef EtherDLLLog_H
+#define EtherDLLLog_H
 
 #include "stdafx.h"
 #include <ExternalCodes.h>
@@ -12,7 +12,7 @@ extern std::vector<std::string> errorBuffer;
 
 #pragma once
 
-class MIAerLog
+class EtherDLLLog
 {
 	public:
 		void start(std::string name, bool consoleEnable, bool fileEnable, std::string consoleLevel, std::string logFilename, std::string fileLevel);
@@ -20,7 +20,7 @@ class MIAerLog
 		void info(std::string str);
 		void warn(std::string str);
 		void error(std::string str);
-		~MIAerLog();
+		~EtherDLLLog();
 
 	private:
 		std::string logName;
