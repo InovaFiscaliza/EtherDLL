@@ -9,8 +9,6 @@
 *** for contributors-url, forks-url, etc. This is an optional, concise syntax you may use.
 *** https://www.markdownguide.org/basic-syntax/#reference-style-links
 -->
-# MIAerConn
-
 <!-- TABLE OF CONTENTS -->
 <details>
   <summary>Table of Contents</summary>
@@ -28,7 +26,9 @@
 <!-- ABOUT THE PROJECT -->
 # About
 
-The application is a Windows Service that may also be accessed as a desktop application for debug and provides a socket interface for the MIAer Spectrum Monitoring Stations through the manufactures specific API.
+The application is a Windows Service that may also be accessed as a desktop application for debug and provides a open socket API to access DLL callback methods, allowing the integration of local windows services as if they were a web service, through TCP/IP.
+
+Current version was specifically designed to work with MIAer Spectrum Monitoring Stations and may be modified to work with other DLL or APIs working in the local windows environment.
 
 The API is not included in this repository and must be provided by the manufacturer, being dependent on the manufacturer's SDK and licensing.
 
