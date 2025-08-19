@@ -3,7 +3,7 @@
 #include <iostream>
 #include <audioclientactivationparams.h>
 
-#include "MIAerConnAudio.h"
+#include "EtherDLLAudio.h"
 
 #define BITS_PER_BYTE 8
 SOCKET clientSocket = NULL;

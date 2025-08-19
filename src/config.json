@@ -11,37 +11,37 @@
     }
   },
   "station": {
-    "address": "166.139.112.178",
+    "address": "172.24.3.11",
     "port": 3303,
     "timeout_s": 10
   },
   "service": {
     "command": {
-      "port": 3000,
+      "port": 30000,
       "timeout_s": 10000,
       "sleep_ms": 100,
       "check_period": 10
     },
     "stream": {
-      "port": 3001,
+      "port": 30001,
       "timeout_s": 10000,
       "sleep_ms": 500,
       "check_period": 200
     },
 	"error": {
-      "port": 3002,
+      "port": 30002,
       "timeout_s": 10000,
       "sleep_ms": 500,
       "check_period": 200
     },
 	"realtime": {
-      "port": 3003,
+      "port": 30003,
       "timeout_s": 10000,
       "sleep_ms": 500,
       "check_period": 200
     },
 	"audio": {
-      "port": 3004,
+      "port": 30004,
       "timeout_s": 60000
     },
     "simulated": true

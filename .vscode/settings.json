@@ -55,5 +55,13 @@
         "typeinfo": "cpp",
         "valarray": "cpp",
         "string": "cpp"
-    }
+    },
+    "cSpell.words": [
+        "uiaxes",
+        "uidropdown",
+        "uigridlayout",
+        "xlabel",
+        "ylabel",
+        "zlabel"
+    ]
 }

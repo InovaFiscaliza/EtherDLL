@@ -1,14 +1,16 @@
-#include <MIAerConnProcessApiResponse.h>
-#include <MIAerConnConstants.h>
+#include <EtherDLLProcessApiResponse.h>
+#include <EtherDLLConstants.h>
 #include <string>
 #include <algorithm>
 #include <vector>
+#include <cstdint>
 #include <limits>
 #include <locale>
 #include <codecvt>
 #include <ExternalCodes.h>
 #include <nlohmann/json.hpp>
 #include "base64.h"
+#include <fmt/chrono.h>
 
 using json = nlohmann::json;
 
@@ -377,29 +379,33 @@ std::string processPanResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg
 	SEquipCtrlMsg::SGetPanResp* PanResponse = (SEquipCtrlMsg::SGetPanResp*)data;
 
     jsonObj["measure"]["status"] = PanResponse->status;
-    jsonObj["measure"]["dateTime"] = PanResponse->dateTime;   
+    jsonObj["measure"]["dateTime"] = oleTimeToIsoFmt(PanResponse->dateTime);
     jsonObj["measure"]["powerDbm"] = PanResponse->powerDbm;
     jsonObj["setting"]["attenuation"] = PanResponse->rcvrAtten;
+
+    auto spectrumInfo = calculateSpectrumInfo(PanResponse);
+    size_t sweepByteLen = static_cast<size_t>(PanResponse->numBins) * sizeof(float);
+
     jsonObj["spectrum"]["numBins"] = PanResponse->numBins;
-	double centralFrequency = double(PanResponse->freq.internal) / ( mcs::FREQ_FACTOR * mcs::MHZ_MULTIPLIER );
-    double binSize = double(PanResponse->binSize.internal) / mcs::FREQ_FACTOR;
-	jsonObj["spectrum"]["startFrequency"] = centralFrequency - (binSize * double(floor(PanResponse->numBins / 2.0)));
-	jsonObj["spectrum"]["stopFrequency"] = centralFrequency + (binSize * double(floor(PanResponse->numBins / 2.0)));
+    jsonObj["spectrum"]["startFrequency"] = spectrumInfo.startFrequency;
+	jsonObj["spectrum"]["stopFrequency"] = spectrumInfo.stopFrequency;
 	jsonObj["spectrum"]["frequencyUnit"] = "MHz";
-	jsonObj["spectrum"]["binSize"] = binSize;
+	jsonObj["spectrum"]["binSize"] = spectrumInfo.binSize;
 	jsonObj["spectrum"]["binSizeUnit"] = "Hz";
-    jsonObj["spectrum"]["sweepData"] = base64_encode(PanResponse->binData, PanResponse->numBins);
-    //jsonObj["spectrum"]["sweepData"] = std::string(reinterpret_cast<char*>(PanResponse->binData), PanResponse->numBins);
+    jsonObj["spectrum"]["sweepData"] = base64_encode(
+        parsedBinData(PanResponse->binData, PanResponse->numBins),
+        static_cast<unsigned int>(sweepByteLen)
+    );
+    jsonObj["spectrum"]["conversionFactorForFS"] = PanResponse->conversionFactorForFS;
+
 	jsonObj["demod"]["nActiveAudioChannels"] = PanResponse->nActiveAudioChannels;
     jsonObj["demod"]["audioPower"]["active"] = PanResponse->audioPower->active;
     for (size_t i = 0; i < PanResponse->nActiveAudioChannels; ++i) {
         jsonObj["demod"]["audioPower"][i]["powerdBm"] = PanResponse->audioPower[i].powerdBm;
     }
-    jsonObj["spectrum"]["conversionFactorForFS"] = PanResponse->conversionFactorForFS;
 
 	return jsonObj.dump();
-    // TODO #15: Check for invalid characters in the string, including " and \r\n to avoid json parsing errors. check https://stackoverflow.com/questions/7724448/simple-json-string-escape-for-c
-        // jsonObj["SGetPanResp"]["binDataEscaped"] = true;
+
 }
 
 //
@@ -972,4 +978,73 @@ int ScanDataExpand(int ninput, int* input, int noutput, int* output)
         }
     }
     return (out - output);
+}
+
+//
+// Convert binary uint8 vector (bindata) with numBins elements 
+// into floats32 vector with offset of 192.0f
+// Float vector is returned as uint8 vector with size numBins * 32 bytes
+// for serialization purposes
+//
+static const unsigned char* parsedBinData(const unsigned char* binData, unsigned short numBins)
+{
+    static_assert(sizeof(float) == 4, "Esperado float32");
+
+    const float dbmOffset = 192.0f;
+    const size_t nRequested = static_cast<size_t>(numBins);
+
+    // Buffer persistente por thread para evitar retorno de ponteiro pendente
+    thread_local static std::vector<unsigned char> parsedData;
+    parsedData.resize(nRequested * sizeof(float));
+
+    float* outFloats = reinterpret_cast<float*>(parsedData.data());
+
+    for (size_t i = 0; i < nRequested; ++i) {
+        outFloats[i] = static_cast<float>(binData[i]) - dbmOffset;
+    }
+
+    return parsedData.data();
+}
+
+//
+// Convert COleTime to ISO format
+//
+std::string oleTimeToIsoFmt(double oleTime) {
+    const double OLE_TIME_EPOCH_DIFF = 25569.0;
+    const int SECONDS_PER_DAY = 86400;
+
+    double unixTimeSeconds = (oleTime - OLE_TIME_EPOCH_DIFF) * SECONDS_PER_DAY;
+
+    // Separar parte inteira e fracionária para preservar precisão
+    std::time_t seconds = static_cast<std::time_t>(unixTimeSeconds);
+    double fractionalPart = unixTimeSeconds - seconds;
+
+    // Converter para chrono::time_point com precisão de microssegundos
+    auto tp = std::chrono::system_clock::from_time_t(seconds);
+    auto microseconds = std::chrono::microseconds(
+        static_cast<long long>(fractionalPart * 1000000)
+    );
+    tp += microseconds;
+
+    return fmt::format("{:%Y-%m-%dT%H:%M:%S}.{:06d}Z",
+        fmt::gmtime(std::chrono::system_clock::to_time_t(tp)),
+        microseconds.count() % 1000000);
+}
+
+SpectrumInfo calculateSpectrumInfo(const SEquipCtrlMsg::SGetPanResp* panResponse)
+{
+    // Convert central frequency from internal units to MHz
+    double centralFrequency = double(panResponse->freq.internal) / (mcs::FREQ_FACTOR * mcs::MHZ_MULTIPLIER);
+
+    // Convert bin size from internal units to Hz
+    double binSize = double(panResponse->binSize.internal) / mcs::FREQ_FACTOR;
+
+    // Calculate half span in MHz  
+    double halfSpan = (binSize * double(floor(panResponse->numBins / double(2.0)))) / double(1000000.0);
+
+    // Calculate start and stop frequencies
+    double startFrequency = centralFrequency - halfSpan;
+    double stopFrequency = centralFrequency + halfSpan;
+
+    return { startFrequency, stopFrequency, binSize };
 }

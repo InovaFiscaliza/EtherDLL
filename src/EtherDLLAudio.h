@@ -10,7 +10,7 @@
 #include <wil\com.h>
 #include <wil\result.h>
 
-#include "MIAerConnAudioCommon.h"
+#include "EtherDLLAudioCommon.h"
 #pragma comment (lib, "mmdevapi.lib")
 #pragma comment (lib, "mfreadwrite.lib")
 #pragma comment (lib, "windowsapp.lib")

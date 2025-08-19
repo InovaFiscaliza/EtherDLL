@@ -22,7 +22,7 @@ namespace mcs {
             case SERVICE_ERROR: return "Service error";
             case COMMAND_ERROR: return "Command channel communication error";
             case STREAM_ERROR: return "Stream channel error";
-            default: return "Undefined MIAerConn Code";
+            default: return "Undefined EtherDLL Code";
             }
         }
     };
