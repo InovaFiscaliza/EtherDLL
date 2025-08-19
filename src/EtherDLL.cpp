@@ -1,6 +1,12 @@
-// EtherDLL.cpp : Defines the entry point for the application.
-//
+// ----------------------------------------------------------------------
+/*
+	EtherDLL.cpp : Defines the entry point for the application.
+*/
 
+// ----------------------------------------------------------------------
+/*
+	Include headers
+*/
 // Include the ScorpioAPI libraries 3h2cl5vTu8cg
 #include <StdAfx.h>
 
@@ -35,10 +41,9 @@
 
 #pragma comment (lib, "AdvApi32.lib")
 
+// ----------------------------------------------------------------------
 /*
-* Felipe Machado - 29/08/2024
-* In debug and release the name of ScorpioAPI is different, so checking is necessary to know which one to call
-
+	In debug and release the name of ScorpioAPI is different, so checking is necessary to know which one to call
 */
 #ifdef _X86_
 	#pragma comment (lib, "ScorpioAPIDll.lib") //RELEASE/DEBUG 32Bits
@@ -53,10 +58,10 @@
 // For convenience
 using json = nlohmann::json;
 
-//
-// Global variables related to the application
-//
-
+// ----------------------------------------------------------------------
+/*
+	Global variables related to the application
+*/
 // JSON configuration object
 json config;
 
@@ -82,9 +87,12 @@ std::vector<std::string> realtimeBuffer;
 std::mutex MCCommandMutex;
 std::mutex MCstreamMutex;
 std::mutex MCStationMutex;
-//
-// Global variables related to the API
-//
+
+
+// ----------------------------------------------------------------------
+/*
+	Global variables related to the API
+*/
 
 // API server ID. This service is intended to be used to connect to a single station, always 0.
 unsigned long APIserverId = 0;
@@ -99,12 +107,14 @@ EtherDLLLog logEtherDLL;
 
 CLoopbackCapture loopbackCapture;
 
+// ----------------------------------------------------------------------
 /*
-* Felipe Machado - 23/08/2024
-* Data callback for Scorpio API
+	Data callback for Scorpio API
 */
 void OnDataFunc(_In_  unsigned long serverId, _In_ ECSMSDllMsgType respType, _In_ unsigned long sourceAddr, _In_ unsigned long desstAddr, _In_ SEquipCtrlMsg::UBody* data)
 {
+	std::string response;
+
 	switch (respType)
 	{
 		case ECSMSDllMsgType::GET_BIST:
@@ -154,7 +164,10 @@ void OnDataFunc(_In_  unsigned long serverId, _In_ ECSMSDllMsgType respType, _In
 			streamBuffer.push_back(processDemodCtrlResponse(respType, data));
 			break;
 		case ECSMSDllMsgType::GET_PAN:
-			streamBuffer.push_back(processPanResponse(respType, data));
+			response = processPanResponse(respType, data);
+			logEtherDLL.info("GET_PAN response: " + response);
+			streamBuffer.push_back(response);
+			//streamBuffer.push_back(processPanResponse(respType, data));
 			break;
 		case ECSMSDllMsgType::GET_DM:
 
@@ -169,9 +182,9 @@ void OnDataFunc(_In_  unsigned long serverId, _In_ ECSMSDllMsgType respType, _In
 	logEtherDLL.info("OnData received server ID " + serverId);
 }
 
+// ----------------------------------------------------------------------
 /*
-* Felipe Machado - 23/08/2024
-* Error callback for Scorpio API
+	Error callback for Scorpio API
 */
 void OnErrorFunc(_In_  unsigned long serverId, _In_ const std::wstring& errorMsg)
 {
@@ -184,9 +197,9 @@ void OnErrorFunc(_In_  unsigned long serverId, _In_ const std::wstring& errorMsg
 
 }
 
+// ----------------------------------------------------------------------
 /*
-* Felipe Machado - 02/09/2024
-* Realtime callback for Scorpio API
+	Realtime callback for Scorpio API
 */
 void OnRealTimeDataFunc(_In_  unsigned long serverId, _In_ ECSMSDllMsgType respType, _In_ SSmsRealtimeMsg::UBody* data)
 {
@@ -195,9 +208,10 @@ void OnRealTimeDataFunc(_In_  unsigned long serverId, _In_ ECSMSDllMsgType respT
 	logEtherDLL.info("OnRealtimeData received server ID " + serverId);
 }
 
-//
-// Signal handler function
-//
+// ----------------------------------------------------------------------
+/*
+	Handle interruptio signals 'ctrl+C' and 'kill'
+*/
 void signalHandler(int signal) {
 
 	if (signal == SIGINT)
@@ -218,17 +232,19 @@ void signalHandler(int signal) {
 	}
 }
 
-//
-// Register the signal handlers
-//
+// ----------------------------------------------------------------------
+/*
+	Register the signal callback handlers
+*/
 void registerSignalHandlers() {
 	std::signal(SIGINT, signalHandler);  // Handles Ctrl+C
 	std::signal(SIGTERM, signalHandler); // Handles kill command
 }
 
-//
-// Function to handle command connections
-//
+// ----------------------------------------------------------------------
+/*
+	Receive commands from clients and push them to the command queue, to be sent to the DLL API.
+*/
 void handleCommandConnection(SOCKET clientSocket, std::string name) {
 	char buffer[1024];
 
@@ -279,9 +295,10 @@ void handleCommandConnection(SOCKET clientSocket, std::string name) {
 	}
 }
 
-//
-// Function to handle streaming data
-//
+// ----------------------------------------------------------------------
+/*
+	Send data from the DLL API to the client, whenever there is data available in the streamBuffer.
+*/
 void handleStreamConnection(SOCKET clientSocket, std::string name) {
 
 	int checkPeriod = 0;
@@ -309,9 +326,10 @@ void handleStreamConnection(SOCKET clientSocket, std::string name) {
 	}
 }
 
-//
-// Function to handle error data
-//
+// ----------------------------------------------------------------------
+/*
+	Send error data from the DLL API to the client, whenever data available in the errorBuffer.
+*/
 void handleErrorConnection(SOCKET clientSocket, std::string name) {
 
 	int checkPeriod = 0;
@@ -338,9 +356,10 @@ void handleErrorConnection(SOCKET clientSocket, std::string name) {
 	}
 }
 
-//
-// Function to handle real time data
-//
+// ----------------------------------------------------------------------
+/*
+	Send real-time data from the station to the client, whenever there is data available in the realtimeBuffer.
+*/
 void handleRealTimeConnection(SOCKET clientSocket, std::string name) {
 
 	int checkPeriod = 0;
@@ -368,15 +387,18 @@ void handleRealTimeConnection(SOCKET clientSocket, std::string name) {
 	}
 }
 
-//
-// Function to handle audio data
-//
+// ----------------------------------------------------------------------
+/*
+	Handle audio data
+*/
 void handleAudioConnection(SOCKET clientSocket, std::string name) {
 	loopbackCapture.handleSocketConnection(clientSocket, name);
 }
-//
-// Function to listen on a specific port
-//
+
+// ----------------------------------------------------------------------
+/*
+	Listen for incoming connections on a socket.
+*/
 void socketHandle(	std::string name,
 					int ServiceCode,
 					int port,
@@ -471,10 +493,11 @@ void socketHandle(	std::string name,
 	logEtherDLL.info(name + " stopped listening on port " + std::to_string(port));
 }
 
-//
-// Create a connection object to the station and connect to it.
-//
-void StationConnect(void) {
+// ----------------------------------------------------------------------
+/*
+	Create a connection object to the DLL and connect to it.
+*/
+void connectAPI(void) {
 	// Create a local copy of APIserverId. This is necessary because TCI methods update the APIserverId value to the next available ID.
 	// unsigned long NextServerId = APIserverId;
 
@@ -506,7 +529,7 @@ void StationConnect(void) {
 	// Handle the error code from object creation
 	if (errCode != ERetCode::API_SUCCESS)
 	{
-		message = "Object associated with station not created: " + ERetCodeToString(errCode);
+		message = "Object associated with the API was not created: " + ERetCodeToString(errCode);
 		logEtherDLL.error(message);
 		//running.store(false);
 		interruptionCode.store(mcs::Code::STATION_ERROR);
@@ -539,10 +562,11 @@ void StationConnect(void) {
 	}
 }
 
-//
-// Disconnect station and socket clients
-//
-void StationDisconnect(void)
+// ----------------------------------------------------------------------
+/*
+	Disconnect station and socket clients
+*/
+void disconnectAPI(void)
 {
 
 	ERetCode errCode = Disconnect(APIserverId);
@@ -562,16 +586,17 @@ void StationDisconnect(void)
 	*/
 }
 
+// ----------------------------------------------------------------------
+/*
+	MAIN
+*/
 int main() {
 
 	registerSignalHandlers();
 
 	// Read configuration from JSON file
 	std::ifstream config_file("config.json");
-	/*
-	  * Felipe Machado - 29/08/2024
-	  * checks if configuration file exists, if does not exist, a new file is generated with default values 
-	*/
+
 	if (config_file.fail()) {
 		newDefaultConfigFile();
 		std::ifstream config_file("config.json");
@@ -582,7 +607,7 @@ int main() {
 	}	
 
 	logEtherDLL.start("EtherDLL", config["log"]["console"]["enable"].get<bool>(), config["log"]["file"]["enable"].get<bool>(), config["log"]["console"]["level"].get<std::string>(), config["log"]["file"]["path"].get<std::string>(), config["log"]["file"]["level"].get<std::string>());
-	StationConnect();
+	connectAPI();
 
 	// Start thread for the command channel socket service. This thread will listen for incoming commands and place then in the command queue
 	std::thread commandThread(socketHandle,
@@ -600,9 +625,6 @@ int main() {
 		config["service"]["stream"]["timeout_s"].get<int>(),
 		handleStreamConnection);
 
-	/*
-	  * Felipe Machado - 02/09/2024
-	*/
 	// Start thread for the stream channel socket service. This thread will stream error back to the client
 	std::thread errorThread(socketHandle,
 		"Error service",
@@ -611,9 +633,6 @@ int main() {
 		config["service"]["error"]["timeout_s"].get<int>(),
 		handleErrorConnection);
 
-	/*
-	  * Felipe Machado - 02/09/2024
-	*/
 	// Start thread for the stream channel socket service. This thread will stream real time data to the client
 	std::thread realtimeThread(socketHandle,
 		"Real time service",
@@ -622,9 +641,6 @@ int main() {
 		config["service"]["realtime"]["timeout_s"].get<int>(),
 		handleRealTimeConnection);
 
-	/*
-	  * Felipe Machado - 04/10/2024
-	*/
 	// Start thread for the audio socket service.
 	std::thread audioThread(socketHandle,
 		"Audio service",
@@ -637,19 +653,15 @@ int main() {
 	while (running.load()) {
 
 		if (!commandQueue.empty()) {
-// ! Need to fix the mutex lock, moving it to functions which manipulate the commandQueue outside the scope of the main loop
-			std::lock_guard<std::mutex> lock(MCCommandMutex);
-			std::string command = commandQueue.back();
-			commandQueue.pop_back();
+			std::string command;
+			{
+				std::lock_guard<std::mutex> lock(MCCommandMutex);
+				command = commandQueue.back();
+				commandQueue.pop_back();
+			}
 			logEtherDLL.info("Processing command: " + command);
 			
-			/*
-			* Felipe Machado - 23/08/2024
-			* Exemplo pacote socket
-			* {commandCode: 1, commandStruct: struct, taskType: , reqID: ,  }
-			*/ 
 			unsigned long requestID = 0;
-			using json = nlohmann::json;
 			json jsonObj = json::parse(command);
 
 			int cmd = jsonObj["commandCode"].get<int>();
@@ -744,7 +756,7 @@ int main() {
 	}
 
 	// Close the connection
-	StationDisconnect();
+	disconnectAPI();
 	logEtherDLL.~EtherDLLLog();
 
 	return static_cast<int>(interruptionCode.load());
