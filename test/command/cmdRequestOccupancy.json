@@ -13,8 +13,8 @@
         "band": {
             "channelBandwidth": 25000,
             "exclude": false,
-            "highFrequency": 99975000,
-            "lowFrequency": 90000000
+            "highFrequency": 108000000,
+            "lowFrequency": 88000000
         }
     }
 }

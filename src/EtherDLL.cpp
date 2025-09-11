@@ -606,7 +606,15 @@ int main() {
 		config = json::parse(config_file);
 	}	
 
-	logEtherDLL.start("EtherDLL", config["log"]["console"]["enable"].get<bool>(), config["log"]["file"]["enable"].get<bool>(), config["log"]["console"]["level"].get<std::string>(), config["log"]["file"]["path"].get<std::string>(), config["log"]["file"]["level"].get<std::string>());
+	logEtherDLL.start(
+		"EtherDLL",
+		config["log"]["console"]["enable"].get<bool>(),
+		config["log"]["file"]["enable"].get<bool>(),
+		config["log"]["console"]["level"].get<std::string>(),
+		config["log"]["file"]["path"].get<std::string>(),
+		config["log"]["file"]["level"].get<std::string>()
+	);
+
 	connectAPI();
 
 	// Start thread for the command channel socket service. This thread will listen for incoming commands and place then in the command queue

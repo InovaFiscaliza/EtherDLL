@@ -14,7 +14,7 @@
     <VCProjectVersion>17.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
     <ProjectGuid>{e1e8fdb6-e330-4479-b6d0-c276cdfd8095}</ProjectGuid>
-    <RootNamespace>MIAerConnVS</RootNamespace>
+    <RootNamespace>EtherDLL</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
     <ProjectName>EtherDLL</ProjectName>
   </PropertyGroup>
@@ -97,7 +97,10 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="base64.h" />
+    <ClInclude Include="base64\base64.h" />
+    <ClInclude Include="dllSpecific\scorpio\MoreEquipCtrlMsg.h" />
+    <ClInclude Include="dllSpecific\scorpio\OccupSpectConnect.h" />
+    <ClInclude Include="dllSpecific\scorpio\StdAfx.h" />
     <ClInclude Include="EtherDLLAudio.h" />
     <ClInclude Include="EtherDLLAudioCommon.h" />
     <ClInclude Include="EtherDLLConstants.h" />
@@ -107,9 +110,9 @@
     <ClInclude Include="EtherDLLUtils.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="base64.cpp" />
+    <ClCompile Include="base64\base64.cpp" />
+    <ClCompile Include="dllSpecific\scorpio\StdAfx.cpp" />
     <ClCompile Include="ExternalCodes.cpp" />
-    <ClCompile Include="EtherDLLAudio%282%29.cpp" />
     <ClCompile Include="EtherDLL.cpp" />
     <ClCompile Include="EtherDLLAudio.cpp" />
     <ClCompile Include="EtherDLLProcessApiResponse.cpp" />

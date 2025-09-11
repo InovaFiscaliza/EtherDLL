@@ -1,12 +1,15 @@
 #include "EtherDLLUtils.h"
 
+using json = nlohmann::json;
+
 /*
 * Felipe Machado
 * 
 * Generate a new config file with default values if file not exist
 */
 void newDefaultConfigFile() {
-	using json = nlohmann::json;
+	// Create a JSON object with default values
+
 	json jsonObj;
 
 	jsonObj["log"]["console"]["enable"] = true;
@@ -220,15 +223,36 @@ SMeasReqData* jsonToSMeasReqData(nlohmann::json jsonObj) {
 }
 
 /*
-* Felipe Machado
 * 
 * Convert JSON object in struct a of SOccupReqData
 */
 SOccupReqData* jsonToSOccupReqData(nlohmann::json jsonObj) {
 	SOccupReqData structSO;
-	structSO.ant = jsonObj["ant"].is_null() == true ? (SEquipCtrlMsg::EAnt)NULL : jsonObj["ant"].get<SEquipCtrlMsg::EAnt>();
-	
 	SSmsMsg::SBandV4 band;
+
+	// Find the number of bands in the JSON object
+	if (jsonObj["band"].is_null() == true || jsonObj["band"].is_array() == false || jsonObj["band"].size() == 0) {
+		logEtherDLL.error("SOccupReqData: 'band' field is missing or empty in the JSON object.");
+		return NULL;
+	}
+
+	// If 'band' is an array, set the number of bands accordingly
+	// otherwise set it to 1 and convert it to an array
+	if (jsonObj["band"].is_array() == true) {
+		structSO.numBands = jsonObj["band"].size();
+	} else {
+		structSO.numBands = 1; 
+		json singleBand = jsonObj["band"];
+		jsonObj["band"] = json::array({ singleBand });
+	}
+
+	// create a vector of band objects and fill it with data from the JSON object
+	
+
+	// TODO: Handle multiple bands, using vector and dynamic memory allocation
+	// TODO: Handle default values from config, replacing NULL
+	// TODO: Reorder the field handling to match the struct order
+
 
 	if (jsonObj["band"]["channelBandwidth"].is_null() == false) {
 		band.channelBandwidth = Units::Frequency(jsonObj["band"]["channelBandwidth"].get<unsigned long>()).GetRaw();
@@ -243,21 +267,22 @@ SOccupReqData* jsonToSOccupReqData(nlohmann::json jsonObj) {
 		band.lowFrequency = Units::Frequency(jsonObj["band"]["lowFrequency"].get<unsigned long>()).GetRaw();
 	}
 
-	band.sType.signalType.horizPol = jsonObj["band"]["sType"]["signalType"]["horizPol"].is_null() == true ? NULL : jsonObj["band"]["sType"]["signalType"]["horizPol"].get<unsigned long>();
-	band.sType.signalType.narrow = jsonObj["band"]["sType"]["signalType"]["narrow"].is_null() == true ? NULL : jsonObj["band"]["sType"]["signalType"]["narrow"].get<unsigned long>();
-	band.sType.signalType.unused0 = jsonObj["band"]["sType"]["signalType"]["unused0"].is_null() == true ? NULL : jsonObj["band"]["sType"]["signalType"]["unused0"].get<unsigned long>();
-	band.sType.signalType.unused1 = jsonObj["band"]["sType"]["signalType"]["unused1"].is_null() == true ? NULL : jsonObj["band"]["sType"]["signalType"]["unused1"].get<unsigned long>();
+	band.sType.signalType.horizPol = jsonObj["band"]["signalType"]["horizPol"].is_null() == true ? NULL : jsonObj["band"]["sType"]["signalType"]["horizPol"].get<unsigned long>();
+	band.sType.signalType.narrow = jsonObj["band"]["signalType"]["narrow"].is_null() == true ? NULL : jsonObj["band"]["sType"]["signalType"]["narrow"].get<unsigned long>();
+	band.sType.signalType.unused0 = 0;
+	band.sType.signalType.unused1 = 0;
 
 	structSO.band[0] = band;
-	structSO.confidenceLevel = jsonObj["confidenceLevel"].is_null() == true ? NULL : jsonObj["confidenceLevel"].get<unsigned char>();
-	structSO.desiredAccuracy = jsonObj["desiredAccuracy"].is_null() == true ? NULL : jsonObj["desiredAccuracy"].get<unsigned char>();
-	structSO.durationMethod = jsonObj["durationMethod"].is_null() == true ? (SEquipCtrlMsg::EDurationMethod)NULL : jsonObj["durationMethod"].get<SEquipCtrlMsg::EDurationMethod>();
-	structSO.measurementTime = jsonObj["measurementTime"].is_null() == true ? NULL : jsonObj["measurementTime"].get<unsigned long>();
-	structSO.numBands = jsonObj["numBands"].is_null() == true ? NULL : jsonObj["numBands"].get<unsigned long>();
-	structSO.occPrimaryThreshold[0] = jsonObj["occPrimaryThreshold"][0].is_null() == true ? NULL : jsonObj["occPrimaryThreshold"][0].get<short>();
-	structSO.occupancyMinGap = jsonObj["occupancyMinGap"].is_null() == true ? NULL : jsonObj["occupancyMinGap"].get<unsigned long>();
-	structSO.storageTime = jsonObj["storageTime"].is_null() == true ? NULL : jsonObj["storageTime"].get<unsigned long>();
-	structSO.thresholdMethod = jsonObj["thresholdMethod"].is_null() == true ? (SEquipCtrlMsg::EThresholdMethod)NULL : jsonObj["thresholdMethod"].get<SEquipCtrlMsg::EThresholdMethod>();
+
+	structSO.ant = jsonObj["ant"].is_null() ? (SEquipCtrlMsg::EAnt)NULL : jsonObj["ant"].get<SEquipCtrlMsg::EAnt>();
+	structSO.confidenceLevel = jsonObj["confidenceLevel"].is_null() ? NULL : jsonObj["confidenceLevel"].get<unsigned char>();
+	structSO.desiredAccuracy = jsonObj["desiredAccuracy"].is_null() ? NULL : jsonObj["desiredAccuracy"].get<unsigned char>();
+	structSO.durationMethod = jsonObj["durationMethod"].is_null() ? (SEquipCtrlMsg::EDurationMethod)NULL : jsonObj["durationMethod"].get<SEquipCtrlMsg::EDurationMethod>();
+	structSO.measurementTime = jsonObj["measurementTime"].is_null() ? NULL : jsonObj["measurementTime"].get<unsigned long>();
+	structSO.occPrimaryThreshold[0] = jsonObj["occPrimaryThreshold"][0].is_null() ? NULL : jsonObj["occPrimaryThreshold"][0].get<short>();
+	structSO.occupancyMinGap = jsonObj["occupancyMinGap"].is_null() ? NULL : jsonObj["occupancyMinGap"].get<unsigned long>();
+	structSO.storageTime = jsonObj["storageTime"].is_null() ? NULL : jsonObj["storageTime"].get<unsigned long>();
+	structSO.thresholdMethod = jsonObj["thresholdMethod"].is_null() ? (SEquipCtrlMsg::EThresholdMethod)NULL : jsonObj["thresholdMethod"].get<SEquipCtrlMsg::EThresholdMethod>();
 	
 	auto occupbodySize = offsetof(SOccupReqData, band) + structSO.numBands * sizeof(SEquipCtrlMsg::SBandV4);
 	SOccupReqData* m_occReqMsg = (SOccupReqData*)malloc(occupbodySize);

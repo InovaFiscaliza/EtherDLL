@@ -11,7 +11,7 @@
     }
   },
   "station": {
-    "address": "172.24.3.11",
+    "address": "172.24.3.15",
     "port": 3303,
     "timeout_s": 10
   },
@@ -28,22 +28,44 @@
       "sleep_ms": 500,
       "check_period": 200
     },
-	"error": {
+    "error": {
       "port": 30002,
       "timeout_s": 10000,
       "sleep_ms": 500,
       "check_period": 200
     },
-	"realtime": {
+    "realtime": {
       "port": 30003,
       "timeout_s": 10000,
       "sleep_ms": 500,
       "check_period": 200
     },
-	"audio": {
+    "audio": {
       "port": 30004,
       "timeout_s": 60000
     },
     "simulated": true
+  },
+  "default": {
+    "OCCRequest": {
+      "durationMethod": "Fixed",
+      "thresholdMethod": "Noise Riding",
+      "storageTime": 1,
+      "measurementTime": 1,
+      "confidenceLevel": 90,
+      "desiredAccuracy": 90,
+      "occPrimaryThreshold": 10,
+      "occupancyMinGap": 1,
+      "occflags": {
+        "occupancyVsChannel": true,
+        "eFieldVsChannel": false,
+        "occupancyVsTimeOfDay": false,
+        "msglengthVsChannel": false,
+        "msglengthDistribution": false,
+        "spectrogram": false,
+        "timegram": false
+      },
+      "ant": 1
+    }
   }
 }
