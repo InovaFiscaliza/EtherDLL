@@ -7,7 +7,7 @@
 /*
 	Include headers
 */
-// Include the ScorpioAPI libraries 3h2cl5vTu8cg
+// Include the ScorpioAPI libraries
 #include <StdAfx.h>
 
 // Include the standard C++ headers
@@ -24,7 +24,7 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 
-// Include the nlohmann JSON library
+// Include additional libraries
 #include <nlohmann/json.hpp>
 
 // Include to solution specific libraries
