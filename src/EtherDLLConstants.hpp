@@ -2,7 +2,7 @@
 
 #include <string>
 
-namespace mcs {
+namespace edll {
 
     struct Code {
         static constexpr int RUNNING = 0;
@@ -40,4 +40,7 @@ namespace mcs {
 	constexpr double GHZ_FROM_MHZ = 0.001;
 	constexpr double PAN_OFFSET = 192.0;
 	constexpr double FREQ_FACTOR = 1920.0;
+
+    constexpr const char* DEFAULT_CONFIG_FILENAME = "EtherDLLConfig.json";
+	constexpr const char* VERSION = "1.0.0";
 }

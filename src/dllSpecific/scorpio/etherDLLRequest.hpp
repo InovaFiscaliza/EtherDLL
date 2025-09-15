@@ -1,5 +1,5 @@
 /**
- * @file scorpioDLLRequest.h
+ * @file etherDLLRequest.hpp
  * @brief JSON to Scorpio API data structure conversion functions
  * 
  * This header file contains function declarations for converting JSON objects
@@ -17,12 +17,7 @@
  * - ScorpioAPITypes.h
  * 
  **/
-
 #pragma once
-
-#include "StdAfx.h"
-// #include <sstream>
-// #include <fstream>
 
 #include <nlohmann/json.hpp>
 #include "ScorpioAPITypes.h"

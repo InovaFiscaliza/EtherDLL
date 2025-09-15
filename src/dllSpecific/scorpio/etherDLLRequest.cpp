@@ -18,8 +18,19 @@
 * 
 **/
 
-#include "scorpioDLLRequest.h"
+// ----------------------------------------------------------------------
+#include "etherDLLRequest.hpp"
+
+#include "EtherDLLLog.hpp"
+
 #include <nlohmann/json.hpp>
+#include <string>
+#include <tuple>
+
+#include "stdafx.h"
+#include "ScorpioAPITypes.h"
+#include "Units.h"
+#include "EquipCtrlMsg.h"
 
 using json = nlohmann::json;
 
@@ -190,6 +201,7 @@ SMeasReqData* jsonToSMeasReqData(nlohmann::json jsonObj) {
 	return m_measureReqMsg;
 }
 
+
 // ----------------------------------------------------------------------
 /**
 * @brief Convert JSON object in SOccupReqData struct
@@ -202,11 +214,6 @@ SOccupReqData* jsonToSOccupReqData(nlohmann::json jsonObj) {
 	SOccupReqData structSO;
 	SSmsMsg::SBandV4 band;
 
-	// Find the number of bands in the JSON object
-	if (jsonObj["band"].is_null() == true || jsonObj["band"].is_array() == false || jsonObj["band"].size() == 0) {
-		logEtherDLL.error("SOccupReqData: 'band' field is missing or empty in the JSON object.");
-		return NULL;
-	}
 
 	// If 'band' is an array, set the number of bands accordingly
 	// otherwise set it to 1 and convert it to an array
@@ -379,4 +386,150 @@ SAVDReqData* jsonToSAVDReqData(nlohmann::json jsonObj) {
 	memcpy(avdReqMsg, &structSO, avdbodySize);
 
 	return avdReqMsg;
+}
+
+
+
+void EtherDLLLog::logCommandExec(ERetCode errCode, std::string command) {
+	if (errCode != ERetCode::API_SUCCESS)
+	{
+		logger.error("[" + command + "] ERROR. " + ERetCodeToString(errCode));
+	}
+	else
+	{
+		logger.info("[" + command + "] command executed");
+	}
+}
+
+
+// ----------------------------------------------------------------------
+/**
+* @brief Test JSON object contains the required information is present
+*
+* @param jsonObj: JSON object containing the parameters
+* @param msgType: Message type to be validated (see ECSMSDllMsgType enum)
+* @return nlohmann::json: 
+* @throws NO EXCEPTION HANDLING
+**/
+json validateRequest(json jsonObj, ECSMSDllMsgType msgType) {
+
+	json msg = json::object();
+
+	switch (msgType)
+	{
+	case ECSMSDllMsgType::GET_OCCUPANCYDF:
+		// fallthrough intended to also validate GET_OCCUPANCY fields
+	case ECSMSDllMsgType::GET_OCCUPANCY:
+		if (jsonObj["band"].is_null() == true || jsonObj["band"].is_array() == false || jsonObj["band"].size() == 0) {
+			msg += "SOccupReqData: 'band' field is missing or empty in the JSON object; ";
+		}
+		break;
+	case ECSMSDllMsgType::GET_AVD:
+		break;
+	case ECSMSDllMsgType::GET_MEAS:
+		break;
+	case ECSMSDllMsgType::GET_TASK_STATUS:
+		break;
+	case ECSMSDllMsgType::GET_TASK_STATE:
+		break;
+	case ECSMSDllMsgType::TASK_SUSPEND:
+		break;
+	case ECSMSDllMsgType::TASK_RESUME:
+		break;
+	case ECSMSDllMsgType::TASK_TERMINATE:
+		break;
+	case ECSMSDllMsgType::GET_BIST:
+		break;
+	case ECSMSDllMsgType::SET_AUDIO_PARAMS:
+		break;
+	case ECSMSDllMsgType::FREE_AUDIO_CHANNEL:
+		break;
+	case ECSMSDllMsgType::SET_PAN_PARAMS:
+		break;
+	case ECSMSDllMsgType::GET_PAN:
+		break;
+	default:
+		break;
+	}
+
+	return std::make_tuple(msg, log_level);
+}
+
+// ----------------------------------------------------------------------
+/**
+* @brief Test JSON object contains the required information is present
+*
+* @param jsonObj: JSON object containing the parameters
+* @param msgType: Message type to be validated (see ECSMSDllMsgType enum)
+* @return std::string: Empty if all required fields are present, otherwise a string describing the missing fields
+* @throws NO EXCEPTION HANDLING
+**/
+
+int cmd = jsonObj["commandCode"].get<int>();
+
+switch (cmd)
+{
+case ECSMSDllMsgType::GET_OCCUPANCY:
+	logEtherDLL.logCommandExec(RequestOccupancy(APIserverId, jsonToSOccupReqData(jsonObj["occupancyParams"]), &requestID), "RequestOccupancy");
+	break;
+case ECSMSDllMsgType::GET_OCCUPANCYDF:
+	logEtherDLL.logCommandExec(RequestOccupancyDF(APIserverId, jsonToSOccDFReqData(jsonObj["occupancyParams"]), &requestID), "RequestOccupancyDF");
+	break;
+case ECSMSDllMsgType::GET_AVD:
+	logEtherDLL.logCommandExec(RequestAVD(APIserverId, jsonToSAVDReqData(jsonObj["acdParams"]), &requestID), "RequestAVD");
+	break;
+case ECSMSDllMsgType::GET_MEAS:
+	logEtherDLL.logCommandExec(RequestMeasurement(APIserverId, jsonToSMeasReqData(jsonObj["measParams"]), &requestID), "RequestMeasurement");
+	break;
+case ECSMSDllMsgType::GET_TASK_STATUS:
+	logEtherDLL.logCommandExec(RequestTaskStatus(APIserverId, jsonObj["reqId"].get<unsigned long>()), "RequestTaskStatus");
+	break;
+case ECSMSDllMsgType::GET_TASK_STATE:
+	logEtherDLL.logCommandExec(RequestTaskState(APIserverId, (ECSMSDllMsgType)jsonObj["taskType"].get<unsigned long>(), jsonObj["reqId"].get<unsigned long>()), "RequestTaskState");
+	break;
+case ECSMSDllMsgType::TASK_SUSPEND:
+	logEtherDLL.logCommandExec(SuspendTask(APIserverId, (ECSMSDllMsgType)jsonObj["taskType"].get<unsigned long>(), jsonObj["reqId"].get<unsigned long>()), "SuspendTask");
+	break;
+case ECSMSDllMsgType::TASK_RESUME:
+	logEtherDLL.logCommandExec(ResumeTask(APIserverId, (ECSMSDllMsgType)jsonObj["taskType"].get<unsigned long>(), jsonObj["reqId"].get<unsigned long>()), "ResumeTask");
+	break;
+case ECSMSDllMsgType::TASK_TERMINATE:
+	logEtherDLL.logCommandExec(TerminateTask(APIserverId, jsonObj["reqId"].get<unsigned long>()), "TerminateTask");
+	break;
+case ECSMSDllMsgType::GET_BIST:
+	logEtherDLL.logCommandExec(RequestBist(APIserverId, (EBistScope)jsonObj["scope"].get<int>(), &requestID), "RequestBist");
+	break;
+case ECSMSDllMsgType::SET_AUDIO_PARAMS:
+{
+	ERetCode ret = SetAudio(APIserverId, jsonToSAudioParams(jsonObj["audioParams"]), &requestID);
+	logEtherDLL.logCommandExec(ret, "SetAudio");
+	if (ret == ERetCode::API_SUCCESS) {
+		DWORD processId = wcstoul(L"123", nullptr, 0);
+		HRESULT hr = loopbackCapture.StartCaptureAsync(processId, false, L"audio");
+		if (FAILED(hr))
+		{
+			logEtherDLL.error("Failed to start audio capture");
+		}
+		else {
+			logEtherDLL.info("Capturing audio.");
+		}
+	}
+	break;
+}
+case ECSMSDllMsgType::FREE_AUDIO_CHANNEL:
+{
+	logEtherDLL.logCommandExec(FreeAudio(APIserverId, jsonObj["channel"].get<unsigned long>(), &requestID), "FreeAudio");
+	loopbackCapture.StopCaptureAsync();
+	logEtherDLL.info("Finished audio capture.");
+	break;
+}
+case ECSMSDllMsgType::SET_PAN_PARAMS:
+	logEtherDLL.logCommandExec(SetPanParams(APIserverId, jsonToSPanParams(jsonObj["panParams"]), &requestID), "SetPanParams");
+	break;
+case ECSMSDllMsgType::GET_PAN:
+	logEtherDLL.logCommandExec(RequestPan(APIserverId, jsonToSGetPanParams(jsonObj["panParams"]), &requestID), "RequestPan");
+	break;
+default:
+	logEtherDLL.error("command not recognized");
+	break;
 }

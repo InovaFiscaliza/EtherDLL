@@ -4,18 +4,13 @@
 */
 
 // ----------------------------------------------------------------------
-/*
-	Include headers
-*/
-// Include the ScorpioAPI libraries
-#include <StdAfx.h>
-
 // Include the standard C++ headers
 #include <mutex>
 #include <thread>
 #include <atomic>
 #include <vector>
 #include <string>
+#include <tuple>
 #include <chrono>
 #include <csignal>
 #include <fstream>
@@ -26,34 +21,25 @@
 
 // Include additional libraries
 #include <nlohmann/json.hpp>
+#include <spdlog/spdlog.h>
 
-// Include to solution specific libraries
-#include <EtherDLLLog.h>
-#include <ExternalCodes.h>
-#include <EtherDLLAudio.h>
-#include <EtherDLLUtils.h>
-#include <EtherDLLConstants.h>
-#include <EtherDLLProcessApiResponse.h>
+// Include general EtherDLL headers
+#include <EtherDLLLog.hpp>
+#include <EtherDLLAudio.hpp>
+#include <EtherDLLUtils.hpp>
+#include <EtherDLLConstants.hpp>
+
+// Include to DLL specific headers
+#include <etherDLLCodes.hpp>
+#include <etherDLLConfig.hpp>
+#include <etherDLLRequest.hpp>
+#include <etherDLLResponse.hpp>
+#include <filesystem>
 
  // Libs for socket
 #pragma comment (lib, "Ws2_32.lib")
 #pragma comment (lib, "Mswsock.lib")
-
 #pragma comment (lib, "AdvApi32.lib")
-
-// ----------------------------------------------------------------------
-/*
-	In debug and release the name of ScorpioAPI is different, so checking is necessary to know which one to call
-*/
-#ifdef _X86_
-	#pragma comment (lib, "ScorpioAPIDll.lib") //RELEASE/DEBUG 32Bits
-#else
-	#ifdef NDEBUG
-		#pragma comment (lib, "ScorpioAPIDll.lib") //RELEASE 64Bits
-	#else
-		#pragma comment (lib, "ScorpioAPIDlld.lib") //DEBUG 64Bits
-	#endif
-#endif
 
 // For convenience
 using json = nlohmann::json;
@@ -64,6 +50,9 @@ using json = nlohmann::json;
 */
 // JSON configuration object
 json config;
+
+// Logger object
+spdlog::logger log;
 
 // Atomic flag to signal application error
 std::atomic<bool> running{ true }; 
@@ -94,6 +83,7 @@ std::mutex MCStationMutex;
 	Global variables related to the API
 */
 
+
 // API server ID. This service is intended to be used to connect to a single station, always 0.
 unsigned long APIserverId = 0;
 
@@ -102,8 +92,6 @@ SScorpioAPIClient station;
 
 // Station capabilities
 SCapabilities StationCapabilities;
-
-EtherDLLLog logEtherDLL;
 
 CLoopbackCapture loopbackCapture;
 
@@ -177,7 +165,7 @@ void OnDataFunc(_In_  unsigned long serverId, _In_ ECSMSDllMsgType respType, _In
 			break;
 	}
 
-	logEtherDLL.info("OnData received with type " + respType);
+	log.info("OnData received with type " + respType);
 	logEtherDLL.info("OnData received destination address " + desstAddr);
 	logEtherDLL.info("OnData received server ID " + serverId);
 }
@@ -587,33 +575,123 @@ void disconnectAPI(void)
 }
 
 // ----------------------------------------------------------------------
+/**
+ * @brief Read the configuration file and return a JSON object
+ *
+ * @param config: JSON object containing configuration
+ * @return nlohmann::json: JSON object containing the configuration
+ * @throws std::invalid_argument if the file cannot be read or parsed
+ * @throws std::runtime_error if the file does not exist and cannot be created
+**/
+json readConfigFile(std::string fileName) {
+
+	try {
+		std::ifstream configFile(fileName);
+
+		if (!configFile.is_open()) {
+			std::cout << "Configuration file not found, creating default: " + fileName << std::endl;
+			newDefaultConfigFile(fileName);
+
+			// Reopen the newly created file
+			configFile.open(fileName);
+			if (!configFile.is_open()) {
+				throw std::runtime_error("Failed to create or open configuration file: " + fileName);
+			}
+		}
+
+		config = json::parse(configFile);
+		configFile.close(); // Explicitly close the file
+	}
+	catch (const json::parse_error& e) {
+		throw std::invalid_argument("JSON parsing error: " + std::string(e.what()));
+	}
+	catch (const std::exception& e) {
+		throw std::invalid_argument("Error reading configuration file: " + std::string(e.what()));
+	}
+
+	return config;
+}
+
+
+// ----------------------------------------------------------------------
+/**
+ * @brief Print help message to the std::cout
+ * 
+ * @param None
+ * @return None
+ * @throws None
+**/
+void print_help() {
+	std::cout << std::endl;
+	std::cout << "--------------------------------------------------------------------------------" << std::endl;
+	std::cout << "EtherDLL Version " + std::string(edll::VERSION) << std::endl;
+	std::cout << "--------------------------------------------------------------------------------" << std::endl;
+	std::cout << "Usage: EtherDLL.exe [options] [config_file.json]" << std::endl;
+	std::cout << "Options:" << std::endl;
+	std::cout << "  -h, --help       Show this help message and exit" << std::endl;
+	std::cout << "  -f, --file	     JSON configuration file to use instead of default" << std::endl;
+	std::cout << std::endl;
+	std::cout << " * If argument is provided, looks for the default filename 'EtherDLLConfig.json'" << std::endl;
+	std::cout << " * If the configuration file does not exist, a default one will be created." << std::endl;
+	std::cout << std::endl;
+}
+
+
+std::string handleInputArguments(int argc, char* argv[]) {
+	// test if the application was called with any command line arguments
+	if (argc > 1) {
+		std::string arg1 = argv[1];
+
+		//if used "--" change to "-"
+		if (arg1.length() > 2) {
+			arg1 = arg1.substr(1);
+		}
+
+		switch (arg1[2]) {
+			case '-h':
+				// intended fall through
+			case '-H': {
+				print_help();
+				exit(0);
+			}
+			case '-f':
+				// intended fall through
+			case '-F':
+				if (argc != 3) {
+					print_help();
+					throw std::invalid_argument("Too many arguments provided. (Provided " + std::to_string(argc) + " arguments, expected 2)");
+				}
+				else
+				{
+					std::string fileName = std::string(argv[2]);
+					return fileName;
+				}
+			default: {
+				print_help();
+				throw std::invalid_argument("Unknown argument: " + arg1);
+			}
+		}
+	}
+	// No arguments provided, use default configuration file name
+	return std::string(edll::DEFAULT_CONFIG_FILENAME);
+}
+
+// ----------------------------------------------------------------------
 /*
 	MAIN
 */
-int main() {
+int main(int argc, char* argv[]) {
 
 	registerSignalHandlers();
 
-	// Read configuration from JSON file
-	std::ifstream config_file("config.json");
+	std::string configFileName = handleInputArguments(argc, argv);
 
-	if (config_file.fail()) {
-		newDefaultConfigFile();
-		std::ifstream config_file("config.json");
-		config = json::parse(config_file);
-	}
-	else {
-		config = json::parse(config_file);
-	}	
+	json config = readConfigFile(configFileName);
 
-	logEtherDLL.start(
-		"EtherDLL",
-		config["log"]["console"]["enable"].get<bool>(),
-		config["log"]["file"]["enable"].get<bool>(),
-		config["log"]["console"]["level"].get<std::string>(),
-		config["log"]["file"]["path"].get<std::string>(),
-		config["log"]["file"]["level"].get<std::string>()
-	);
+	auto logPtr = initializeLog(config["log"].get<json>());
+    if (logPtr) {
+        log = *logPtr;
+    }
 
 	connectAPI();
 
@@ -672,73 +750,10 @@ int main() {
 			unsigned long requestID = 0;
 			json jsonObj = json::parse(command);
 
-			int cmd = jsonObj["commandCode"].get<int>();
 
-			switch (cmd)
-			{
-				case ECSMSDllMsgType::GET_OCCUPANCY:
-					logEtherDLL.logCommandExec(RequestOccupancy(APIserverId, jsonToSOccupReqData(jsonObj["occupancyParams"]), &requestID), "RequestOccupancy");
-					break;
-				case ECSMSDllMsgType::GET_OCCUPANCYDF:
-					logEtherDLL.logCommandExec(RequestOccupancyDF(APIserverId, jsonToSOccDFReqData(jsonObj["occupancyParams"]), &requestID), "RequestOccupancyDF");
-					break;
-				case ECSMSDllMsgType::GET_AVD:
-					logEtherDLL.logCommandExec(RequestAVD(APIserverId, jsonToSAVDReqData(jsonObj["acdParams"]), &requestID), "RequestAVD");
-					break;
-				case ECSMSDllMsgType::GET_MEAS:
-					logEtherDLL.logCommandExec(RequestMeasurement(APIserverId, jsonToSMeasReqData(jsonObj["measParams"]), &requestID), "RequestMeasurement");
-					break;
-				case ECSMSDllMsgType::GET_TASK_STATUS:
-					logEtherDLL.logCommandExec(RequestTaskStatus(APIserverId, jsonObj["reqId"].get<unsigned long>()), "RequestTaskStatus");
-					break;
-				case ECSMSDllMsgType::GET_TASK_STATE:
-					logEtherDLL.logCommandExec(RequestTaskState(APIserverId, (ECSMSDllMsgType)jsonObj["taskType"].get<unsigned long>(), jsonObj["reqId"].get<unsigned long>()), "RequestTaskState");
-					break;
-				case ECSMSDllMsgType::TASK_SUSPEND:
-					logEtherDLL.logCommandExec(SuspendTask(APIserverId, (ECSMSDllMsgType)jsonObj["taskType"].get<unsigned long>(), jsonObj["reqId"].get<unsigned long>()), "SuspendTask");
-					break;
-				case ECSMSDllMsgType::TASK_RESUME:
-					logEtherDLL.logCommandExec(ResumeTask(APIserverId, (ECSMSDllMsgType)jsonObj["taskType"].get<unsigned long>(), jsonObj["reqId"].get<unsigned long>()), "ResumeTask");
-					break;
-				case ECSMSDllMsgType::TASK_TERMINATE:
-					logEtherDLL.logCommandExec(TerminateTask(APIserverId, jsonObj["reqId"].get<unsigned long>()), "TerminateTask");
-					break;
-				case ECSMSDllMsgType::GET_BIST:
-					logEtherDLL.logCommandExec(RequestBist(APIserverId, (EBistScope)jsonObj["scope"].get<int>(), &requestID), "RequestBist");
-					break;
-				case ECSMSDllMsgType::SET_AUDIO_PARAMS:
-				{
-					ERetCode ret = SetAudio(APIserverId, jsonToSAudioParams(jsonObj["audioParams"]), &requestID);
-					logEtherDLL.logCommandExec(ret, "SetAudio");
-					if (ret == ERetCode::API_SUCCESS) {
-						DWORD processId = wcstoul(L"123", nullptr, 0);
-						HRESULT hr = loopbackCapture.StartCaptureAsync(processId, false, L"audio");
-						if (FAILED(hr))
-						{
-							logEtherDLL.error("Failed to start audio capture");
-						} else {
-							logEtherDLL.info("Capturing audio.");
-						}
-					}
-					break;
-				}
-				case ECSMSDllMsgType::FREE_AUDIO_CHANNEL:
-				{
-					logEtherDLL.logCommandExec(FreeAudio(APIserverId, jsonObj["channel"].get<unsigned long>(), &requestID), "FreeAudio");
-					loopbackCapture.StopCaptureAsync();
-					logEtherDLL.info("Finished audio capture.");
-					break;
-				}
-				case ECSMSDllMsgType::SET_PAN_PARAMS:
-					logEtherDLL.logCommandExec(SetPanParams(APIserverId, jsonToSPanParams(jsonObj["panParams"]), &requestID), "SetPanParams");
-					break;
-				case ECSMSDllMsgType::GET_PAN:
-					logEtherDLL.logCommandExec(RequestPan(APIserverId, jsonToSGetPanParams(jsonObj["panParams"]), &requestID), "RequestPan");
-					break;
-				default:
-					logEtherDLL.error("command not recognized");
-					break;
-			}
+			std::tie(message, log_level)
+
+
 		}
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));

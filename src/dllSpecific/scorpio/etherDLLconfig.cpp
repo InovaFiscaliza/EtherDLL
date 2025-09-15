@@ -1,5 +1,6 @@
 /**
-* @file scorpioDLLconfig.cpp
+* @file etherDLLconfig.cpp
+* 
 * @brief Configuration file creation with default values
 * * This source file contains the implementation for creating a new configuration file
 * * with default values, saving it to a specified filename.
@@ -17,90 +18,114 @@
 * 
 **/
 
+// ----------------------------------------------------------------------
+#include "etherDLLConfig.hpp"
 
-#include <nlohmann/json.hpp>
-#include "scorpioDLLConfig.h"
-
-using json = nlohmann::json;
+#include <string>
+#include <fstream>
 
 // ----------------------------------------------------------------------
 /**
  * @brief Save default configuration file
  *
  * Create a new configuration file with default values, saving it to the specified filename.
+ * It does not overwrite existing files or create the folder structure.
  *
  * @param filename: Name of the configuration file to be created
  * @return void
- * @throws `runtime_error` if file cannot be created or written
+ * @throws std::runtime_error if file cannot be created or written
  **/
 void newDefaultConfigFile(const std::string& filename) {
-	// Create a JSON object with default values
 
-	json jsonObj;
+	std::string default_config = R"(
+{
+  "log": {
+    "console": {
+      "enable": true,
+      "level": "trace"
+    },
+    "file": {
+      "enable": true,
+      "level": "trace",
+      "path": "log.txt"
+    }
+  },
+  "station": {
+    "address": "172.24.3.15",
+    "port": 3303,
+    "timeout_s": 10
+  },
+  "service": {
+    "command": {
+      "port": 30000,
+      "timeout_s": 10000,
+      "sleep_ms": 100,
+      "check_period": 10
+    },
+    "stream": {
+      "port": 30001,
+      "timeout_s": 10000,
+      "sleep_ms": 500,
+      "check_period": 200
+    },
+    "error": {
+      "port": 30002,
+      "timeout_s": 10000,
+      "sleep_ms": 500,
+      "check_period": 200
+    },
+    "realtime": {
+      "port": 30003,
+      "timeout_s": 10000,
+      "sleep_ms": 500,
+      "check_period": 200
+    },
+    "audio": {
+      "port": 30004,
+      "timeout_s": 60000
+    },
+    "simulated": true
+  },
+  "default": {
+    "OCCRequest": {
+      "durationMethod": "Fixed",
+      "thresholdMethod": "Noise Riding",
+      "storageTime": 1,
+      "measurementTime": 1,
+      "confidenceLevel": 90,
+      "desiredAccuracy": 90,
+      "occPrimaryThreshold": 10,
+      "occupancyMinGap": 1,
+      "occflags": {
+        "occupancyVsChannel": true,
+        "eFieldVsChannel": false,
+        "occupancyVsTimeOfDay": false,
+        "msglengthVsChannel": false,
+        "msglengthDistribution": false,
+        "spectrogram": false,
+        "timegram": false
+      },
+      "ant": 1
+    }
+  }
+})";
 
-	jsonObj["log"]["console"]["enable"] = true;
-	jsonObj["log"]["console"]["level"] = "trace";
-
-	jsonObj["log"]["file"]["enable"] = true;
-	jsonObj["log"]["file"]["level"] = "trace";
-	jsonObj["log"]["file"]["path"] = "log.txt";
-
-	jsonObj["station"]["address"] = "166.139.112.178";
-	jsonObj["station"]["port"] = 3303;
-	jsonObj["station"]["timeout_s"] = 10;
-
-	jsonObj["service"]["command"]["port"] = 3000;
-	jsonObj["service"]["command"]["timeout_s"] = 10000;
-	jsonObj["service"]["command"]["sleep_ms"] = 100;
-	jsonObj["service"]["command"]["check_period"] = 10;
-
-	jsonObj["service"]["stream"]["port"] = 3001;
-	jsonObj["service"]["stream"]["timeout_s"] = 10000;
-	jsonObj["service"]["stream"]["sleep_ms"] = 500;
-	jsonObj["service"]["stream"]["check_period"] = 200;
-
-	jsonObj["service"]["error"]["port"] = 3002;
-	jsonObj["service"]["error"]["timeout_s"] = 10000;
-	jsonObj["service"]["error"]["sleep_ms"] = 500;
-	jsonObj["service"]["error"]["check_period"] = 200;
-
-	jsonObj["service"]["realtime"]["port"] = 3003;
-	jsonObj["service"]["realtime"]["timeout_s"] = 10000;
-	jsonObj["service"]["realtime"]["sleep_ms"] = 500;
-	jsonObj["service"]["realtime"]["check_period"] = 200;
-
-	jsonObj["service"]["audio"]["port"] = 3004;
-	jsonObj["service"]["audio"]["timeout_s"] = 60000;
-
-	jsonObj["service"]["simulated"] = true;
-
-	try {
-		std::ofstream file(filename);
-
-		// Verificar se o arquivo foi aberto com sucesso
-		if (!file.is_open()) {
-			throw std::runtime_error("Não foi possível abrir o arquivo: " + filename);
-		}
-
-		// Escrever JSON com formatação
-		file << jsonObj.dump(4); // 4 espaços de indentação
-
-		// Verificar se a escrita foi bem-sucedida
-		if (file.fail()) {
-			throw std::runtime_error("Erro ao escrever no arquivo: " + filename);
-		}
-
-		// Forçar flush e fechar explicitamente
-		file.flush();
-		file.close();
-
-		if (file.fail()) {
-			throw std::runtime_error("Erro ao finalizar escrita do arquivo: " + filename);
-		}
-
-	}
-	catch (const std::exception& e) {
-		// Log do erro ou re-throw dependendo da necessidade
-		throw std::runtime_error("Falha ao criar arquivo de configuração: " + std::string(e.what()));
-	}
+    try {
+        std::ofstream file(filename);
+        
+		// Verificação se arquivo pode ser aberto
+        if (!file.is_open()) {
+            throw std::runtime_error("Não foi possível abrir o arquivo: " + filename);
+        }
+        
+		// Habilitar exceções para operações futuras ofstream
+        file.exceptions(std::ios::failbit | std::ios::badbit);
+        
+        file << default_config;
+        
+    } catch (const std::ios_base::failure& e) {
+        throw std::runtime_error("Erro de I/O no arquivo: " + filename + " - " + e.what());
+    } catch (const std::exception& e) {
+        throw std::runtime_error("Falha ao criar arquivo de configuração: " + std::string(e.what()));
+    }
 }
