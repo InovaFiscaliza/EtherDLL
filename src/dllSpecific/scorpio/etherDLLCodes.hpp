@@ -1,5 +1,5 @@
 /**
- * @file externalCodes.h
+ * @file EtherDLLCodes.hpp
  * @brief Declarations of functions to convert codes used in the API to human readable messages
  *
  * This header file contains function declarations for converting 
@@ -10,10 +10,8 @@
  * @version 1.0
  *
  * @note Requires C++14 or later
- * @note Uses nlohmann/json library for JSON parsing
  *
- * Dependencies:
- * - string
+ * Special Dependencies:
  * - ScorpioAPITypes.h
  * - ScorpioAPIDll.h
  *

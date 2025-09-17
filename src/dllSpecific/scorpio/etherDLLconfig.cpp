@@ -23,6 +23,12 @@
 
 #include <string>
 #include <fstream>
+#include <stdexcept>
+
+#include <nlohmann/json.hpp>
+#include <spdlog/spdlog.h>
+
+#include <ScorpioAPIDll.h>
 
 // ----------------------------------------------------------------------
 /**
@@ -30,6 +36,8 @@
  *
  * Create a new configuration file with default values, saving it to the specified filename.
  * It does not overwrite existing files or create the folder structure.
+ * Default configuration is included from a separate file to keep the code clean.
+ * File has the JSON content defined within a raw string literal. R"(...)".
  *
  * @param filename: Name of the configuration file to be created
  * @return void
@@ -37,95 +45,97 @@
  **/
 void newDefaultConfigFile(const std::string& filename) {
 
-	std::string default_config = R"(
-{
-  "log": {
-    "console": {
-      "enable": true,
-      "level": "trace"
-    },
-    "file": {
-      "enable": true,
-      "level": "trace",
-      "path": "log.txt"
-    }
-  },
-  "station": {
-    "address": "172.24.3.15",
-    "port": 3303,
-    "timeout_s": 10
-  },
-  "service": {
-    "command": {
-      "port": 30000,
-      "timeout_s": 10000,
-      "sleep_ms": 100,
-      "check_period": 10
-    },
-    "stream": {
-      "port": 30001,
-      "timeout_s": 10000,
-      "sleep_ms": 500,
-      "check_period": 200
-    },
-    "error": {
-      "port": 30002,
-      "timeout_s": 10000,
-      "sleep_ms": 500,
-      "check_period": 200
-    },
-    "realtime": {
-      "port": 30003,
-      "timeout_s": 10000,
-      "sleep_ms": 500,
-      "check_period": 200
-    },
-    "audio": {
-      "port": 30004,
-      "timeout_s": 60000
-    },
-    "simulated": true
-  },
-  "default": {
-    "OCCRequest": {
-      "durationMethod": "Fixed",
-      "thresholdMethod": "Noise Riding",
-      "storageTime": 1,
-      "measurementTime": 1,
-      "confidenceLevel": 90,
-      "desiredAccuracy": 90,
-      "occPrimaryThreshold": 10,
-      "occupancyMinGap": 1,
-      "occflags": {
-        "occupancyVsChannel": true,
-        "eFieldVsChannel": false,
-        "occupancyVsTimeOfDay": false,
-        "msglengthVsChannel": false,
-        "msglengthDistribution": false,
-        "spectrogram": false,
-        "timegram": false
-      },
-      "ant": 1
-    }
-  }
-})";
 
+    std::string default_config =
+		#include "etherDLLConfig.json.inc"
+        ;
     try {
         std::ofstream file(filename);
-        
-		// Verificação se arquivo pode ser aberto
+
+        // Verificação se arquivo está ser aberto
         if (!file.is_open()) {
-            throw std::runtime_error("Não foi possível abrir o arquivo: " + filename);
+            throw std::runtime_error("Não foi possível abrir/criar o arquivo: " + filename);
         }
-        
-		// Habilitar exceções para operações futuras ofstream
+
+        // Habilitar exceções para operações futuras ofstream
         file.exceptions(std::ios::failbit | std::ios::badbit);
-        
+
         file << default_config;
-        
-    } catch (const std::ios_base::failure& e) {
+        file.close();
+    }    
+    catch (const std::ios_base::failure& e) {
         throw std::runtime_error("Erro de I/O no arquivo: " + filename + " - " + e.what());
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e) {
         throw std::runtime_error("Falha ao criar arquivo de configuração: " + std::string(e.what()));
     }
+}
+
+// ----------------------------------------------------------------------
+/*
+	Create a connection object to the DLL and connect to it.
+*/
+void connectAPI(const nlohmann::json& config, StationInfo& station, Logger& logger) {
+	// Create a local copy of APIserverId. This is necessary because TCI methods update the APIserverId value to the next available ID.
+	// unsigned long NextServerId = APIserverId;
+
+	// Hostname as simple string, extracted from th JSON configuration file
+	std::string hostNameStr = config["station"]["address"].get<std::string>();
+	station.hostName = stringToWString(hostNameStr);
+
+	// Port as simple string, extracted from the JSON configuration file where it is defined as a number
+	std::string portStr = std::to_string(config["station"]["port"].get<int>());
+	station.port = stringToWString(portStr);
+
+	// Timeout as unsigned long, extracted from the JSON configuration file in second and converted to miliseconds
+	station.sendTimeout = (unsigned long)(config["station"]["timeout_s"].get<int>()) * 1000;
+
+	// Error code using API ERetCode enum
+	ERetCode errCode;
+
+	// Create the connection object
+	errCode = ScorpioAPICreate(
+		APIserverId,
+		station,
+		OnErrorFunc,
+		OnDataFunc,
+		OnRealTimeDataFunc);
+
+	// Error message string to be used in the logger
+	std::string message;
+
+	// Handle the error code from object creation
+	if (errCode != ERetCode::API_SUCCESS)
+	{
+		message = "Object associated with the API was not created: " + ERetCodeToString(errCode);
+		logEtherDLL.error(message);
+		//running.store(false);
+		interruptionCode.store(mcs::Code::STATION_ERROR);
+		return;
+	}
+	else
+	{
+		logEtherDLL.info("Object creation successful");
+	}
+
+	// NextServerId = APIserverId;
+
+	// Once the object was successfully created, test connection to the station
+
+	errCode = RequestCapabilities(APIserverId, StationCapabilities);
+
+	// Handle the error code from station connection
+	if (errCode != ERetCode::API_SUCCESS)
+	{
+		message = "Failed to connect to " + hostNameStr + ": " + ERetCodeToString(errCode);
+		logEtherDLL.error(message);
+		//		running.store(false);
+		interruptionCode.store(mcs::Code::STATION_ERROR);
+		return;
+	}
+	else
+	{
+		message = "Connected to station " + hostNameStr;
+		logEtherDLL.info(message);
+	}
 }

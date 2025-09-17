@@ -1,11 +1,10 @@
-{
+R"({
   "log": {
+    "name": "log",
     "console": {
-      "enable": true,
       "level": "trace"
     },
     "file": {
-      "enable": true,
       "level": "trace",
       "path": "log.txt"
     }
@@ -68,4 +67,4 @@
       "ant": 1
     }
   }
-}
+})"

@@ -1,7 +1,33 @@
-#include "EtherDLLUtils.h"
+/**
+ * @file EtherDLLUtils.hpp
+ * @brief General utility functions used in EtherDLL
+ *
+ * @author fslobao
+ * @date 2025-09-12
+ * @version 1.0
+ *
+ * @note Requires C++14 or later
+ * @note Uses nlohmann/json library for JSON parsing
+ *
+ * Special Dependencies:
+ * - nlohmann/json.hpp
+ *
+ **/
+
+ // ----------------------------------------------------------------------
+#include "EtherDLLUtils.hpp"
+
 #include <nlohmann/json.hpp>
 
+#include <ctime>
+#include <chrono>
+#include <fmt/chrono.h>
+#include <cmath>
+
 using json = nlohmann::json;
+
+#include <iostream>
+
 
 // ----------------------------------------------------------------------
 /**
@@ -65,4 +91,94 @@ bool stringToBool(std::string str) {
 	bool b;
 	is >> std::boolalpha >> b;
 	return b;
+}
+
+// ----------------------------------------------------------------------
+/** @brief Convert COleTime to ISO formated string
+ *
+ * COLeTime is a double representing the number of days since midnight, December 30, 1899.
+ * Output is a string in ISO 8601 format: "YYYY-MM-DDTHH:MM:SS.ssssssZ"
+ * Time is represented down to microseconds (0.000001 seconds)
+ *
+ * @param oleTime: COleTime value to be converted
+ * @return std::string: ISO 8601 formatted string
+ * @throws NO EXCEPTION HANDLING
+**/
+std::string COleTimeToIsoStr(double oleTime) {
+	const double OLE_TIME_EPOCH_DIFF = 25569.0;
+	const int SECONDS_PER_DAY = 86400;
+
+	double unixTimeSeconds = (oleTime - OLE_TIME_EPOCH_DIFF) * SECONDS_PER_DAY;
+
+	// Separar parte inteira e fracionária para preservar precisão
+	std::time_t seconds = static_cast<std::time_t>(unixTimeSeconds);
+	double fractionalPart = unixTimeSeconds - seconds;
+
+	// Converter para chrono::time_point com precisão de microssegundos
+	auto tp = std::chrono::system_clock::from_time_t(seconds);
+	auto microseconds = std::chrono::microseconds(
+		static_cast<long long>(fractionalPart * 1000000)
+	);
+	tp += microseconds;
+
+	return fmt::format("{:%Y-%m-%dT%H:%M:%S}.{:06d}Z",
+		fmt::gmtime(std::chrono::system_clock::to_time_t(tp)),
+		microseconds.count() % 1000000);
+}
+
+
+// ----------------------------------------------------------------------
+/** @brief Base64 encoding function
+ *
+ * Functions to encode binary data to Base64 string and decode Base64 string to binary data.
+ * Uses standard Base64 character set.
+ * Based on public domain code by Jouni Malinen
+ *
+ * @param buf: Pointer to the input binary data
+ * @param bufLen: Length of the input binary data
+ * @return std::string: Base64 encoded string
+ *
+ * @param encoded_string: Input Base64 encoded string
+ * @return std::vector<BYTE>: Decoded binary data
+ * @throws NO EXCEPTION HANDLING
+**/
+std::string base64_encode(BYTE const* buf, unsigned int bufLen) {
+    std::string ret;
+    int i = 0;
+    int j = 0;
+    BYTE char_array_3[3];
+    BYTE char_array_4[4];
+
+    while (bufLen--) {
+        char_array_3[i++] = *(buf++);
+        if (i == 3) {
+            char_array_4[0] = (char_array_3[0] & 0xfc) >> 2;
+            char_array_4[1] = ((char_array_3[0] & 0x03) << 4) + ((char_array_3[1] & 0xf0) >> 4);
+            char_array_4[2] = ((char_array_3[1] & 0x0f) << 2) + ((char_array_3[2] & 0xc0) >> 6);
+            char_array_4[3] = char_array_3[2] & 0x3f;
+
+            for (i = 0; (i < 4); i++)
+                ret += base64_chars[char_array_4[i]];
+            i = 0;
+        }
+    }
+
+    if (i)
+    {
+        for (j = i; j < 3; j++)
+            char_array_3[j] = '\0';
+
+        char_array_4[0] = (char_array_3[0] & 0xfc) >> 2;
+        char_array_4[1] = ((char_array_3[0] & 0x03) << 4) + ((char_array_3[1] & 0xf0) >> 4);
+        char_array_4[2] = ((char_array_3[1] & 0x0f) << 2) + ((char_array_3[2] & 0xc0) >> 6);
+        char_array_4[3] = char_array_3[2] & 0x3f;
+
+        for (j = 0; (j < i + 1); j++)
+            ret += base64_chars[char_array_4[j]];
+
+        while ((i++ < 3))
+            ret += '=';
+    }
+
+    return ret;
 }

@@ -1,7 +1,20 @@
-// ----------------------------------------------------------------------
-/*
-	EtherDLL.cpp : Defines the entry point for the application.
-*/
+/**
+ * @file EtherDLL.cpp
+ * @brief Main source file for EtherDLL service
+ **
+ * * @author fslobao
+ * * @date 2025-09-12
+ * * @version 1.0
+ *
+ * * @note Designed for Windows OS using VSStudio and MSVC compiler for x86 architecture
+ * * @note Requires C++11 or later
+ * * @note Uses nlohmann/json library for JSON handling
+ * * @note Uses spdlog library for logging
+ *
+ * * * Dependencies:
+ * * - string
+ * * - externalCodes.h
+**/
 
 // ----------------------------------------------------------------------
 // Include the standard C++ headers
@@ -44,6 +57,7 @@
 // For convenience
 using json = nlohmann::json;
 
+
 // ----------------------------------------------------------------------
 /*
 	Global variables related to the application
@@ -58,7 +72,7 @@ spdlog::logger log;
 std::atomic<bool> running{ true }; 
 
 // Code to represent the cause for not running
-std::atomic<int> interruptionCode{ mcs::Code::RUNNING };
+std::atomic<int> interruptionCode{ edll::Code::RUNNING };
 
 // Vector used for the command queue
 std::vector<std::string> commandQueue;
@@ -77,124 +91,6 @@ std::mutex MCCommandMutex;
 std::mutex MCstreamMutex;
 std::mutex MCStationMutex;
 
-
-// ----------------------------------------------------------------------
-/*
-	Global variables related to the API
-*/
-
-
-// API server ID. This service is intended to be used to connect to a single station, always 0.
-unsigned long APIserverId = 0;
-
-// Station connection parameters
-SScorpioAPIClient station;
-
-// Station capabilities
-SCapabilities StationCapabilities;
-
-CLoopbackCapture loopbackCapture;
-
-// ----------------------------------------------------------------------
-/*
-	Data callback for Scorpio API
-*/
-void OnDataFunc(_In_  unsigned long serverId, _In_ ECSMSDllMsgType respType, _In_ unsigned long sourceAddr, _In_ unsigned long desstAddr, _In_ SEquipCtrlMsg::UBody* data)
-{
-	std::string response;
-
-	switch (respType)
-	{
-		case ECSMSDllMsgType::GET_BIST:
-		case ECSMSDllMsgType::GET_BIST_RESULT:
-		case ECSMSDllMsgType::GET_DIAGNOSTICS:
-			streamBuffer.push_back(processBITEResponse(respType, data));
-			break;
-		case ECSMSDllMsgType::GET_ANT_LIST_INFO:
-			streamBuffer.push_back(ProcessAntListResponse(respType, data));
-			break;
-		case ECSMSDllMsgType::OCC_MSGLEN_DIST_RESPONSE:
-		case ECSMSDllMsgType::OCC_FREQ_VS_CHANNEL:
-		case ECSMSDllMsgType::OCC_CHANNEL_RESULT:
-		case ECSMSDllMsgType::OCC_STATUS:
-		case ECSMSDllMsgType::OCC_STATE_RESPONSE:
-		case ECSMSDllMsgType::OCC_SOLICIT_STATE_RESPONSE:
-		case ECSMSDllMsgType::OCC_SPECTRUM_RESPONSE:
-		case ECSMSDllMsgType::OCC_TIMEOFDAY_RESULT:
-		case ECSMSDllMsgType::OCC_EFLD_CHANNEL_RESULT:
-		case ECSMSDllMsgType::OCC_MSGLEN_CHANNEL_RESULT:
-		case ECSMSDllMsgType::OCC_EFLD_TIMEOFDAY_RESULT:
-			streamBuffer.push_back(processOccupancyResponse(respType, data));
-			break;
-		case ECSMSDllMsgType::OCCDF_FREQ_VS_CHANNEL:
-		case ECSMSDllMsgType::OCCDF_SCANDF_VS_CHANNEL:
-		case ECSMSDllMsgType::OCCDF_STATUS:
-		case ECSMSDllMsgType::OCCDF_STATE_RESPONSE:
-		case ECSMSDllMsgType::OCCDF_SOLICIT_STATE_RESPONSE:
-			streamBuffer.push_back(processOccupancyDFResponse(respType, data));
-			break;
-		case ECSMSDllMsgType::AVD_FREQ_VS_CHANNEL:
-		case ECSMSDllMsgType::AVD_OCC_CHANNEL_RESULT:
-		case ECSMSDllMsgType::AVD_FREQ_MEAS:
-		case ECSMSDllMsgType::AVD_BW_MEAS:
-		case ECSMSDllMsgType::AVD_SOLICIT_STATE_RESPONSE:
-		case ECSMSDllMsgType::AVD_STATE_RESPONSE:
-		case ECSMSDllMsgType::AVD_STATUS:
-			streamBuffer.push_back(processAutoViolateResponse(respType, data));
-			break;
-		case ECSMSDllMsgType::GET_MEAS:
-		case ECSMSDllMsgType::VALIDATE_MEAS:
-			streamBuffer.push_back(processMeasResponse(respType, sourceAddr, data));
-			break;
-		case ECSMSDllMsgType::SET_PAN_PARAMS:
-		case ECSMSDllMsgType::SET_AUDIO_PARAMS:
-		case ECSMSDllMsgType::FREE_AUDIO_CHANNEL:
-			streamBuffer.push_back(processDemodCtrlResponse(respType, data));
-			break;
-		case ECSMSDllMsgType::GET_PAN:
-			response = processPanResponse(respType, data);
-			logEtherDLL.info("GET_PAN response: " + response);
-			streamBuffer.push_back(response);
-			//streamBuffer.push_back(processPanResponse(respType, data));
-			break;
-		case ECSMSDllMsgType::GET_DM:
-
-			//m_taskType = ECSMSDllMsgType::GET_DM; // TODO should be in DM_STATUS reponse instead
-			break;
-		default:
-			break;
-	}
-
-	log.info("OnData received with type " + respType);
-	logEtherDLL.info("OnData received destination address " + desstAddr);
-	logEtherDLL.info("OnData received server ID " + serverId);
-}
-
-// ----------------------------------------------------------------------
-/*
-	Error callback for Scorpio API
-*/
-void OnErrorFunc(_In_  unsigned long serverId, _In_ const std::wstring& errorMsg)
-{
-	std::string str(errorMsg.begin(), errorMsg.end());
-	logEtherDLL.error(str);
-	std::string strData = "{\"serverId\":"+ std::to_string(serverId) + ", \"errorMsg\":\"" + str + "\"}";
-	errorBuffer.push_back(strData);
-	logEtherDLL.info("OnErrorFunc received error message: " + str);
-	logEtherDLL.info("OnErrorFunc received server ID: " + serverId);
-
-}
-
-// ----------------------------------------------------------------------
-/*
-	Realtime callback for Scorpio API
-*/
-void OnRealTimeDataFunc(_In_  unsigned long serverId, _In_ ECSMSDllMsgType respType, _In_ SSmsRealtimeMsg::UBody* data)
-{
-	streamBuffer.push_back(ProcessRealTimeData(respType, data));
-	logEtherDLL.info("OnRealtimeData received with type " + respType);
-	logEtherDLL.info("OnRealtimeData received server ID " + serverId);
-}
 
 // ----------------------------------------------------------------------
 /*
@@ -483,75 +379,6 @@ void socketHandle(	std::string name,
 
 // ----------------------------------------------------------------------
 /*
-	Create a connection object to the DLL and connect to it.
-*/
-void connectAPI(void) {
-	// Create a local copy of APIserverId. This is necessary because TCI methods update the APIserverId value to the next available ID.
-	// unsigned long NextServerId = APIserverId;
-
-	// Hostname as simple string, extracted from th JSON configuration file
-	std::string hostNameStr = config["station"]["address"].get<std::string>();
-	station.hostName = stringToWString(hostNameStr);
-
-	// Port as simple string, extracted from the JSON configuration file where it is defined as a number
-	std::string portStr = std::to_string(config["station"]["port"].get<int>());
-	station.port = stringToWString(portStr);
-
-	// Timeout as unsigned long, extracted from the JSON configuration file in second and converted to miliseconds
-	station.sendTimeout = (unsigned long)(config["station"]["timeout_s"].get<int>())*1000;
-
-	// Error code using API ERetCode enum
-	ERetCode errCode;
-
-	// Create the connection object
-	errCode = ScorpioAPICreate(
-					APIserverId,
-					station,
-					OnErrorFunc,
-					OnDataFunc,
-					OnRealTimeDataFunc);
-
-	// Error message string to be used in the logger
-	std::string message;
-
-	// Handle the error code from object creation
-	if (errCode != ERetCode::API_SUCCESS)
-	{
-		message = "Object associated with the API was not created: " + ERetCodeToString(errCode);
-		logEtherDLL.error(message);
-		//running.store(false);
-		interruptionCode.store(mcs::Code::STATION_ERROR);
-		return;
-	}
-	else
-	{
-		logEtherDLL.info("Object creation successful");
-	}
-
-	// NextServerId = APIserverId;
-
-	// Once the object was successfully created, test connection to the station
-
-	errCode = RequestCapabilities(APIserverId, StationCapabilities);
-
-	// Handle the error code from station connection
-	if (errCode != ERetCode::API_SUCCESS)
-	{
-		message = "Failed to connect to " + hostNameStr + ": " + ERetCodeToString(errCode);
-		logEtherDLL.error(message);
-//		running.store(false);
-		interruptionCode.store(mcs::Code::STATION_ERROR);
-		return;
-	}
-	else
-	{
-		message = "Connected to station " + hostNameStr;
-		logEtherDLL.info(message);
-	}
-}
-
-// ----------------------------------------------------------------------
-/*
 	Disconnect station and socket clients
 */
 void disconnectAPI(void)
@@ -637,6 +464,15 @@ void print_help() {
 }
 
 
+// ----------------------------------------------------------------------
+/**
+ * @brief Handle input arguments and return the configuration file name
+ * 
+ * @param argc: Number of arguments received from command line
+ * @param argv: Array of argument strings received from command line
+ * @return std::string: Configuration file name
+ * @throws std::invalid_argument if the arguments are invalid
+**/
 std::string handleInputArguments(int argc, char* argv[]) {
 	// test if the application was called with any command line arguments
 	if (argc > 1) {
@@ -676,9 +512,18 @@ std::string handleInputArguments(int argc, char* argv[]) {
 	return std::string(edll::DEFAULT_CONFIG_FILENAME);
 }
 
+
 // ----------------------------------------------------------------------
 /*
-	MAIN
+* @brief Main function
+* 
+* Initialize the application, read configuration,
+* Connect to the DLL API and start communication
+* Open socket ports and wait for requests
+* 
+* * @param argc: Number of arguments received from command line
+* * @param argv: Array of argument strings received from command line
+* * @return int: Exit code
 */
 int main(int argc, char* argv[]) {
 

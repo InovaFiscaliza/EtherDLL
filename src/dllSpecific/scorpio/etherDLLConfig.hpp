@@ -1,5 +1,5 @@
 /**
-* @file etherDLLconfig.cpp
+* @file etherDLLconfig.hpp
 *
 * @brief Heder file for configuration file creation with default values
 * 

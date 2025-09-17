@@ -13,15 +13,3 @@ std::string ProcessRealTimeData(_In_ ECSMSDllMsgType respType, _In_ SSmsRealtime
 
 // Anxilary functions
 nlohmann::json ProcessGpsData(SEquipCtrlMsg::SGpsResponse* gpsResponse);
-int ScanDataExpand(int ninput, int* input, int noutput, int* output);
-static const unsigned char* parsedBinData(const unsigned char* binData, unsigned short numBins);
-std::string oleTimeToIsoFmt(double oleTime);
-
-// Spectrum calculation utility
-struct SpectrumInfo {
-    double startFrequency;  // MHz
-    double stopFrequency;   // MHz  
-    double binSize;         // Hz
-};
-
-SpectrumInfo calculateSpectrumInfo(const SEquipCtrlMsg::SGetPanResp* panResponse);

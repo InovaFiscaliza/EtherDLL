@@ -1,5 +1,8 @@
-#include <EtherDLLProcessApiResponse.h>
-#include <EtherDLLConstants.h>
+
+#include "etherDLLResponse.hpp"
+
+#include "EtherDLLConstants.hpp"
+#include "EtherDLLUtils.hpp"
 
 #include <string>
 #include <algorithm>
@@ -8,12 +11,29 @@
 #include <limits>
 #include <locale>
 #include <codecvt>
-#include <ExternalCodes.h>
-#include <json/json.hpp>
-#include "base64.h"
+#include <etherDLLCodes.hpp>
+#include <nlohmann/json.hpp>
 // #include <fmt/chrono.h>
 
 using json = nlohmann::json;
+
+
+// ----------------------------------------------------------------------
+/*
+    Global variables related to the API
+*/
+// API server ID. This service is intended to be used to connect to a single station, always 0.
+unsigned long APIserverId = 0;
+
+// Station connection parameters
+SScorpioAPIClient station;
+
+// Station capabilities
+SCapabilities StationCapabilities;
+
+CLoopbackCapture loopbackCapture;
+
+
 
 //
 // Convert response of BIT command in JSON
@@ -380,7 +400,7 @@ std::string processPanResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg
 	SEquipCtrlMsg::SGetPanResp* PanResponse = (SEquipCtrlMsg::SGetPanResp*)data;
 
     jsonObj["measure"]["status"] = PanResponse->status;
-    jsonObj["measure"]["dateTime"] = oleTimeToIsoFmt(PanResponse->dateTime);
+    jsonObj["measure"]["dateTime"] = COleTimeToIsoStr(PanResponse->dateTime);
     jsonObj["measure"]["powerDbm"] = PanResponse->powerDbm;
     jsonObj["setting"]["attenuation"] = PanResponse->rcvrAtten;
 
@@ -950,102 +970,104 @@ nlohmann::json ProcessGpsData(SEquipCtrlMsg::SGpsResponse* gpsResponse)
 	return jsonObj;
 }
 
-int ScanDataExpand(int ninput, int* input, int noutput, int* output)
+
+// ----------------------------------------------------------------------
+/*
+    Data callback for Scorpio API
+*/
+void OnDataFunc(_In_  unsigned long serverId, _In_ ECSMSDllMsgType respType, _In_ unsigned long sourceAddr, _In_ unsigned long desstAddr, _In_ SEquipCtrlMsg::UBody* data)
 {
-    // expands the compressed data in the input[ninput] array into the
-    // the array output[noutput]
-    // if successful, returns the actual number of elements in the output array
-    // if unsuccessful, returns -1  (output array overrun)
-    // input and output arrays can not be the same
+    std::string response;
 
-    int* outend = output + noutput;
-    int i;
-    int* in = input;
-    int* out = output;
-
-    for (i = 0; i < ninput; i++, in++)
+    switch (respType)
     {
-        if (*in > 0)	// copy this element to output
-        {
-            if (out >= outend) return (-1);	// output overrun
-            *out++ = *in;
-        }
-        else	// insert required number of zeroes into output
-        {
-            int zerocount = -(*in);
-            if (out + zerocount > outend) return (-1);	// output overrun
-            for (int* j = out; j < out + zerocount; j++) *j = 0;
-            out += zerocount;
-        }
+    case ECSMSDllMsgType::GET_BIST:
+    case ECSMSDllMsgType::GET_BIST_RESULT:
+    case ECSMSDllMsgType::GET_DIAGNOSTICS:
+        streamBuffer.push_back(processBITEResponse(respType, data));
+        break;
+    case ECSMSDllMsgType::GET_ANT_LIST_INFO:
+        streamBuffer.push_back(ProcessAntListResponse(respType, data));
+        break;
+    case ECSMSDllMsgType::OCC_MSGLEN_DIST_RESPONSE:
+    case ECSMSDllMsgType::OCC_FREQ_VS_CHANNEL:
+    case ECSMSDllMsgType::OCC_CHANNEL_RESULT:
+    case ECSMSDllMsgType::OCC_STATUS:
+    case ECSMSDllMsgType::OCC_STATE_RESPONSE:
+    case ECSMSDllMsgType::OCC_SOLICIT_STATE_RESPONSE:
+    case ECSMSDllMsgType::OCC_SPECTRUM_RESPONSE:
+    case ECSMSDllMsgType::OCC_TIMEOFDAY_RESULT:
+    case ECSMSDllMsgType::OCC_EFLD_CHANNEL_RESULT:
+    case ECSMSDllMsgType::OCC_MSGLEN_CHANNEL_RESULT:
+    case ECSMSDllMsgType::OCC_EFLD_TIMEOFDAY_RESULT:
+        streamBuffer.push_back(processOccupancyResponse(respType, data));
+        break;
+    case ECSMSDllMsgType::OCCDF_FREQ_VS_CHANNEL:
+    case ECSMSDllMsgType::OCCDF_SCANDF_VS_CHANNEL:
+    case ECSMSDllMsgType::OCCDF_STATUS:
+    case ECSMSDllMsgType::OCCDF_STATE_RESPONSE:
+    case ECSMSDllMsgType::OCCDF_SOLICIT_STATE_RESPONSE:
+        streamBuffer.push_back(processOccupancyDFResponse(respType, data));
+        break;
+    case ECSMSDllMsgType::AVD_FREQ_VS_CHANNEL:
+    case ECSMSDllMsgType::AVD_OCC_CHANNEL_RESULT:
+    case ECSMSDllMsgType::AVD_FREQ_MEAS:
+    case ECSMSDllMsgType::AVD_BW_MEAS:
+    case ECSMSDllMsgType::AVD_SOLICIT_STATE_RESPONSE:
+    case ECSMSDllMsgType::AVD_STATE_RESPONSE:
+    case ECSMSDllMsgType::AVD_STATUS:
+        streamBuffer.push_back(processAutoViolateResponse(respType, data));
+        break;
+    case ECSMSDllMsgType::GET_MEAS:
+    case ECSMSDllMsgType::VALIDATE_MEAS:
+        streamBuffer.push_back(processMeasResponse(respType, sourceAddr, data));
+        break;
+    case ECSMSDllMsgType::SET_PAN_PARAMS:
+    case ECSMSDllMsgType::SET_AUDIO_PARAMS:
+    case ECSMSDllMsgType::FREE_AUDIO_CHANNEL:
+        streamBuffer.push_back(processDemodCtrlResponse(respType, data));
+        break;
+    case ECSMSDllMsgType::GET_PAN:
+        response = processPanResponse(respType, data);
+        logEtherDLL.info("GET_PAN response: " + response);
+        streamBuffer.push_back(response);
+        //streamBuffer.push_back(processPanResponse(respType, data));
+        break;
+    case ECSMSDllMsgType::GET_DM:
+
+        //m_taskType = ECSMSDllMsgType::GET_DM; // TODO should be in DM_STATUS reponse instead
+        break;
+    default:
+        break;
     }
-    return (out - output);
+
+    log.info("OnData received with type " + respType);
+    logEtherDLL.info("OnData received destination address " + desstAddr);
+    logEtherDLL.info("OnData received server ID " + serverId);
 }
 
-//
-// Convert binary uint8 vector (bindata) with numBins elements 
-// into floats32 vector with offset of 192.0f
-// Float vector is returned as uint8 vector with size numBins * 32 bytes
-// for serialization purposes
-//
-static const unsigned char* parsedBinData(const unsigned char* binData, unsigned short numBins)
+// ----------------------------------------------------------------------
+/*
+    Error callback for Scorpio API
+*/
+void OnErrorFunc(_In_  unsigned long serverId, _In_ const std::wstring& errorMsg)
 {
-    static_assert(sizeof(float) == 4, "Esperado float32");
+    std::string str(errorMsg.begin(), errorMsg.end());
+    logEtherDLL.error(str);
+    std::string strData = "{\"serverId\":" + std::to_string(serverId) + ", \"errorMsg\":\"" + str + "\"}";
+    errorBuffer.push_back(strData);
+    logEtherDLL.info("OnErrorFunc received error message: " + str);
+    logEtherDLL.info("OnErrorFunc received server ID: " + serverId);
 
-    const float dbmOffset = 192.0f;
-    const size_t nRequested = static_cast<size_t>(numBins);
-
-    // Buffer persistente por thread para evitar retorno de ponteiro pendente
-    thread_local static std::vector<unsigned char> parsedData;
-    parsedData.resize(nRequested * sizeof(float));
-
-    float* outFloats = reinterpret_cast<float*>(parsedData.data());
-
-    for (size_t i = 0; i < nRequested; ++i) {
-        outFloats[i] = static_cast<float>(binData[i]) - dbmOffset;
-    }
-
-    return parsedData.data();
 }
 
-//
-// Convert COleTime to ISO format
-//
-std::string oleTimeToIsoFmt(double oleTime) {
-    const double OLE_TIME_EPOCH_DIFF = 25569.0;
-    const int SECONDS_PER_DAY = 86400;
-
-    double unixTimeSeconds = (oleTime - OLE_TIME_EPOCH_DIFF) * SECONDS_PER_DAY;
-
-    // Separar parte inteira e fracionária para preservar precisão
-    std::time_t seconds = static_cast<std::time_t>(unixTimeSeconds);
-    double fractionalPart = unixTimeSeconds - seconds;
-
-    // Converter para chrono::time_point com precisão de microssegundos
-    auto tp = std::chrono::system_clock::from_time_t(seconds);
-    auto microseconds = std::chrono::microseconds(
-        static_cast<long long>(fractionalPart * 1000000)
-    );
-    tp += microseconds;
-
-    return fmt::format("{:%Y-%m-%dT%H:%M:%S}.{:06d}Z",
-        fmt::gmtime(std::chrono::system_clock::to_time_t(tp)),
-        microseconds.count() % 1000000);
-}
-
-SpectrumInfo calculateSpectrumInfo(const SEquipCtrlMsg::SGetPanResp* panResponse)
+// ----------------------------------------------------------------------
+/*
+    Realtime callback for Scorpio API
+*/
+void OnRealTimeDataFunc(_In_  unsigned long serverId, _In_ ECSMSDllMsgType respType, _In_ SSmsRealtimeMsg::UBody* data)
 {
-    // Convert central frequency from internal units to MHz
-    double centralFrequency = double(panResponse->freq.internal) / (mcs::FREQ_FACTOR * mcs::MHZ_MULTIPLIER);
-
-    // Convert bin size from internal units to Hz
-    double binSize = double(panResponse->binSize.internal) / mcs::FREQ_FACTOR;
-
-    // Calculate half span in MHz  
-    double halfSpan = (binSize * double(floor(panResponse->numBins / double(2.0)))) / double(1000000.0);
-
-    // Calculate start and stop frequencies
-    double startFrequency = centralFrequency - halfSpan;
-    double stopFrequency = centralFrequency + halfSpan;
-
-    return { startFrequency, stopFrequency, binSize };
+    streamBuffer.push_back(ProcessRealTimeData(respType, data));
+    logEtherDLL.info("OnRealtimeData received with type " + respType);
+    logEtherDLL.info("OnRealtimeData received server ID " + serverId);
 }

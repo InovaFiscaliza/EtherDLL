@@ -11,9 +11,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="ExternalCodes.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="EtherDLLAudio.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -21,9 +18,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="EtherDLLConstants.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="EtherDLLProcessApiResponse.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="EtherDLLLog.hpp">
@@ -443,18 +437,18 @@
     <ClInclude Include="dllSpecific\scorpio\etherDLLCodes.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="EtherDLL.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="dllSpecific\scorpio\etherDLLDataProcess.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="ExternalCodes.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="EtherDLL.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="EtherDLLAudio.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="EtherDLLProcessApiResponse.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="EtherDLLUtils.cpp">
@@ -487,8 +481,11 @@
     <ClCompile Include="dllSpecific\scorpio\etherDLLCodes.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="dllSpecific\scorpio\etherDLLDataProcess.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="config.json" />
+    <None Include="dllSpecific\scorpio\etherDLLConfig.json.inc" />
   </ItemGroup>
 </Project>

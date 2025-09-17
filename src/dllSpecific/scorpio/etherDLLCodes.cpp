@@ -1,5 +1,5 @@
 /**
- * @file scorpioDLLconfig.cpp
+ * @file EtherDLLCodes.cpp
  * @brief Functions to convert codes used in the API to human readable messages
  * 
  * Specific DLL codes for Scorpio API are handled here.
@@ -12,11 +12,10 @@
  * * @version 1.0
  *
  * * @note Requires C++11 or later
- * * @note Uses nlohmann/json library for JSON handling
  *
- * * * Dependencies:
- * * - string
- * * - externalCodes.h
+ * * Special Dependencies:
+ * * - ScorpioAPITypes.h
+ * * - EquipCtrlMsg.h
 **/
 
 // ----------------------------------------------------------------------
