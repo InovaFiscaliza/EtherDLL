@@ -18,17 +18,34 @@
 * 
 **/
 
-// ----------------------------------------------------------------------
-#include "etherDLLConfig.hpp"
 
+// ----------------------------------------------------------------------
+#pragma once
+
+// Include core EtherDLL libraries
+#include "EtherDLLUtils.hpp"
+
+// Include DLL specific libraries
+#include "etherDLLConfig.hpp"
+#include "etherDLLCodes.hpp"
+#include "etherDLLResponse.hpp"
+
+// Include provided DLL libraries
+#include <ScorpioAPITypes.h>
+#include <ScorpioAPIDll.h>
+
+// Include general C++ libraries
 #include <string>
 #include <fstream>
 #include <stdexcept>
 
+// Include project libraries
 #include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
 
-#include <ScorpioAPIDll.h>
+// For convenience
+using json = nlohmann::json;
+
 
 // ----------------------------------------------------------------------
 /**
@@ -72,70 +89,90 @@ void newDefaultConfigFile(const std::string& filename) {
 }
 
 // ----------------------------------------------------------------------
-/*
-	Create a connection object to the DLL and connect to it.
+/** @brief Create a connection object to the DLL and test it.
+* 
+* Alias DLLConnectionData should be used to pass the connection data structure
+* This is specific to the DLL and should not directly accessed by core EtherDLL code.
+* but rather passed through the alias to other DLL specific functions, as required.
+* 
+* @param config: JSON object containing the configuration parameters
+* @param station: DLLConnectionData structure to be populated with connection parameters
+* @param log: spdlog logger object for logging messages
+* @return bool: True if connection is successful, false otherwise
+* @throws NO EXCEPTION HANDLING
 */
-void connectAPI(const nlohmann::json& config, StationInfo& station, Logger& logger) {
-	// Create a local copy of APIserverId. This is necessary because TCI methods update the APIserverId value to the next available ID.
-	// unsigned long NextServerId = APIserverId;
+bool connectAPI(DLLConnectionData& stationConnID, const nlohmann::json& config, spdlog::logger& log)
+{
+	std::string message;
+	SScorpioAPIClient station;
 
-	// Hostname as simple string, extracted from th JSON configuration file
+	// Prepare station data structure from the config data
 	std::string hostNameStr = config["station"]["address"].get<std::string>();
 	station.hostName = stringToWString(hostNameStr);
 
-	// Port as simple string, extracted from the JSON configuration file where it is defined as a number
 	std::string portStr = std::to_string(config["station"]["port"].get<int>());
 	station.port = stringToWString(portStr);
 
-	// Timeout as unsigned long, extracted from the JSON configuration file in second and converted to miliseconds
 	station.sendTimeout = (unsigned long)(config["station"]["timeout_s"].get<int>()) * 1000;
 
-	// Error code using API ERetCode enum
 	ERetCode errCode;
 
 	// Create the connection object
 	errCode = ScorpioAPICreate(
-		APIserverId,
+		stationConnID,
 		station,
 		OnErrorFunc,
 		OnDataFunc,
 		OnRealTimeDataFunc);
 
-	// Error message string to be used in the logger
-	std::string message;
-
 	// Handle the error code from object creation
 	if (errCode != ERetCode::API_SUCCESS)
 	{
 		message = "Object associated with the API was not created: " + ERetCodeToString(errCode);
-		logEtherDLL.error(message);
-		//running.store(false);
-		interruptionCode.store(mcs::Code::STATION_ERROR);
-		return;
-	}
-	else
-	{
-		logEtherDLL.info("Object creation successful");
+		log.error(message);
+		return false;
 	}
 
-	// NextServerId = APIserverId;
+	log.info("Object creation successful");
 
-	// Once the object was successfully created, test connection to the station
+	// Test connection to the station
+	SCapabilities StationCapabilities;
 
-	errCode = RequestCapabilities(APIserverId, StationCapabilities);
+	errCode = RequestCapabilities(stationConnID, StationCapabilities);
 
-	// Handle the error code from station connection
 	if (errCode != ERetCode::API_SUCCESS)
 	{
-		message = "Failed to connect to " + hostNameStr + ": " + ERetCodeToString(errCode);
-		logEtherDLL.error(message);
-		//		running.store(false);
-		interruptionCode.store(mcs::Code::STATION_ERROR);
-		return;
+		message = "Failed to connect to " + hostNameStr + " [" + portStr + "]. Erro " + ERetCodeToString(errCode);
+		log.error(message);
+		return false;
 	}
-	else
+
+	message = "Connected to station " + hostNameStr + " [" + portStr + "]";
+	log.info(message);
+	return true;
+}
+
+// ----------------------------------------------------------------------
+/** @brief Disconnect station and socket clients
+* 
+* @param stationConnID: DLLConnectionData structure containing connection parameters
+* @param log: spdlog logger object for logging messages
+* @return bool: True if disconnection is successful, false otherwise
+* @throws NO EXCEPTION HANDLING
+*/
+bool disconnectAPI(DLLConnectionData& stationConnID, spdlog::logger& log)
+{
+
+	ERetCode errCode = Disconnect(stationConnID);
+	log.warn("Disconnecting station returned:" + ERetCodeToString(errCode));
+
+	// TODO: DLL function not returning API_SUCCESS - Need to investigate
+	if (errCode != ERetCode::API_SUCCESS)
 	{
-		message = "Connected to station " + hostNameStr;
-		logEtherDLL.info(message);
+		log.error("Error disconnecting from station " + ERetCodeToString(errCode));
+		return false;
 	}
+	
+	log.info("Disconnected from station");
+	return true;
 }

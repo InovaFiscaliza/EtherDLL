@@ -10,19 +10,17 @@ namespace edll {
         static constexpr int CTRL_C_INTERRUPT = 2;
         static constexpr int STATION_ERROR = 100;
         static constexpr int SERVICE_ERROR = 200;
-        static constexpr int COMMAND_ERROR = 300;
-        static constexpr int STREAM_ERROR = 400;
+        static constexpr int CLIENT_ERROR = 300;
 
         static constexpr const char* toString(int code) {
             switch (code) {
-            case RUNNING: return "Service running";
-            case KILL_INTERRUPT: return "Service interrupted by kill command";
-            case CTRL_C_INTERRUPT: return "Service interrupted by Ctrl+C";
-            case STATION_ERROR: return "Station communication error";
-            case SERVICE_ERROR: return "Service error";
-            case COMMAND_ERROR: return "Command channel communication error";
-            case STREAM_ERROR: return "Stream channel error";
-            default: return "Undefined EtherDLL Code";
+                case RUNNING: return "Service running";
+                case KILL_INTERRUPT: return "Service interrupted by kill command";
+                case CTRL_C_INTERRUPT: return "Service interrupted by Ctrl+C";
+                case STATION_ERROR: return "Station communication error";
+                case SERVICE_ERROR: return "EtherDLL service error";
+                case CLIENT_ERROR: return "Client communication error";
+                default: return "Undefined EtherDLL Code";
             }
         }
     };
@@ -43,4 +41,6 @@ namespace edll {
 
     constexpr const char* DEFAULT_CONFIG_FILENAME = "EtherDLLConfig.json";
 	constexpr const char* VERSION = "1.0.0";
+
+	constexpr int SOCKET_BUFFER_SIZE = 4096;
 }

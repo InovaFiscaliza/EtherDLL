@@ -1,9 +1,42 @@
 
-#include "etherDLLResponse.hpp"
+/**
+* @file etherDLLResponse.cpp
+*
+* @brief Code file for functions that convert Scorpio DLL responses to JSON
+* * Include callback functions used by the Scorpio API
+* * and additional function for converting DLL data structures to JSON
+* * some convertions will require additional data processing
+* * which will be handled by functions in dllSpecific/scorpio/etherDLLDataProcess.hpp
+*
+* * @author fslobao
+* * @date 2025-09-17
+* * @version 1.0
+*
+* * @note Requires C++11 or later
+* * @note Uses nlohmann/json library for JSON handling
+*
+* * * Dependencies:
+* * - nlohmann/json.hpp
+**/
 
+// ----------------------------------------------------------------------
+#pragma once
+
+// Include core EtherDLL libraries
 #include "EtherDLLConstants.hpp"
 #include "EtherDLLUtils.hpp"
 
+// Include DLL specific libraries
+#include "etherDLLResponse.hpp"
+#include "etherDLLDataProcess.hpp"
+#include "etherDLLCodes.hpp"
+
+// Include provided DLL libraries
+#include "ScorpioAPITypes.h"
+#include "EquipCtrlMsg.h"
+#include "SmsRealtimeMsg.h"
+
+// Include general C++ libraries
 #include <string>
 #include <algorithm>
 #include <vector>
@@ -11,10 +44,11 @@
 #include <limits>
 #include <locale>
 #include <codecvt>
-#include <etherDLLCodes.hpp>
-#include <nlohmann/json.hpp>
-// #include <fmt/chrono.h>
 
+// Include project libraries
+#include <nlohmann/json.hpp>
+
+// For convenience
 using json = nlohmann::json;
 
 
@@ -22,14 +56,6 @@ using json = nlohmann::json;
 /*
     Global variables related to the API
 */
-// API server ID. This service is intended to be used to connect to a single station, always 0.
-unsigned long APIserverId = 0;
-
-// Station connection parameters
-SScorpioAPIClient station;
-
-// Station capabilities
-SCapabilities StationCapabilities;
 
 CLoopbackCapture loopbackCapture;
 
@@ -38,7 +64,7 @@ CLoopbackCapture loopbackCapture;
 //
 // Convert response of BIT command in JSON
 //
-std::string processBITEResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody* respdata)
+json processBITEResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody* respdata)
 {
 	json jsonObj;
 
@@ -66,13 +92,13 @@ std::string processBITEResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMs
             break;
     }
 	
-	return jsonObj.dump();
+	return jsonObj;
 }
 
 //
 // Convert response of type GET_ANT_LIST_INFO in JSON
 //
-std::string ProcessAntListResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody* data)
+json ProcessAntListResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody* data)
 {
 	SEquipCtrlMsg::SAntInfoListResp* antListResponse = (SEquipCtrlMsg::SAntInfoListResp*)data;
 	json jsonObj;
@@ -97,13 +123,13 @@ std::string ProcessAntListResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtr
 		jsonObj["Equipment"]["antenna"][i]["polarization"] = eAntPolToString(antListResponse->ant[i].polarization);
 	    jsonObj["Equipment"]["antenna"][i]["rotatorId"] = antListResponse->ant[i].rotatorId;
     }
-	return jsonObj.dump();
+	return jsonObj;
 }
 
 //
 // Convert response of types AVD_FREQ_VS_CHANNEL, AVD_OCC_CHANNEL_RESULT, AVD_FREQ_MEAS, AVD_BW_MEAS, AVD_SOLICIT_STATE_RESPONSE, AVD_STATE_RESPONSE and AVD_STATUS  in JSON
 //
-std::string processAutoViolateResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody* data)
+json processAutoViolateResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody* data)
 {
 	SEquipCtrlMsg::SOccupancyHeader* pOccHdr = nullptr;
 	json jsonObj;
@@ -281,13 +307,13 @@ std::string processAutoViolateResponse(_In_ ECSMSDllMsgType respType, _In_ SEqui
             break;
     }
 	
-	return jsonObj.dump();
+	return jsonObj;
 }
 
 //
 // Convert response of types GET_MEAS and VALIDATE_MEAS in JSON
 //
-std::string processMeasResponse(_In_ ECSMSDllMsgType respType, _In_ unsigned long sourceAddr, _In_ SEquipCtrlMsg::UBody* data)
+json processMeasResponse(_In_ ECSMSDllMsgType respType, _In_ unsigned long sourceAddr, _In_ SEquipCtrlMsg::UBody* data)
 {
 	json jsonObj;
 
@@ -336,13 +362,13 @@ std::string processMeasResponse(_In_ ECSMSDllMsgType respType, _In_ unsigned lon
             break;
     }
 
-	return jsonObj.dump();
+	return jsonObj;
 }
 
 //
 // Convert response of types SET_PAN_PARAMS, SET_AUDIO_PARAMS and FREE_AUDIO_CHANNEL in JSON
 //
-std::string processDemodCtrlResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody* data)
+json processDemodCtrlResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody* data)
 {
 	json jsonObj;
 
@@ -385,13 +411,13 @@ std::string processDemodCtrlResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipC
             break;
     }
 	
-	return jsonObj.dump();
+	return jsonObj;
 }
 
 //
 // Convert response of type GET_PAN in JSON
 //
-std::string processPanResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody* data)
+json processPanResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody* data)
 {
 	json jsonObj;
 
@@ -425,14 +451,14 @@ std::string processPanResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg
         jsonObj["demod"]["audioPower"][i]["powerdBm"] = PanResponse->audioPower[i].powerdBm;
     }
 
-	return jsonObj.dump();
+	return jsonObj;
 
 }
 
 //
 // Convert response of types OCC_MSGLEN_DIST_RESPONSE, OCC_FREQ_VS_CHANNEL, OCC_CHANNEL_RESULT, OCC_STATUS, OCC_STATE_RESPONSE, OCC_SOLICIT_STATE_RESPONSE, OCC_SPECTRUM_RESPONSE, OCC_TIMEOFDAY_RESULT, OCC_EFLD_CHANNEL_RESULT, OCC_MSGLEN_CHANNEL_RESULT, OCC_EFLD_TIMEOFDAY_RESULT in JSON
 //
-std::string processOccupancyResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody* data)
+json processOccupancyResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody* data)
 {
 	json jsonObj;
 
@@ -621,13 +647,13 @@ std::string processOccupancyResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipC
 			jsonObj["error"] = std::string("Unexpected processOccupancyResponse type ") + ECSMSDllMsgTypeToString(respType);
             break;
     }
-	return jsonObj.dump();
+	return jsonObj;
 }
 
 //
 // Convert response of types OCCDF_FREQ_VS_CHANNEL, OCCDF_SCANDF_VS_CHANNEL, OCCDF_STATUS, OCCDF_STATE_RESPONSE and OCCDF_SOLICIT_STATE_RESPONSE in JSON
 //
-std::string processOccupancyDFResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody* data)
+json processOccupancyDFResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody* data)
 {
 	json jsonObj;
 
@@ -733,15 +759,14 @@ std::string processOccupancyDFResponse(_In_ ECSMSDllMsgType respType, _In_ SEqui
             jsonObj["error"] = std::string("Unexpected processOccupancyDFResponse type ") + ECSMSDllMsgTypeToString(respType);
             break;
     }
-	return jsonObj.dump();
+	return jsonObj;
 }
 
 //
 // Convert response returned by callback OnRealTimeDataFunc in JSON
 //
-std::string ProcessRealTimeData(_In_ ECSMSDllMsgType respType, _In_ SSmsRealtimeMsg::UBody* data)
+json ProcessRealTimeData(_In_ ECSMSDllMsgType respType, _In_ SSmsRealtimeMsg::UBody* data)
 {
-	using json = nlohmann::json;
 	json jsonObj;
 
 	jsonObj["respType"] = static_cast<int>(respType);
@@ -936,13 +961,13 @@ std::string ProcessRealTimeData(_In_ ECSMSDllMsgType respType, _In_ SSmsRealtime
             jsonObj["error"] = std::string("Unexpected ProcessRealTimeData type ") + ECSMSDllMsgTypeToString(respType);
             break;
 	}
-	return jsonObj.dump();
+	return jsonObj;
 }
 
 //
 // Convert response returned by callback OnGpsDataFunc in JSON
 //
-nlohmann::json ProcessGpsData(SEquipCtrlMsg::SGpsResponse* gpsResponse)
+json ProcessGpsData(SEquipCtrlMsg::SGpsResponse* gpsResponse)
 {
     json jsonObj;
 

@@ -16,10 +16,11 @@
 *
 **/
 
+
 // ----------------------------------------------------------------------
-/*
-	Conditional library linking for ScorpioAPI based on build configuration
-*/
+/**
+ * Conditional library linking for ScorpioAPI based on build configuration
+**/
 #ifdef _X86_
 	#pragma comment (lib, "ScorpioAPIDll.lib") //RELEASE/DEBUG 32Bits
 #else
@@ -33,8 +34,35 @@
 // ----------------------------------------------------------------------
 #pragma once
 
-// Include to solution specific libraries
+// Include core EtherDLL libraries
+
+
+// Include DLL specific libraries
+
+// Include provided DLL libraries
+#include <ScorpioAPITypes.h>
+
+// Include general C++ libraries
 #include <string>
+
+// Include project libraries
+#include <nlohmann/json.hpp>
+#include <spdlog/spdlog.h>
+
+// For convenience
+using json = nlohmann::json;
+
+// ----------------------------------------------------------------------
+// 
+/** @brief Alias to be used by core EtherDLL code to pass connection parameters
+ * 
+ * \! Name must not be changed \n
+ *    May be defined as an alias to any DLL specific structure or to other data type
+ *    May also be defined as a structure containing multiple parameters
+**/
+using DLLConnectionData = unsigned long;
 
 // Function prototypes
 void newDefaultConfigFile(const std::string& filename);
+bool connectAPI(DLLConnectionData& stationConnID, const nlohmann::json& config, spdlog::logger& log);
+bool disconnectAPI(DLLConnectionData& stationConnID, spdlog::logger& log);

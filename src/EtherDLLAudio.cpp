@@ -408,3 +408,12 @@ HRESULT CLoopbackCapture::OnAudioSampleRequested()
 
     return S_OK;
 }
+
+// ----------------------------------------------------------------------
+/*
+    Handle audio data
+*/
+void handleAudioConnection(SOCKET clientSocket, std::string name) {
+    loopbackCapture.handleSocketConnection(clientSocket, name);
+}
+
