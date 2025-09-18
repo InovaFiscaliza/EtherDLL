@@ -4,6 +4,8 @@
 
 namespace edll {
 
+	using INT_CODE = int;
+    
     struct Code {
         static constexpr int RUNNING = 0;
         static constexpr int KILL_INTERRUPT = 1;
@@ -28,6 +30,8 @@ namespace edll {
     struct Form {
         static constexpr const char PING[] = "{\"PING\":1}\r\n";
         static constexpr const char ACK[] = "{\"ACK\":";
+		static constexpr const char MSG_ID[] = "ID";
+		static constexpr const char NACK[] = "{\"NACK\":\"Message is not a valid JSON\"";
         static constexpr const char MSG_END[] = "\r\n";
     };
 

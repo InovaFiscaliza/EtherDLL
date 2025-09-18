@@ -443,6 +443,9 @@
     <ClInclude Include="dllSpecific\scorpio\etherDLLDataProcess.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="EtherDLLClient.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="EtherDLL.cpp">
@@ -482,6 +485,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="dllSpecific\scorpio\etherDLLDataProcess.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="EtherDLLClient.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

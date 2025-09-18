@@ -37,17 +37,18 @@
 #include <spdlog/spdlog.h>
 
 // Include general EtherDLL headers
-#include <EtherDLLLog.hpp>
-#include <EtherDLLAudio.hpp>
-#include <EtherDLLUtils.hpp>
-#include <EtherDLLConstants.hpp>
+#include "EtherDLLLog.hpp"
+#include "EtherDLLAudio.hpp"
+#include "EtherDLLUtils.hpp"
+#include "EtherDLLConstants.hpp"
+#include "EtherDLLClient.hpp"
 
 // Include to DLL specific headers
-#include <etherDLLCodes.hpp>
-#include <etherDLLConfig.hpp>
-#include <etherDLLRequest.hpp>
-#include <etherDLLResponse.hpp>
-#include <filesystem>
+#include "etherDLLCodes.hpp"
+#include "etherDLLConfig.hpp"
+#include "etherDLLRequest.hpp"
+#include "etherDLLResponse.hpp"
+#include "filesystem"
 
  // Libs for socket
 #pragma comment (lib, "Ws2_32.lib")
@@ -65,20 +66,8 @@ using json = nlohmann::json;
 // Logger object
 spdlog::logger log;
 
-// Atomic flag to signal application error
-std::atomic<bool> running = true; 
-
 // Code to represent the cause for not running
-std::atomic<int> interruptionCode = edll::Code::RUNNING;
-
-// Vector used for the command queue
-std::vector<std::string> requestQueue;
-std::mutex requestQueueMutex;
-
-// Vector used for the data stream output
-std::vector<std::string> responseQueue;
-std::mutex responseQueueMutex;
-
+edll::INT_CODE interruptionCode = edll::Code::RUNNING;
 
 // ----------------------------------------------------------------------
 /*
@@ -88,13 +77,11 @@ static void signalHandler(int signal) {
 
 	if (signal == SIGINT)
 	{
-		running = false;
 		interruptionCode = edll::Code::CTRL_C_INTERRUPT;
 		log.critical("Received interruption signal (ctrl+C)");
 	}
 	else if (signal == SIGTERM)
 	{
-		running = false;
 		interruptionCode = edll::Code::KILL_INTERRUPT;
 		log.critical("Received termination signal (kill)");
 	}
@@ -133,16 +120,11 @@ static json readConfigFile(std::string fileName) {
 		if (!configFile.is_open()) {
 			std::cout << "Configuration file not found, creating default: " + fileName << std::endl;
 			newDefaultConfigFile(fileName);
-
-			// Reopen the newly created file
-			configFile.open(fileName);
-			if (!configFile.is_open()) {
-				throw std::runtime_error("Failed to create or open configuration file: " + fileName);
-			}
 		}
 
+		configFile.open(fileName);
 		config = json::parse(configFile);
-		configFile.close(); // Explicitly close the file
+		configFile.close();
 	}
 	catch (const json::parse_error& e) {
 		throw std::invalid_argument("JSON parsing error: " + std::string(e.what()));
@@ -193,30 +175,34 @@ static  std::string handleInputArguments(int argc, char* argv[]) {
 	if (argc > 1) {
 		std::string arg1 = argv[1];
 
-		//if used "--" change to "-"
-		if (arg1.length() > 2) {
-			arg1 = arg1.substr(1);
+		//Make extended format initial characters similar to short format, e.g. change "--help" to "-help"
+		char switchChar = '-';
+		for (size_t i = 0; i < 2; i++) {
+			if (arg1[i] == '-') continue;
+			arg1[i] = switchChar;
 		}
 
-		switch (arg1[2]) {
-			case '-h':
+		switch (switchChar) {
+			case 'h':
 				// intended fall through
-			case '-H': {
+			case 'H': {
 				print_help();
+				if (argc != 2) {
+					throw std::invalid_argument("Too many arguments provided. (Provided " + std::to_string(argc) + " arguments, expected 2)");
+				}
 				exit(0);
 			}
-			case '-f':
+			case 'f':
 				// intended fall through
-			case '-F':
+			case 'F': {
 				if (argc != 3) {
 					print_help();
 					throw std::invalid_argument("Too many arguments provided. (Provided " + std::to_string(argc) + " arguments, expected 2)");
 				}
-				else
-				{
-					std::string fileName = std::string(argv[2]);
-					return fileName;
-				}
+	
+				std::string fileName = std::string(argv[2]);
+				return fileName;
+			}
 			default: {
 				print_help();
 				throw std::invalid_argument("Unknown argument: " + arg1);
@@ -253,15 +239,27 @@ int main(int argc, char* argv[]) {
         log = *logPtr;
     }
 
+	SOCKET clientSocket = establishClientCommunication(config, interruptionCode, log);
+    // Substitua a declaração de interrupçãoCode por:
+    
+
+    // E, onde você atribui valores:
+    interruptionCode = edll::Code::CTRL_C_INTERRUPT;
+    interruptionCode = edll::Code::KILL_INTERRUPT;
+
+    // E, ao retornar o código de saída:
+    return static_cast<int>(interruptionCode.load());
 	// DLLConnectionData must be defined in specific DLL file etherDLLConfig.hpp
 	// It is an alias to a structure or data type used to pass connection parameters to the DLL API functions
 	DLLConnectionData station;
 
-	if ( !connectAPI(station, config, log) ) {
+	if (!connectAPI(station, config, log)) {
 		log.error("Failed to connect to station. Exiting...");
 		return static_cast<int>(edll::Code::STATION_ERROR);
 	}
-		
+
+
+
 
 	// Start thread for the command channel socket service. This thread will listen for incoming commands and place then in the command queue
 	std::thread commandThread(socketHandle,

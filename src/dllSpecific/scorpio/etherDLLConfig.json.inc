@@ -15,35 +15,11 @@ R"({
     "timeout_s": 10
   },
   "service": {
-    "command": {
       "port": 30000,
       "timeout_s": 10000,
       "sleep_ms": 100,
-      "check_period": 10
-    },
-    "stream": {
-      "port": 30001,
-      "timeout_s": 10000,
-      "sleep_ms": 500,
-      "check_period": 200
-    },
-    "error": {
-      "port": 30002,
-      "timeout_s": 10000,
-      "sleep_ms": 500,
-      "check_period": 200
-    },
-    "realtime": {
-      "port": 30003,
-      "timeout_s": 10000,
-      "sleep_ms": 500,
-      "check_period": 200
-    },
-    "audio": {
-      "port": 30004,
-      "timeout_s": 60000
-    },
-    "simulated": true
+      "check_period": 10,
+      "ping_enable": true
   },
   "default": {
     "OCCRequest": {

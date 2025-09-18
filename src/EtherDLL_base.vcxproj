@@ -111,6 +111,7 @@
     <ClInclude Include="EtherDLL.hpp" />
     <ClInclude Include="EtherDLLAudio.hpp" />
     <ClInclude Include="EtherDLLAudioCommon.h" />
+    <ClInclude Include="EtherDLLClient.hpp" />
     <ClInclude Include="EtherDLLConstants.hpp" />
     <ClInclude Include="EtherDLLLog.hpp" />
     <ClInclude Include="EtherDLLUtils.hpp" />
@@ -254,6 +255,7 @@
     <ClCompile Include="dllSpecific\scorpio\stdafx.cpp" />
     <ClCompile Include="EtherDLL.cpp" />
     <ClCompile Include="EtherDLLAudio.cpp" />
+    <ClCompile Include="EtherDLLClient.cpp" />
     <ClCompile Include="EtherDLLUtils.cpp" />
     <ClCompile Include="EtherDLLLog.cpp" />
   </ItemGroup>

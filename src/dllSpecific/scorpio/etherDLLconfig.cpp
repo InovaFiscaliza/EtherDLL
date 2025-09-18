@@ -60,8 +60,8 @@ using json = nlohmann::json;
  * @return void
  * @throws std::runtime_error if file cannot be created or written
  **/
-void newDefaultConfigFile(const std::string& filename) {
-
+void newDefaultConfigFile(const std::string& filename)
+{
 
     std::string default_config =
 		#include "etherDLLConfig.json.inc"
