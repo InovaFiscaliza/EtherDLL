@@ -37,6 +37,9 @@
 // For convenience
 using json = nlohmann::json;
 
+constexpr double PAN_OFFSET = 192.0;
+constexpr double FREQ_FACTOR = 1920.0;
+
 // ----------------------------------------------------------------------
 // Callback function prototypes
 void OnDataFunc(_In_  unsigned long serverId, _In_ ECSMSDllMsgType respType, _In_ unsigned long sourceAddr, _In_ unsigned long desstAddr, _In_ SEquipCtrlMsg::UBody* data);

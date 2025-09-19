@@ -27,24 +27,28 @@ namespace edll {
         }
     };
 
-    struct Form {
-        static constexpr const char PING[] = "{\"PING\":1}\r\n";
-        static constexpr const char ACK[] = "{\"ACK\":";
-		static constexpr const char MSG_ID[] = "ID";
-		static constexpr const char NACK[] = "{\"NACK\":\"Message is not a valid JSON\"";
-        static constexpr const char MSG_END[] = "\r\n";
-    };
-
 	constexpr double MHZ_MULTIPLIER = 1000000.0;
 	constexpr double KHZ_MAX_VALUE = 1.0;
 	constexpr double KHZ_FROM_MHZ = 1000.0;
 	constexpr double GHZ_MIN_VALUE = 1000.0;
 	constexpr double GHZ_FROM_MHZ = 0.001;
-	constexpr double PAN_OFFSET = 192.0;
-	constexpr double FREQ_FACTOR = 1920.0;
 
     constexpr const char* DEFAULT_CONFIG_FILENAME = "EtherDLLConfig.json";
 	constexpr const char* VERSION = "1.0.0";
+
+    constexpr int DEFAULT_SERVICE_PORT = 5555;
+	constexpr int DEFAULT_TIMEOUT_S = 10;
+	constexpr int DEFAULT_SLEEP_MS = 100;
+	constexpr int DEFAULT_BUFFER_TTL_PERIOD = 5;
+	constexpr int DEFAULT_PING_PERIOD = 10;
+    constexpr bool DEFAULT_PING_STATE = true;
+    constexpr const char* DEFAULT_PING_MSG = "PING";
+    constexpr const char* DEFAULT_ACK_MSG = "ACK";
+	constexpr const char* DEFAULT_NACK_MSG = "NACK";
+	constexpr const char* DEFAULT_END_MSG = "\r\n";
+    constexpr const char* DEFAULT_ID = "ID";
+    
+
 
 	constexpr int SOCKET_BUFFER_SIZE = 4096;
 }

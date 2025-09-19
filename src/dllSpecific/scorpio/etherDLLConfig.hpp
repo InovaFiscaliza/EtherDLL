@@ -59,8 +59,11 @@ using json = nlohmann::json;
  * \! Name must not be changed \n
  *    May be defined as an alias to any DLL specific structure or to other data type
  *    May also be defined as a structure containing multiple parameters
+ *    A default value must be defined as DEFAULT_DLL_CONNECTION_DATA for initialization purposes
 **/
 using DLLConnectionData = unsigned long;
+
+const DLLConnectionData DEFAULT_DLL_CONNECTION_DATA = 0;
 
 // Function prototypes
 void newDefaultConfigFile(const std::string& filename);

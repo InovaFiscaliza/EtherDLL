@@ -19,7 +19,7 @@
 // ----------------------------------------------------------------------
 // Include the standard C++ headers
 #include <mutex>
-#include <thread>
+#include <future>
 #include <atomic>
 #include <vector>
 #include <string>
@@ -239,110 +239,49 @@ int main(int argc, char* argv[]) {
         log = *logPtr;
     }
 
-	SOCKET clientSocket = establishClientCommunication(config, interruptionCode, log);
-    // Substitua a declaração de interrupçãoCode por:
-    
-
-    // E, onde você atribui valores:
-    interruptionCode = edll::Code::CTRL_C_INTERRUPT;
-    interruptionCode = edll::Code::KILL_INTERRUPT;
-
-    // E, ao retornar o código de saída:
-    return static_cast<int>(interruptionCode.load());
-	// DLLConnectionData must be defined in specific DLL file etherDLLConfig.hpp
-	// It is an alias to a structure or data type used to pass connection parameters to the DLL API functions
-	DLLConnectionData station;
-
-	if (!connectAPI(station, config, log)) {
-		log.error("Failed to connect to station. Exiting...");
-		return static_cast<int>(edll::Code::STATION_ERROR);
+	// Initialize DLL connection
+	DLLConnectionData DLLConnID = DEFAULT_DLL_CONNECTION_DATA;
+	if (!connectAPI(DLLConnID, config, log)) {
+		interruptionCode = edll::Code::STATION_ERROR;
+		return static_cast<int>(interruptionCode);
 	}
 
+	messageQueue request;
+	messageQueue response;
+	while (interruptionCode == edll::Code::RUNNING)
+	{
+		SOCKET clientSocket = establishClientCommunication(config, interruptionCode, log);
 
+		// Start threads for client communication
+		auto receiveFuture = std::async(std::launch::async, [&]() {
+			clientRequestToDLL(clientSocket, config, request, interruptionCode, log);
+			return true; 
+			});
 
+		// Start thread for sending responses to client
+		auto sendFuture = std::async(std::launch::async, [&]() {
+			DLLResponseToClient(clientSocket, config, response, interruptionCode, log);
+			return true;
+			});
 
-	// Start thread for the command channel socket service. This thread will listen for incoming commands and place then in the command queue
-	std::thread commandThread(socketHandle,
-		"Control service",
-		edll::Code::COMMAND_ERROR,
-		config["service"]["command"]["port"].get<int>(),
-		config["service"]["command"]["timeout_s"].get<int>(),
-		handleCommandConnection,
-		log);
+		// Hold the main loop to process messages between client and DLL
+		bool activeComm = true;
+		bool activeProces = true;
+		while (interruptionCode == edll::Code::RUNNING && activeProces && activeComm)
+		{
+			activeProces = processMessages(stationConnID, config, log);
 
-	// Start thread for the stream channel socket service. This thread will listen for incoming connections and stream data back to the client
-	std::thread streamThread(socketHandle,
-		"Stream service",
-		edll::Code::STREAM_ERROR,
-		config["service"]["stream"]["port"].get<int>(),
-		config["service"]["stream"]["timeout_s"].get<int>(),
-		handleStreamConnection);
+			activeComm = !(receiveFuture.wait_for(std::chrono::seconds(0)) == std::future_status::ready &&
+				sendFuture.wait_for(std::chrono::seconds(0)) == std::future_status::ready);
 
-	// Start thread for the stream channel socket service. This thread will stream error back to the client
-	std::thread errorThread(socketHandle,
-		"Error service",
-		edll::Code::STREAM_ERROR,
-		config["service"]["error"]["port"].get<int>(),
-		config["service"]["error"]["timeout_s"].get<int>(),
-		handleErrorConnection);
-
-	// Start thread for the stream channel socket service. This thread will stream real time data to the client
-	std::thread realtimeThread(socketHandle,
-		"Real time service",
-		edll::Code::STREAM_ERROR,
-		config["service"]["realtime"]["port"].get<int>(),
-		config["service"]["realtime"]["timeout_s"].get<int>(),
-		handleRealTimeConnection);
-
-	// Start thread for the audio socket service.
-	std::thread audioThread(socketHandle,
-		"Audio service",
-		edll::Code::STREAM_ERROR,
-		config["service"]["audio"]["port"].get<int>(),
-		config["service"]["audio"]["timeout_s"].get<int>(),
-		handleAudioConnection);
-		
-	// Main loop to process commands received
-	while (running.load()) {
-
-		if (!requestQueue.empty()) {
-			std::string command;
-			{
-				std::lock_guard<std::mutex> lock(requestQueueMutex);
-				command = requestQueue.back();
-				requestQueue.pop_back();
-			}
-			log.info("Processing command: " + command);
-			
-			unsigned long requestID = 0;
-			json jsonObj = json::parse(command);
-
+			std::this_thread::sleep_for(std::chrono::milliseconds(config["service"].value("sleep_ms", edll::DEFAULT_SLEEP_MS)));
 		}
 
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		closesocket(clientSocket);
+		if (!activeComm) log.info("Client disconnected.");
 	}
-
-	log.info("Service will shutdown...");
-
-	// Join threads before exiting
-	if (commandThread.joinable()) {
-		commandThread.join();
-	}
-	if (streamThread.joinable()) {
-		streamThread.join();
-	}
-	if (errorThread.joinable()) {
-		errorThread.join();
-	}
-	if (realtimeThread.joinable()) {
-		realtimeThread.join();
-	}
-	if (audioThread.joinable()) {
-		audioThread.join();
-	}
-
 	// Close the connection
-	if (!disconnectAPI(station, log)) {
+	if (!disconnectAPI(DLLConnID, log)) {
 		log.error("Failed to disconnect from station.");
 	}
 	log.info("Service stopped.");

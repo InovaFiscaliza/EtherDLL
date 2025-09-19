@@ -34,6 +34,7 @@
 #include <thread>
 #include <atomic>
 #include <queue>
+#include <chrono>
 #include <winsock2.h>
 #include <ws2tcpip.h>
 
@@ -55,6 +56,7 @@ using json = nlohmann::json;
  * This function will lock the thread. Must be run in a separate thread.
  * Messages are expected to be in JSON format and end with the defined message end sequence.
  * Each complete message will be acknowledged with an ACK or NACK response.
+ * ACK will contain the message ID if available, NACK will contain the length of the invalid message.
  * If no data is received, a PING message will be sent periodically to check if the connection is still alive.
  *
  * @param clientSocket: Socket connected to the client
@@ -66,17 +68,32 @@ using json = nlohmann::json;
 */
 void clientRequestToDLL(SOCKET clientSocket, json config, messageQueue& request, edll::INT_CODE& interruptionCode, spdlog::logger& log)
 {
+	std::string msgJsonStartStr = "{\"";
+	std::string msgJsonMidStr = "\":";
+
+	std::string msgEndStr = config["service"]["msg_keys"].value("end", edll::DEFAULT_END_MSG);
+	std::string ackStr = config["service"]["msg_keys"].value("ack", edll::DEFAULT_ACK_MSG);
+	std::string nackStr = config["service"]["msg_keys"].value("nack", edll::DEFAULT_NACK_MSG);
+
+	std::string idStr = config["service"]["msg_keys"].value("id", edll::DEFAULT_ID);
+
+	ackStr = msgJsonStartStr + ackStr + msgJsonMidStr;
+	nackStr = msgJsonStartStr + nackStr + msgJsonMidStr;
+	std::string msgJsonEndStr = "}" + msgEndStr;
+
 	char buffer[edll::SOCKET_BUFFER_SIZE];
 	std::string accumulatedData = "";
+		
+	int bufferTTLInit = config["service"].value("buffer_ttl_period",edll::DEFAULT_BUFFER_TTL_PERIOD);
+	int bufferTTL = bufferTTLInit;
 
-	int checkPeriod = 0;
 	int iResult = 0;
 
 	while (interruptionCode == edll::Code::RUNNING) {
 		int bytesRead = recv(clientSocket, buffer, sizeof(buffer), 0);
 		
 		if (bytesRead > 0) {
-			size_t pos = accumulatedData.find(edll::Form::MSG_END);
+			size_t pos = accumulatedData.find(msgEndStr);
 
 			if (pos != std::string::npos) { // Found the end of a message
 				
@@ -86,53 +103,45 @@ void clientRequestToDLL(SOCKET clientSocket, json config, messageQueue& request,
 
 				if (jsonObj != json::value_t::discarded) {
 					request.push(completeMessage);
-					std::string messageID = jsonObj.value(edll::Form::MSG_ID, "");
+					std::string messageID = std::string(jsonObj.value(idStr, "NO ID"));
 					log.debug("Received message ID: " + messageID);
-					std::string ack = edll::Form::ACK + messageID + edll::Form::MSG_END;
+					std::string ack = ackStr + messageID + msgEndStr;
 					iResult = send(clientSocket, ack.c_str(), ack.length(), 0);
 				}
 				else {
 					log.warn("Received invalid JSON message: " + completeMessage);
-					std::string nack = std::string(edll::Form::NACK) + edll::Form::MSG_END;
+                    std::string nack = nackStr + std::to_string(completeMessage.length()) + msgEndStr;
 					iResult = send(clientSocket, nack.c_str(), nack.length(), 0);
 				}
 
 				// keep any extra data after the end of the message for the next iteration
-				if (pos != accumulatedData.length() - strlen(edll::Form::MSG_END)) {	
-					accumulatedData = accumulatedData.substr(pos + strlen(edll::Form::MSG_END), std::string::npos);
+				if (pos != accumulatedData.length() - msgEndStr.length()) {
+					accumulatedData = accumulatedData.substr(pos + msgEndStr.length(), std::string::npos);
 					log.debug("Keeping data for next iteration: " + accumulatedData);
+					bufferTTL--;
 				}
 				else {
 					accumulatedData.clear();
+					bufferTTL = bufferTTLInit;
 				}
 
 				if (iResult == SOCKET_ERROR) {
 					log.warn("Failed sending ACK/NACK message. EC:" + std::to_string(WSAGetLastError()));
 					log.info("Connection with address" + std::to_string(clientSocket) + " lost.");
 					return;
-				}	
+				}
 			}
 		}
 		else {
-			if (checkPeriod == 0) {
-				// test if the connection is still alive
-				iResult = send(clientSocket,
-					edll::Form::PING,
-					static_cast<int>(strlen(edll::Form::PING)),
-					0);
-				if (iResult == SOCKET_ERROR) {
-					log.warn("PING send failed. EC:" + std::to_string(WSAGetLastError()));
-					log.info("Connection with address" + std::to_string(clientSocket) + " lost.");
-					return;
-				}
+			std::this_thread::sleep_for(std::chrono::milliseconds(config["service"].value("sleep_ms", edll::DEFAULT_SLEEP_MS)));
 
-				log.info("Waiting for commands from client...");
-				checkPeriod = config["service"]["command"]["check_period"].get<int>();
+			if (bufferTTL == 0) {
+				if (accumulatedData.length() > 0) {
+					log.debug("Buffer TTL expired. Clearing accumulated data: " + accumulatedData);
+					accumulatedData.clear();
+				}
+				bufferTTL = bufferTTLInit;
 			}
-			else {
-				checkPeriod--;
-			}
-			std::this_thread::sleep_for(std::chrono::milliseconds(config["service"]["command"]["sleep_ms"].get<int>()));
 		}	
 	}
 }
@@ -141,6 +150,9 @@ void clientRequestToDLL(SOCKET clientSocket, json config, messageQueue& request,
 /** @brief Send messages from the DLL API to the client, whenever there are messages available
  * 
  * This function will lock the thread. Must be run in a separate thread.
+ * Messages are expected to be in JSON format and end with the defined message end sequence.
+ * If no data is available to send, a PING message will be sent periodically to check if the connection is still alive.
+ * PING message will contain the current timestamp in milliseconds since epoch.
  * 
  * @param clientSocket: Socket connected to the client
  * @param config: JSON object containing configuration
@@ -151,27 +163,54 @@ void clientRequestToDLL(SOCKET clientSocket, json config, messageQueue& request,
 */
 void DLLResponseToClient(SOCKET clientSocket, json config, messageQueue& response, edll::INT_CODE& interruptionCode, spdlog::logger& log) {
 
-	int checkPeriod = 0;
+	std::string msgJsonStartStr = "{\"";
+	std::string msgJsonMidStr = "\":";
+
+	std::string msgEndStr = config["service"]["msg_keys"].value("end", edll::DEFAULT_END_MSG);
+	std::string pingStr = config["service"]["msg_keys"].value("ping",edll::DEFAULT_PING_MSG);
+	bool pingEnable = config["service"].value("ping_enable", edll::DEFAULT_PING_STATE);
+
+	pingStr = msgJsonStartStr + pingStr + msgJsonMidStr;
+
+	std::string msgJsonEndStr = "}" + msgEndStr;
+
+	int pingPeriodInit = config["service"].value("ping_period",edll::DEFAULT_PING_PERIOD);
+	int pingPeriod = pingPeriodInit;
+
 	int iResult = 0;
-	while (interruptionCode.load() == edll::Code::RUNNING) {
-		if (!response.queue.empty()) {
-			std::string data = streamBuffer.back() + edll::Form::MSG_END;
-			streamBuffer.pop_back();
-			iResult = send(clientSocket, data.c_str(), static_cast<int>(data.length()), 0);
+
+	while (interruptionCode == edll::Code::RUNNING) {
+		if (!response.msgQueue.empty()) {
+			std::string message = response.pop() + msgEndStr;
+			
+			iResult = send(clientSocket, message.c_str(), static_cast<int>(message.length()), 0);
 			if (iResult == SOCKET_ERROR) {
-				log.warn(name + " data send failed. EC:" + std::to_string(WSAGetLastError()));
+				log.warn("Data send failed. EC:" + std::to_string(WSAGetLastError()));
 				return;
 			}
 		}
 		else {
-			if (checkPeriod == 0) {
-				log.info(name + " waiting for data from station to send...");
-				checkPeriod = config["service"]["stream"]["check_period"].get<int>();
+			if (pingPeriod == 0 && pingEnable) {
+				// test if the connection is still alive
+				auto now = std::chrono::duration_cast<std::chrono::milliseconds>(
+					std::chrono::system_clock::now().time_since_epoch()).count();
+				std::string ping = pingStr + std::to_string(now) + msgJsonEndStr;
+
+				iResult = send(clientSocket, ping.c_str(), ping.length(), 0);
+
+				if (iResult == SOCKET_ERROR) {
+					log.warn("PING send failed. EC:" + std::to_string(WSAGetLastError()));
+					log.info("Connection with address" + std::to_string(clientSocket) + " lost.");
+					return;
+				}
+
+				log.info("Waiting for commands from client...");
+				pingPeriod = pingPeriodInit;
 			}
 			else {
-				checkPeriod--;
+				pingPeriod--;
 			}
-			std::this_thread::sleep_for(std::chrono::milliseconds(config["service"]["stream"]["sleep_ms"].get<int>()));
+			std::this_thread::sleep_for(std::chrono::milliseconds(config["service"].value("sleep_ms", edll::DEFAULT_SLEEP_MS)));
 		}
 	}
 }
@@ -203,7 +242,7 @@ SOCKET establishClientCommunication(json config, edll::INT_CODE& interruptionCod
 	hints.ai_protocol = IPPROTO_TCP;
 	hints.ai_flags = AI_PASSIVE;
 
-	std::string portStr = std::to_string(config["service"]["command"]["port"].get<int>());
+	std::string portStr = std::to_string(config["service"]["command"].value("port", edll::DEFAULT_SERVICE_PORT));
 	int iResult = getaddrinfo(NULL, portStr.c_str(), &hints, &result);
 	if (iResult != 0) {
 		log.error("Socket getaddrinfo failed. EC:" + std::to_string(iResult));
@@ -221,7 +260,7 @@ SOCKET establishClientCommunication(json config, edll::INT_CODE& interruptionCod
 		return;
 	}
 
-	int timeout = config["service"]["command"]["timeout_s"].get<int>();
+	int timeout = config["service"]["command"].value("timeout_s", edll::DEFAULT_TIMEOUT_S) * 1000; // milliseconds
 	iResult = setsockopt(listenSocket, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout, sizeof(timeout));
 	if (iResult == SOCKET_ERROR) {
 		log.error("Socket setsockopt timeout failed. EC:" + std::to_string(WSAGetLastError()));
@@ -254,12 +293,12 @@ SOCKET establishClientCommunication(json config, edll::INT_CODE& interruptionCod
 	}
 
 	// create variable to store the client address
-	struct sockaddr_in clientAddr;
+	struct sockaddr_in clientAddr{};
 
 	SOCKET clientSocket = INVALID_SOCKET;
-	while (interruptionCode.load() == edll::Code::RUNNING) {
+	while (interruptionCode == edll::Code::RUNNING) {
 		// call the connection handler 
-		log.info("Waiting for client connections on port " + std::to_string(port));
+		log.info("Waiting for client connections on port " + portStr);
 
 		clientSocket = accept(listenSocket, (struct sockaddr*)&clientAddr, NULL);
 		if (clientSocket == INVALID_SOCKET) {
@@ -270,7 +309,7 @@ SOCKET establishClientCommunication(json config, edll::INT_CODE& interruptionCod
 
 			closesocket(listenSocket);
 			WSACleanup();
-			log.info("Stopped waiting for new connections on port " + std::to_string(port));
+			log.info("Stopped waiting for new connections on port " + portStr);
 
 			return clientSocket;
 		}

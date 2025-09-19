@@ -18,8 +18,16 @@ R"({
       "port": 30000,
       "timeout_s": 10000,
       "sleep_ms": 100,
-      "check_period": 10,
-      "ping_enable": true
+      "buffer_ttl_period": 5,
+      "ping_period": 10,
+      "ping_enable": true,
+      "msg_keys" : {
+          "ping" : "PING",
+          "ack" : "ACK",
+          "nack" : "NACK",
+          "end" : "\\r\\n"
+          "id" : "ID""
+      }
   },
   "default": {
     "OCCRequest": {
