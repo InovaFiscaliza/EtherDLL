@@ -52,15 +52,6 @@
 using json = nlohmann::json;
 
 
-// ----------------------------------------------------------------------
-/*
-    Global variables related to the API
-*/
-
-CLoopbackCapture loopbackCapture;
-
-
-
 //
 // Convert response of BIT command in JSON
 //
@@ -1000,7 +991,7 @@ json ProcessGpsData(SEquipCtrlMsg::SGpsResponse* gpsResponse)
 /*
     Data callback for Scorpio API
 */
-void OnDataFunc(_In_  unsigned long serverId, _In_ ECSMSDllMsgType respType, _In_ unsigned long sourceAddr, _In_ unsigned long desstAddr, _In_ SEquipCtrlMsg::UBody* data)
+void OnDataFunc(_In_  unsigned long serverId, _In_ ECSMSDllMsgType respType, _In_ unsigned long sourceAddr, _In_ unsigned long requestID, _In_ SEquipCtrlMsg::UBody* data)
 {
     std::string response;
 

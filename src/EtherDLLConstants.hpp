@@ -40,15 +40,17 @@ namespace edll {
 	constexpr int DEFAULT_TIMEOUT_S = 10;
 	constexpr int DEFAULT_SLEEP_MS = 100;
 	constexpr int DEFAULT_BUFFER_TTL_PERIOD = 5;
+
 	constexpr int DEFAULT_PING_PERIOD = 10;
     constexpr bool DEFAULT_PING_STATE = true;
     constexpr const char* DEFAULT_PING_MSG = "PING";
     constexpr const char* DEFAULT_ACK_MSG = "ACK";
 	constexpr const char* DEFAULT_NACK_MSG = "NACK";
 	constexpr const char* DEFAULT_END_MSG = "\r\n";
-    constexpr const char* DEFAULT_ID = "ID";
-    
 
+    constexpr const char* MSG_KEY_CLIENT_ID = "ID";
+	constexpr const char* MSG_KEY_QUEUE_ID = "queue_id";
+    constexpr const char* MSG_KEY_CLIENT_IP = "client_ip";
 
 	constexpr int SOCKET_BUFFER_SIZE = 4096;
 }

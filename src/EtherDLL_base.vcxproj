@@ -255,7 +255,6 @@
     <ClCompile Include="dllSpecific\scorpio\stdafx.cpp" />
     <ClCompile Include="EtherDLL.cpp" />
     <ClCompile Include="EtherDLLAudio.cpp" />
-    <ClCompile Include="EtherDLLClient.cpp" />
     <ClCompile Include="EtherDLLUtils.cpp" />
     <ClCompile Include="EtherDLLLog.cpp" />
   </ItemGroup>

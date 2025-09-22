@@ -19,28 +19,42 @@
 **/
 
 // ----------------------------------------------------------------------
+// Include core EtherDLL libraries
+#include "EtherDLLClient.hpp"
+#include "EtherDLLConstants.hpp"
+#include "EtherDLLAudio.hpp"
+#include "EtherDLLAudioCommon.h"
+
+// Include DLL specific libraries
 #include "etherDLLRequest.hpp"
+#include "etherDLLCodes.hpp"
+#include "etherDLLConfig.hpp"
 
-#include "EtherDLLLog.hpp"
-
-#include <nlohmann/json.hpp>
-#include <string>
-#include <tuple>
-
-#include "stdafx.h"
+// Include provided DLL libraries
 #include "ScorpioAPITypes.h"
+#include "ScorpioAPIDll.h"
+/*
+#include "stdafx.h"
 #include "Units.h"
 #include "EquipCtrlMsg.h"
+*/
 
+// Include general C++ libraries
+#include <string>
+
+// Include project libraries
+#include <nlohmann/json.hpp>
+#include <spdlog/spdlog.h>
+
+// For convenience
 using json = nlohmann::json;
 
-// ----------------------------------------------------------------------
 /**
- * @brief Convert JSON object in SAudioParams struct 
- *
- * @param jsonObj: JSON object containing the parameters
- * @return SAudioParams: structure populated with values from the JSON object
- * @throws NO EXCEPTION HANDLING
+  * @brief Convert JSON object in SAudioParams struct 
+  *
+  * @param jsonObj: JSON object containing the parameters
+  * @return SAudioParams: structure populated with values from the JSON object
+  * @throws NO EXCEPTION HANDLING
  **/
 SAudioParams jsonToSAudioParams(nlohmann::json jsonObj) {
 	SAudioParams structSO{};
@@ -389,19 +403,6 @@ SAVDReqData* jsonToSAVDReqData(nlohmann::json jsonObj) {
 }
 
 
-
-void EtherDLLLog::logCommandExec(ERetCode errCode, std::string command) {
-	if (errCode != ERetCode::API_SUCCESS)
-	{
-		logger.error("[" + command + "] ERROR. " + ERetCodeToString(errCode));
-	}
-	else
-	{
-		logger.info("[" + command + "] command executed");
-	}
-}
-
-
 // ----------------------------------------------------------------------
 /**
 * @brief Test JSON object contains the required information is present
@@ -457,79 +458,154 @@ json validateRequest(json jsonObj, ECSMSDllMsgType msgType) {
 
 // ----------------------------------------------------------------------
 /**
-* @brief Test JSON object contains the required information is present
-*
-* @param jsonObj: JSON object containing the parameters
-* @param msgType: Message type to be validated (see ECSMSDllMsgType enum)
-* @return std::string: Empty if all required fields are present, otherwise a string describing the missing fields
-* @throws NO EXCEPTION HANDLING
+ * @brief Call the appropriate DLL function based on the request in JSON format
+ *
+ * Include the identification of the funciton based on request type
+ * conversion from JSON to the appropriate struct for each function call.
+ * 
+ * @param jsonObj: JSON object containing the parameters
+ * @param msgType: Message type to be validated (see ECSMSDllMsgType enum)
+ * @return std::string: Empty if all required fields are present, otherwise a string describing the missing fields
+ * @throws NO EXCEPTION HANDLING
 **/
-
-int cmd = jsonObj["commandCode"].get<int>();
-
-switch (cmd)
+void DLLFunctionCall(DLLConnectionData DLLConnID, json request, unsigned long& requestID, CLoopbackCapture& loopbackCapture, spdlog::logger& log)
 {
-case ECSMSDllMsgType::GET_OCCUPANCY:
-	logEtherDLL.logCommandExec(RequestOccupancy(APIserverId, jsonToSOccupReqData(jsonObj["occupancyParams"]), &requestID), "RequestOccupancy");
-	break;
-case ECSMSDllMsgType::GET_OCCUPANCYDF:
-	logEtherDLL.logCommandExec(RequestOccupancyDF(APIserverId, jsonToSOccDFReqData(jsonObj["occupancyParams"]), &requestID), "RequestOccupancyDF");
-	break;
-case ECSMSDllMsgType::GET_AVD:
-	logEtherDLL.logCommandExec(RequestAVD(APIserverId, jsonToSAVDReqData(jsonObj["acdParams"]), &requestID), "RequestAVD");
-	break;
-case ECSMSDllMsgType::GET_MEAS:
-	logEtherDLL.logCommandExec(RequestMeasurement(APIserverId, jsonToSMeasReqData(jsonObj["measParams"]), &requestID), "RequestMeasurement");
-	break;
-case ECSMSDllMsgType::GET_TASK_STATUS:
-	logEtherDLL.logCommandExec(RequestTaskStatus(APIserverId, jsonObj["reqId"].get<unsigned long>()), "RequestTaskStatus");
-	break;
-case ECSMSDllMsgType::GET_TASK_STATE:
-	logEtherDLL.logCommandExec(RequestTaskState(APIserverId, (ECSMSDllMsgType)jsonObj["taskType"].get<unsigned long>(), jsonObj["reqId"].get<unsigned long>()), "RequestTaskState");
-	break;
-case ECSMSDllMsgType::TASK_SUSPEND:
-	logEtherDLL.logCommandExec(SuspendTask(APIserverId, (ECSMSDllMsgType)jsonObj["taskType"].get<unsigned long>(), jsonObj["reqId"].get<unsigned long>()), "SuspendTask");
-	break;
-case ECSMSDllMsgType::TASK_RESUME:
-	logEtherDLL.logCommandExec(ResumeTask(APIserverId, (ECSMSDllMsgType)jsonObj["taskType"].get<unsigned long>(), jsonObj["reqId"].get<unsigned long>()), "ResumeTask");
-	break;
-case ECSMSDllMsgType::TASK_TERMINATE:
-	logEtherDLL.logCommandExec(TerminateTask(APIserverId, jsonObj["reqId"].get<unsigned long>()), "TerminateTask");
-	break;
-case ECSMSDllMsgType::GET_BIST:
-	logEtherDLL.logCommandExec(RequestBist(APIserverId, (EBistScope)jsonObj["scope"].get<int>(), &requestID), "RequestBist");
-	break;
-case ECSMSDllMsgType::SET_AUDIO_PARAMS:
-{
-	ERetCode ret = SetAudio(APIserverId, jsonToSAudioParams(jsonObj["audioParams"]), &requestID);
-	logEtherDLL.logCommandExec(ret, "SetAudio");
-	if (ret == ERetCode::API_SUCCESS) {
-		DWORD processId = wcstoul(L"123", nullptr, 0);
-		HRESULT hr = loopbackCapture.StartCaptureAsync(processId, false, L"audio");
-		if (FAILED(hr))
+	ERetCode errCode = ERetCode::API_SUCCESS;
+
+	unsigned long cmd = request["commandCode"].get<unsigned long>();
+	json reqArguments = request["arguments"].get<json>();
+
+	switch (cmd) {
+		case ECSMSDllMsgType::GET_OCCUPANCY:
+			SOccupReqData* occupDFReqMsg = jsonToSOccupReqData(reqArguments);
+			errCode = RequestOccupancy(DLLConnID, occupDFReqMsg, &requestID);
+			break;
+		case ECSMSDllMsgType::GET_OCCUPANCYDF:
+			SOccDFReqData* occDFReqMsg = jsonToSOccDFReqData(reqArguments);
+			errCode = RequestOccupancyDF(DLLConnID, occDFReqMsg, &requestID);
+			break;
+		case ECSMSDllMsgType::GET_AVD:
+			SAVDReqData* avdReqMsg = jsonToSAVDReqData(reqArguments);
+			errCode = RequestAVD(DLLConnID, avdReqMsg, &requestID);
+			break;
+		case ECSMSDllMsgType::GET_MEAS:
+			SMeasReqData* m_measureReqMsg = jsonToSMeasReqData(reqArguments);
+			errCode = RequestMeasurement(DLLConnID, m_measureReqMsg, &requestID);
+			break;
+		case ECSMSDllMsgType::GET_TASK_STATUS:
+			errCode = RequestTaskStatus(DLLConnID, requestID);
+			break;
+		case ECSMSDllMsgType::GET_TASK_STATE:
+			errCode = RequestTaskState(DLLConnID, (ECSMSDllMsgType)reqArguments["taskType"].get<unsigned long>(), requestID);
+			break;
+		case ECSMSDllMsgType::TASK_SUSPEND:
+			errCode = SuspendTask(DLLConnID, (ECSMSDllMsgType)reqArguments["taskType"].get<unsigned long>(), requestID);
+			break;
+		case ECSMSDllMsgType::TASK_RESUME:
+			errCode = ResumeTask(DLLConnID, (ECSMSDllMsgType)reqArguments["taskType"].get<unsigned long>(), requestID);
+			break;
+		case ECSMSDllMsgType::TASK_TERMINATE:
+			errCode = TerminateTask(DLLConnID, requestID);
+			break;
+		case ECSMSDllMsgType::GET_BIST:
+			errCode = RequestBist(DLLConnID, (EBistScope)reqArguments["scope"].get<int>(), &requestID);
+			break;
+		case ECSMSDllMsgType::SET_AUDIO_PARAMS:
 		{
-			logEtherDLL.error("Failed to start audio capture");
+			SAudioParams audioParams = jsonToSAudioParams(reqArguments["audioParams"]);
+			errCode = SetAudio(DLLConnID, audioParams, &requestID);
+
+			if (errCode == ERetCode::API_SUCCESS) {
+				DWORD processId = wcstoul(L"123", nullptr, 0);
+				HRESULT hr = loopbackCapture.StartCaptureAsync(processId, false, L"audio");
+				if (FAILED(hr))
+				{
+					log.error("Failed to start audio capture");
+				}
+				else {
+					log.info("Capturing audio.");
+				}
+			}
+			break;
 		}
-		else {
-			logEtherDLL.info("Capturing audio.");
+		case ECSMSDllMsgType::FREE_AUDIO_CHANNEL:
+		{
+			errCode = FreeAudio(DLLConnID, reqArguments["channel"].get<unsigned long>(), &requestID);
+			loopbackCapture.StopCaptureAsync();
+			log.info("Finished audio capture.");
+			break;
 		}
+		case ECSMSDllMsgType::SET_PAN_PARAMS:
+			SPanParams panParams = jsonToSPanParams(reqArguments["panParams"]);
+			errCode = SetPanParams(DLLConnID, panParams, &requestID);
+			break;
+		case ECSMSDllMsgType::GET_PAN:
+			SGetPanParams panParamsGet = jsonToSGetPanParams(reqArguments["panParams"]);
+			errCode = RequestPan(DLLConnID, panParamsGet, &requestID);
+			break;
+		default:
+			log.error("Command not recognized");
+			break;
 	}
-	break;
+
+	std::string reqName = request["name"].get<std::string>();
+	if (errCode != ERetCode::API_SUCCESS)
+	{
+		log.error("[" + reqName + "] ERROR. " + ERetCodeToString(errCode));
+	}
+	else
+	{
+		log.info("[" + reqName + "] command executed");
+		log.debug("Request ID " + std::to_string(requestID) + ": " + reqArguments.dump() + "");
+	}
 }
-case ECSMSDllMsgType::FREE_AUDIO_CHANNEL:
+
+
+// ----------------------------------------------------------------------
+/** @brief Process messages from the request queue and call the appropriate DLL function
+ *
+ * This function will lock the thread. Must be run in a separate thread.
+ * Messages are expected to be in JSON format and end with the defined message end sequence.
+ * If no data is available to send, a PING message will be sent periodically to check if the connection is still alive.
+ * PING message will contain the current timestamp in milliseconds since epoch.
+ *
+ * @param clientSocket: Socket connected to the client
+ * @param config: JSON object containing configuration
+ * @param response: Thread-safe message queue containing messages to be sent to the client
+ * @param interruptionCode: Signal interruption for service interruption
+ * @param log: spdlog logger object for logging messages
+ * @throws NO EXCEPTION HANDLING
+*/
+void processRequestQueue(DLLConnectionData DLLConnID, MessageQueue& request, json config, edll::INT_CODE& interruptionCode, spdlog::logger& log)
 {
-	logEtherDLL.logCommandExec(FreeAudio(APIserverId, jsonObj["channel"].get<unsigned long>(), &requestID), "FreeAudio");
-	loopbackCapture.StopCaptureAsync();
-	logEtherDLL.info("Finished audio capture.");
-	break;
-}
-case ECSMSDllMsgType::SET_PAN_PARAMS:
-	logEtherDLL.logCommandExec(SetPanParams(APIserverId, jsonToSPanParams(jsonObj["panParams"]), &requestID), "SetPanParams");
-	break;
-case ECSMSDllMsgType::GET_PAN:
-	logEtherDLL.logCommandExec(RequestPan(APIserverId, jsonToSGetPanParams(jsonObj["panParams"]), &requestID), "RequestPan");
-	break;
-default:
-	logEtherDLL.error("command not recognized");
-	break;
+	CLoopbackCapture loopbackCapture = CLoopbackCapture();
+
+	while (interruptionCode == edll::Code::RUNNING)
+	{
+		if (request.empty()) {
+			std::this_thread::sleep_for(std::chrono::milliseconds(config["service"].value("sleep_ms", edll::DEFAULT_SLEEP_MS)));
+			continue;
+		}
+
+		json oneRequest = request.pop();
+		unsigned long requestID = oneRequest[edll::RECEIVE_MSG_COUNT].get<unsigned long>();
+
+		DLLFunctionCall(DLLConnID, oneRequest, requestID, loopbackCapture, log);
+
+
+
+		if (errCode != ERetCode::API_SUCCESS) {
+			log.error("DLL function call failed. Disconnecting and retrying...");
+			DisconnectDLL(DLLConnID, log);
+			std::this_thread::sleep_for(std::chrono::seconds(5));
+			continue;
+		}
+		// Disconnect from the DLL after processing the request
+		DisconnectDLL(DLLConnID, log);
+		// Sleep for a short duration before processing the next request
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+	}
+
+
+	(config, request, interruptionCode, log)
 }

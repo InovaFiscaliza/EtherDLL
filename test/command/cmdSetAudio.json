@@ -1,14 +1,15 @@
 {
-    "commandCode": 16,
-    "audioParams": {
-        "anyChannel": true,
-        "bandwidth": 200000,
-        "bfo": 0,
-        "channel": 0,
-        "detMode": 3,
-        "doModRec": false,
-        "doRDS": false,
-        "freq": 101300000,
-		"streamID": 0
-    }
+  "commandCode": 16,
+  "name": "cmdSetAudio",
+  "arguments": {
+    "anyChannel": true,
+    "bandwidth": 200000,
+    "bfo": 0,
+    "channel": 0,
+    "detMode": 3,
+    "doModRec": false,
+    "doRDS": false,
+    "freq": 101300000,
+    "streamID": 0
+  }
 }

@@ -487,9 +487,6 @@
     <ClCompile Include="dllSpecific\scorpio\etherDLLDataProcess.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="EtherDLLClient.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="dllSpecific\scorpio\etherDLLConfig.json.inc" />

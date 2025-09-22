@@ -19,7 +19,7 @@
 
 using namespace Microsoft::WRL;
 
-class CLoopbackCapture :
+class CLoopbackCapture:
     public RuntimeClass< RuntimeClassFlags< ClassicCom >, FtmBase, IActivateAudioInterfaceCompletionHandler >
 {
 public:

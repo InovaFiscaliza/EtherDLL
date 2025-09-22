@@ -246,32 +246,51 @@ int main(int argc, char* argv[]) {
 		return static_cast<int>(interruptionCode);
 	}
 
-	messageQueue request;
-	messageQueue response;
+	MessageQueue request;
+	MessageQueue response;
+
 	while (interruptionCode == edll::Code::RUNNING)
 	{
-		SOCKET clientSocket = establishClientCommunication(config, interruptionCode, log);
+		// Inicialise ClientConn object to wait for a client connection
+		ClientConn clientConn(config, interruptionCode, log);
 
-		// Start threads for client communication
-		auto receiveFuture = std::async(std::launch::async, [&]() {
-			clientRequestToDLL(clientSocket, config, request, interruptionCode, log);
+		// Start threads to receive client requests
+		auto requestComFuture = std::async(std::launch::async, [&]() {
+			clientConn.clientRequestToDLL(request);
 			return true; 
 			});
 
-		// Start thread for sending responses to client
-		auto sendFuture = std::async(std::launch::async, [&]() {
-			DLLResponseToClient(clientSocket, config, response, interruptionCode, log);
+		// Start threads to process client requests
+		auto requestProcFuture = std::async(std::launch::async, [&]() {
+			processRequestQueue(config, request, interruptionCode, log);
 			return true;
 			});
 
-		// Hold the main loop to process messages between client and DLL
-		bool activeComm = true;
-		bool activeProces = true;
-		while (interruptionCode == edll::Code::RUNNING && activeProces && activeComm)
-		{
-			activeProces = processMessages(stationConnID, config, log);
 
-			activeComm = !(receiveFuture.wait_for(std::chrono::seconds(0)) == std::future_status::ready &&
+		// Start thread for preparing responses client
+		auto responseProcFuture = std::async(std::launch::async, [&]() {
+			processResponseQueue(config, request, interruptionCode, log);
+			return true;
+			});
+
+		// Start thread for sending responses to client
+		auto responseConFuture = std::async(std::launch::async, [&]() {
+			clientConn.DLLResponseToClient(response);
+			return true;
+			});
+
+		// Hold the main loop to process messages between requests and responses
+		bool communicationActive = true;
+		bool requestActive = true;
+		bool responsepActive = true;
+
+		while (interruptionCode == edll::Code::RUNNING && requestActive && responsepActive && communicationActive)
+		{
+			requestActive = processRequests(stationConnID, config, log);
+
+			responsepActive = processRequests(stationConnID, config, log);
+
+			communicationActive = !(receiveFuture.wait_for(std::chrono::seconds(0)) == std::future_status::ready &&
 				sendFuture.wait_for(std::chrono::seconds(0)) == std::future_status::ready);
 
 			std::this_thread::sleep_for(std::chrono::milliseconds(config["service"].value("sleep_ms", edll::DEFAULT_SLEEP_MS)));
