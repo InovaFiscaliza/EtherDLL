@@ -21,10 +21,7 @@
 #include <mutex>
 #include <future>
 #include <atomic>
-#include <vector>
 #include <string>
-#include <tuple>
-#include <chrono>
 #include <csignal>
 #include <fstream>
 #include <iostream>
@@ -246,6 +243,11 @@ int main(int argc, char* argv[]) {
 		return static_cast<int>(interruptionCode);
 	}
 
+	// Add these at the top with other global variables:
+	std::mutex threadCompletionMutex;
+	std::condition_variable threadCompletionCV;
+	std::atomic<bool> anyThreadCompleted = false;
+
 	MessageQueue request;
 	MessageQueue response;
 
@@ -254,51 +256,60 @@ int main(int argc, char* argv[]) {
 		// Inicialise ClientConn object to wait for a client connection
 		ClientConn clientConn(config, interruptionCode, log);
 
-		// Start threads to receive client requests
+		// Reset completion flag
+		anyThreadCompleted = false;
+
+		// Lambda to signal completion
+		auto signalCompletion = [&threadCompletionMutex, &anyThreadCompleted, &threadCompletionCV]() {
+				{
+					std::lock_guard<std::mutex> lock(threadCompletionMutex);
+					anyThreadCompleted = true;
+				}
+			threadCompletionCV.notify_one();
+			};
+
+		// Start threads with completion signaling
 		auto requestComFuture = std::async(std::launch::async, [&]() {
 			clientConn.clientRequestToDLL(request);
-			return true; 
+			signalCompletion();
+			return true;
 			});
 
-		// Start threads to process client requests
 		auto requestProcFuture = std::async(std::launch::async, [&]() {
-			processRequestQueue(config, request, interruptionCode, log);
+			processRequestQueue(DLLConnID, request, interruptionCode, log);
+			signalCompletion();
 			return true;
 			});
 
-
-		// Start thread for preparing responses client
 		auto responseProcFuture = std::async(std::launch::async, [&]() {
-			processResponseQueue(config, request, interruptionCode, log);
+			processResponseQueue(config, response, interruptionCode, log);
+			signalCompletion();
 			return true;
 			});
 
-		// Start thread for sending responses to client
 		auto responseConFuture = std::async(std::launch::async, [&]() {
 			clientConn.DLLResponseToClient(response);
+			signalCompletion();
 			return true;
 			});
 
-		// Hold the main loop to process messages between requests and responses
-		bool communicationActive = true;
-		bool requestActive = true;
-		bool responsepActive = true;
-
-		while (interruptionCode == edll::Code::RUNNING && requestActive && responsepActive && communicationActive)
 		{
-			requestActive = processRequests(stationConnID, config, log);
-
-			responsepActive = processRequests(stationConnID, config, log);
-
-			communicationActive = !(receiveFuture.wait_for(std::chrono::seconds(0)) == std::future_status::ready &&
-				sendFuture.wait_for(std::chrono::seconds(0)) == std::future_status::ready);
-
-			std::this_thread::sleep_for(std::chrono::milliseconds(config["service"].value("sleep_ms", edll::DEFAULT_SLEEP_MS)));
+			std::unique_lock<std::mutex> lock(threadCompletionMutex);
+			threadCompletionCV.wait(lock, [&]() {
+				return anyThreadCompleted.load() || interruptionCode != edll::Code::RUNNING;
+				});
 		}
 
-		closesocket(clientSocket);
-		if (!activeComm) log.info("Client disconnected.");
+		log.info("Service interrupted");
+
+		// Clean up
+		if (!clientConn.isConnected()) {
+			log.info("Client disconnected.");
+		}
+
+		clientConn.closeConnection();
 	}
+
 	// Close the connection
 	if (!disconnectAPI(DLLConnID, log)) {
 		log.error("Failed to disconnect from station.");
