@@ -62,6 +62,11 @@ private:
 	mutable std::mutex mtx;
 	// Total number of messages ever added to the queue. May return to zero if it overflows.
 	unsigned long messageCount = 0;
+	// Mutex for condition variable
+	mutable std::mutex cmtx;
+	// Condition variable to signal availability of new messages
+	std::condition_variable m_condition;
+
 
 public:
 	/** @brief Push an item to the queue in a thread-safe manner
@@ -97,6 +102,30 @@ public:
 		json item = msgQueue.front();
 		msgQueue.pop();
 		return item;
+	}
+
+	/** @brief Wait for and pop an item from the front of the queue in a thread-safe manner
+	* Blocks until an item is available or interruption is signaled.
+	*
+	* @param interruptionCode: Reference to interruption signal to check for shutdown
+	* @return json: Item popped from the front of the queue, or empty json if interrupted
+	* @throws NO EXCEPTION HANDLING
+	**/
+	json waitAndPop(const edll::INT_CODE& interruptionCode) {
+
+		std::unique_lock<std::mutex> lock(cmtx);
+
+		// Wait until queue is not empty or we're interrupted
+		m_condition.wait(lock, [this, &interruptionCode] {
+			return !msgQueue.empty() || interruptionCode != edll::Code::RUNNING;
+			});
+
+		// It wait was interrupted, return empty json
+		if (interruptionCode != edll::Code::RUNNING) {
+			return json(); 
+		}
+
+		return this->pop();
 	}
 
 	/** @brief Check if the queue is empty in a thread-safe manner
