@@ -66,6 +66,10 @@ spdlog::logger log;
 // Code to represent the cause for not running
 edll::INT_CODE interruptionCode = edll::Code::RUNNING;
 
+// Message queues
+MessageQueue request;
+MessageQueue response;
+
 // ----------------------------------------------------------------------
 /*
 	Handle interruptio signals 'ctrl+C' and 'kill'
@@ -248,9 +252,6 @@ int main(int argc, char* argv[]) {
 	std::condition_variable threadCompletionCV;
 	std::atomic<bool> anyThreadCompleted = false;
 
-	MessageQueue request;
-	MessageQueue response;
-
 	while (interruptionCode == edll::Code::RUNNING)
 	{
 		// Inicialise ClientConn object to wait for a client connection
@@ -277,12 +278,6 @@ int main(int argc, char* argv[]) {
 
 		auto requestProcFuture = std::async(std::launch::async, [&]() {
 			processRequestQueue(DLLConnID, request, interruptionCode, log);
-			signalCompletion();
-			return true;
-			});
-
-		auto responseProcFuture = std::async(std::launch::async, [&]() {
-			processResponseQueue(config, response, interruptionCode, log);
 			signalCompletion();
 			return true;
 			});
