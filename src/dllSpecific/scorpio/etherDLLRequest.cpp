@@ -412,17 +412,17 @@ SAVDReqData* jsonToSAVDReqData(nlohmann::json jsonObj) {
 * @return nlohmann::json: 
 * @throws NO EXCEPTION HANDLING
 **/
-json validateRequest(json jsonObj, ECSMSDllMsgType msgType) {
-
-	json msg = json::object();
+std::string validateRequest(json request, ECSMSDllMsgType msgType, spdlog::logger& log)
+{
+	std::string msg = "";
 
 	switch (msgType)
 	{
 	case ECSMSDllMsgType::GET_OCCUPANCYDF:
 		// fallthrough intended to also validate GET_OCCUPANCY fields
 	case ECSMSDllMsgType::GET_OCCUPANCY:
-		if (jsonObj["band"].is_null() == true || jsonObj["band"].is_array() == false || jsonObj["band"].size() == 0) {
-			msg += "SOccupReqData: 'band' field is missing or empty in the JSON object; ";
+		if (request["band"].is_null() == true || request["band"].is_array() == false || request["band"].size() == 0) {
+			msg += "SOccupReqData: 'band' field is missing or empty in the JSON object.";
 		}
 		break;
 	case ECSMSDllMsgType::GET_AVD:
@@ -450,10 +450,12 @@ json validateRequest(json jsonObj, ECSMSDllMsgType msgType) {
 	case ECSMSDllMsgType::GET_PAN:
 		break;
 	default:
+		msg += "Message type not recognized.";
 		break;
 	}
 
-	return std::make_tuple(msg, log_level);
+	log.debug(msg);
+	return msg;
 }
 
 // ----------------------------------------------------------------------
@@ -468,12 +470,16 @@ json validateRequest(json jsonObj, ECSMSDllMsgType msgType) {
  * @return std::string: Empty if all required fields are present, otherwise a string describing the missing fields
  * @throws NO EXCEPTION HANDLING
 **/
-void DLLFunctionCall(DLLConnectionData DLLConnID, json request, unsigned long& requestID, CLoopbackCapture& loopbackCapture, spdlog::logger& log)
+void DLLFunctionCall(DLLConnectionData DLLConnID, json request, CLoopbackCapture& loopbackCapture, spdlog::logger& log)
 {
 	ERetCode errCode = ERetCode::API_SUCCESS;
+	
+	unsigned long requestID = request[edll::MSG_KEY_QUEUE_ID].get<unsigned long>();
 
 	unsigned long cmd = request["commandCode"].get<unsigned long>();
 	json reqArguments = request["arguments"].get<json>();
+
+	validateRequest(request, (ECSMSDllMsgType)cmd, log);
 
 	switch (cmd) {
 		case ECSMSDllMsgType::GET_OCCUPANCY:
@@ -576,36 +582,18 @@ void DLLFunctionCall(DLLConnectionData DLLConnID, json request, unsigned long& r
  * @param log: spdlog logger object for logging messages
  * @throws NO EXCEPTION HANDLING
 */
-void processRequestQueue(DLLConnectionData DLLConnID, MessageQueue& request, json config, edll::INT_CODE& interruptionCode, spdlog::logger& log)
+void processRequestQueue(DLLConnectionData DLLConnID, MessageQueue& request, edll::INT_CODE& interruptionCode, spdlog::logger& log)
 {
 	CLoopbackCapture loopbackCapture = CLoopbackCapture();
 
 	while (interruptionCode == edll::Code::RUNNING)
 	{
-		if (request.empty()) {
-			std::this_thread::sleep_for(std::chrono::milliseconds(config["service"].value("sleep_ms", edll::DEFAULT_SLEEP_MS)));
-			continue;
+		json oneRequest = request.waitAndPop(interruptionCode);
+
+		if (oneRequest.is_null() == false) {
+			DLLFunctionCall(DLLConnID, oneRequest, loopbackCapture, log);
 		}
-
-		json oneRequest = request.pop();
-		unsigned long requestID = oneRequest[edll::RECEIVE_MSG_COUNT].get<unsigned long>();
-
-		DLLFunctionCall(DLLConnID, oneRequest, requestID, loopbackCapture, log);
-
-
-
-		if (errCode != ERetCode::API_SUCCESS) {
-			log.error("DLL function call failed. Disconnecting and retrying...");
-			DisconnectDLL(DLLConnID, log);
-			std::this_thread::sleep_for(std::chrono::seconds(5));
-			continue;
-		}
-		// Disconnect from the DLL after processing the request
-		DisconnectDLL(DLLConnID, log);
-		// Sleep for a short duration before processing the next request
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		
 	}
-
-
-	(config, request, interruptionCode, log)
+	
 }
