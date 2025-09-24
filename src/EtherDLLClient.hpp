@@ -77,7 +77,7 @@ public:
 	 * @return unsigned long: Message count for the item just added
 	 * @throws NO EXCEPTION HANDLING
 	**/
-	unsigned long push(json& item, bool setClientKey = false) {
+	unsigned long push(json item, bool setClientKey = false) {
 		std::lock_guard<std::mutex> lock(mtx);
 		item[edll::MSG_KEY_QUEUE_ID] = messageCount;
 		if (setClientKey) {
