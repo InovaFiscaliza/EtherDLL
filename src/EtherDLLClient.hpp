@@ -28,6 +28,7 @@
 
 
 // Include general C++ libraries
+#include <string>
 #include <mutex>
 #include <thread>
 #include <atomic>
@@ -64,13 +65,19 @@ private:
 
 public:
 	/** @brief Push an item to the queue in a thread-safe manner
-	 *
+	 * Upon and pushing, add to the item the queue ID
+	 * Optionally add the queue ID to another key, 
+	 * 
 	 * @param item: Item to be pushed to the queue
 	 * @return unsigned long: Message count for the item just added
 	 * @throws NO EXCEPTION HANDLING
 	**/
-	unsigned long push(const json& item) {
+	unsigned long push(json& item, bool setClientKey = false) {
 		std::lock_guard<std::mutex> lock(mtx);
+		item[edll::MSG_KEY_QUEUE_ID] = messageCount;
+		if (setClientKey) {
+			item[edll::MSG_KEY_CLIENT_ID] = messageCount;
+		}
 		msgQueue.push(item);
 		return messageCount++;
 	}
@@ -291,6 +298,8 @@ public:
 	 * Messages are expected to be in JSON format and end with the defined message end sequence.
 	 * Each complete message will be acknowledged with an ACK or NACK response.
 	 * ACK will contain the message ID if available, NACK will contain the length of the invalid message.
+	 * If no message ID is provided by the client, a sequential number will be generated and returned in the ACK message.
+	 * The client provided or generated message ID will be used to track responses from the DLL back to the client.
 	 * If no data is received, a PING message will be sent periodically to check if the connection is still alive.
 	 *
 	 * @param clientSocket: Socket connected to the client
@@ -309,7 +318,7 @@ public:
 		std::string ackStr = config["service"]["msg_keys"].value("ack", edll::DEFAULT_ACK_MSG);
 		std::string nackStr = config["service"]["msg_keys"].value("nack", edll::DEFAULT_NACK_MSG);
 
-		std::string idStr = config["service"]["msg_keys"].value("id", edll::DEFAULT_ID);
+		std::string idStr = config["service"]["msg_keys"].value("id", edll::MSG_KEY_CLIENT_ID);
 
 		ackStr = msgJsonStartStr + ackStr + msgJsonMidStr;
 		nackStr = msgJsonStartStr + nackStr + msgJsonMidStr;
@@ -343,15 +352,21 @@ public:
 					if (jsonObj != json::value_t::discarded) {
 
 						// add client id and queue id to object
-						jsonObj[edll::CLIENT_IP] = clientIP;
-						if (!jsonObj.contains(idStr)) {
-							jsonObj[idStr] = "No Client Message ID";
-						}
-						jsonObj[edll::RECEIVE_MSG_COUNT] = request.push(jsonObj);
+						jsonObj[edll::MSG_KEY_CLIENT_IP] = clientIP;
 
-						std::string messageID = jsonObj[idStr];
-						log.debug("Received message ID: " + messageID);
-						std::string ack = ackStr + messageID + msgEndStr;
+
+						if (jsonObj.contains(idStr)) {
+							jsonObj[edll::MSG_KEY_QUEUE_ID] = request.push(jsonObj);
+						}
+						else
+						{
+							jsonObj[idStr] = request.push(jsonObj,true);
+							jsonObj[edll::MSG_KEY_QUEUE_ID] = jsonObj[idStr];
+						}
+						
+						log.debug("Received message ID: " + jsonObj.dump());
+
+						std::string ack = ackStr + jsonObj[idStr] + msgEndStr;
 						iResult = send(clientSocket, ack.c_str(), ack.length(), 0);
 					}
 					else {
