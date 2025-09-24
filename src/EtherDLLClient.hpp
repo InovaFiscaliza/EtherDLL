@@ -547,6 +547,21 @@ public:
 	}
 
 	// ----------------------------------------------------------------------
+	/** @brief Close the client connection
+	 * @param None
+	 * @return void
+	 * @throws NO EXCEPTION HANDLING
+	**/
+	void closeConnection() {
+		if (clientSocket != INVALID_SOCKET) {
+			closesocket(clientSocket);
+			clientSocket = INVALID_SOCKET;
+			log.info("Closed connection with client " + clientIP);
+			clientIP = "";
+		}
+	}
+
+	// ----------------------------------------------------------------------
 	/** @brief Destructor to clean up socket
 	 * @param None
 	 * @return void
