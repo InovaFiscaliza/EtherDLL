@@ -25,6 +25,7 @@
 // Include core EtherDLL libraries
 #include "EtherDLLConstants.hpp"
 #include "EtherDLLUtils.hpp"
+#include "EtherDLLClient.hpp"
 
 // Include DLL specific libraries
 #include "etherDLLResponse.hpp"
@@ -51,10 +52,12 @@
 // For convenience
 using json = nlohmann::json;
 
+extern MessageQueue response;
 
-//
-// Convert response of BIT command in JSON
-//
+// ----------------------------------------------------------------------
+/** @brief Convert response of BIT command in JSON
+ * 
+**/
 json processBITEResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody* respdata)
 {
 	json jsonObj;
@@ -86,9 +89,10 @@ json processBITEResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBod
 	return jsonObj;
 }
 
-//
-// Convert response of type GET_ANT_LIST_INFO in JSON
-//
+// ----------------------------------------------------------------------
+/** @brief Convert response of type GET_ANT_LIST_INFO in JSON
+ * 
+**/
 json ProcessAntListResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody* data)
 {
 	SEquipCtrlMsg::SAntInfoListResp* antListResponse = (SEquipCtrlMsg::SAntInfoListResp*)data;
@@ -117,9 +121,10 @@ json ProcessAntListResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::U
 	return jsonObj;
 }
 
-//
-// Convert response of types AVD_FREQ_VS_CHANNEL, AVD_OCC_CHANNEL_RESULT, AVD_FREQ_MEAS, AVD_BW_MEAS, AVD_SOLICIT_STATE_RESPONSE, AVD_STATE_RESPONSE and AVD_STATUS  in JSON
-//
+// ----------------------------------------------------------------------
+/** @brief Convert response of types AVD_FREQ_VS_CHANNEL, AVD_OCC_CHANNEL_RESULT, AVD_FREQ_MEAS, AVD_BW_MEAS, AVD_SOLICIT_STATE_RESPONSE, AVD_STATE_RESPONSE and AVD_STATUS  in JSON
+ * 
+**/
 json processAutoViolateResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody* data)
 {
 	SEquipCtrlMsg::SOccupancyHeader* pOccHdr = nullptr;
@@ -301,9 +306,10 @@ json processAutoViolateResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMs
 	return jsonObj;
 }
 
-//
-// Convert response of types GET_MEAS and VALIDATE_MEAS in JSON
-//
+// ----------------------------------------------------------------------
+/** @brief Convert response of types GET_MEAS and VALIDATE_MEAS in JSON
+ * 
+**/
 json processMeasResponse(_In_ ECSMSDllMsgType respType, _In_ unsigned long sourceAddr, _In_ SEquipCtrlMsg::UBody* data)
 {
 	json jsonObj;
@@ -356,9 +362,10 @@ json processMeasResponse(_In_ ECSMSDllMsgType respType, _In_ unsigned long sourc
 	return jsonObj;
 }
 
-//
-// Convert response of types SET_PAN_PARAMS, SET_AUDIO_PARAMS and FREE_AUDIO_CHANNEL in JSON
-//
+// ----------------------------------------------------------------------
+/** @brief Convert response of types SET_PAN_PARAMS, SET_AUDIO_PARAMS and FREE_AUDIO_CHANNEL in JSON
+ * 
+**/
 json processDemodCtrlResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody* data)
 {
 	json jsonObj;
@@ -405,9 +412,10 @@ json processDemodCtrlResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg:
 	return jsonObj;
 }
 
-//
-// Convert response of type GET_PAN in JSON
-//
+// ----------------------------------------------------------------------
+/** @brief Convert response of type GET_PAN in JSON
+ * 
+**/
 json processPanResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody* data)
 {
 	json jsonObj;
@@ -446,9 +454,10 @@ json processPanResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody
 
 }
 
-//
-// Convert response of types OCC_MSGLEN_DIST_RESPONSE, OCC_FREQ_VS_CHANNEL, OCC_CHANNEL_RESULT, OCC_STATUS, OCC_STATE_RESPONSE, OCC_SOLICIT_STATE_RESPONSE, OCC_SPECTRUM_RESPONSE, OCC_TIMEOFDAY_RESULT, OCC_EFLD_CHANNEL_RESULT, OCC_MSGLEN_CHANNEL_RESULT, OCC_EFLD_TIMEOFDAY_RESULT in JSON
-//
+// ----------------------------------------------------------------------
+/** @brief Convert response of types OCC_MSGLEN_DIST_RESPONSE, OCC_FREQ_VS_CHANNEL, OCC_CHANNEL_RESULT, OCC_STATUS, OCC_STATE_RESPONSE, OCC_SOLICIT_STATE_RESPONSE, OCC_SPECTRUM_RESPONSE, OCC_TIMEOFDAY_RESULT, OCC_EFLD_CHANNEL_RESULT, OCC_MSGLEN_CHANNEL_RESULT, OCC_EFLD_TIMEOFDAY_RESULT in JSON
+ * 
+**/
 json processOccupancyResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody* data)
 {
 	json jsonObj;
@@ -641,9 +650,10 @@ json processOccupancyResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg:
 	return jsonObj;
 }
 
-//
-// Convert response of types OCCDF_FREQ_VS_CHANNEL, OCCDF_SCANDF_VS_CHANNEL, OCCDF_STATUS, OCCDF_STATE_RESPONSE and OCCDF_SOLICIT_STATE_RESPONSE in JSON
-//
+// ----------------------------------------------------------------------
+/** @brief Convert response of types OCCDF_FREQ_VS_CHANNEL, OCCDF_SCANDF_VS_CHANNEL, OCCDF_STATUS, OCCDF_STATE_RESPONSE and OCCDF_SOLICIT_STATE_RESPONSE in JSON
+ * 
+**/
 json processOccupancyDFResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody* data)
 {
 	json jsonObj;
@@ -753,9 +763,10 @@ json processOccupancyDFResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMs
 	return jsonObj;
 }
 
-//
-// Convert response returned by callback OnRealTimeDataFunc in JSON
-//
+// ----------------------------------------------------------------------
+/** @brief Convert response returned by callback OnRealTimeDataFunc in JSON
+ * 
+**/
 json ProcessRealTimeData(_In_ ECSMSDllMsgType respType, _In_ SSmsRealtimeMsg::UBody* data)
 {
 	json jsonObj;
@@ -955,9 +966,10 @@ json ProcessRealTimeData(_In_ ECSMSDllMsgType respType, _In_ SSmsRealtimeMsg::UB
 	return jsonObj;
 }
 
-//
-// Convert response returned by callback OnGpsDataFunc in JSON
-//
+// ----------------------------------------------------------------------
+/** @brief Convert response returned by callback OnGpsDataFunc in JSON
+ * 
+**/
 json ProcessGpsData(SEquipCtrlMsg::SGpsResponse* gpsResponse)
 {
     json jsonObj;
@@ -988,22 +1000,22 @@ json ProcessGpsData(SEquipCtrlMsg::SGpsResponse* gpsResponse)
 
 
 // ----------------------------------------------------------------------
-/*
-    Data callback for Scorpio API
-*/
+/** @brief Data callback for Scorpio API
+ * 
+**/
 void OnDataFunc(_In_  unsigned long serverId, _In_ ECSMSDllMsgType respType, _In_ unsigned long sourceAddr, _In_ unsigned long requestID, _In_ SEquipCtrlMsg::UBody* data)
 {
-    std::string response;
+
 
     switch (respType)
     {
     case ECSMSDllMsgType::GET_BIST:
     case ECSMSDllMsgType::GET_BIST_RESULT:
     case ECSMSDllMsgType::GET_DIAGNOSTICS:
-        streamBuffer.push_back(processBITEResponse(respType, data));
+        response.push(processBITEResponse(respType, data));
         break;
     case ECSMSDllMsgType::GET_ANT_LIST_INFO:
-        streamBuffer.push_back(ProcessAntListResponse(respType, data));
+        response.push(ProcessAntListResponse(respType, data));
         break;
     case ECSMSDllMsgType::OCC_MSGLEN_DIST_RESPONSE:
     case ECSMSDllMsgType::OCC_FREQ_VS_CHANNEL:
@@ -1016,14 +1028,14 @@ void OnDataFunc(_In_  unsigned long serverId, _In_ ECSMSDllMsgType respType, _In
     case ECSMSDllMsgType::OCC_EFLD_CHANNEL_RESULT:
     case ECSMSDllMsgType::OCC_MSGLEN_CHANNEL_RESULT:
     case ECSMSDllMsgType::OCC_EFLD_TIMEOFDAY_RESULT:
-        streamBuffer.push_back(processOccupancyResponse(respType, data));
+        response.push(processOccupancyResponse(respType, data));
         break;
     case ECSMSDllMsgType::OCCDF_FREQ_VS_CHANNEL:
     case ECSMSDllMsgType::OCCDF_SCANDF_VS_CHANNEL:
     case ECSMSDllMsgType::OCCDF_STATUS:
     case ECSMSDllMsgType::OCCDF_STATE_RESPONSE:
     case ECSMSDllMsgType::OCCDF_SOLICIT_STATE_RESPONSE:
-        streamBuffer.push_back(processOccupancyDFResponse(respType, data));
+        response.push(processOccupancyDFResponse(respType, data));
         break;
     case ECSMSDllMsgType::AVD_FREQ_VS_CHANNEL:
     case ECSMSDllMsgType::AVD_OCC_CHANNEL_RESULT:
@@ -1032,22 +1044,19 @@ void OnDataFunc(_In_  unsigned long serverId, _In_ ECSMSDllMsgType respType, _In
     case ECSMSDllMsgType::AVD_SOLICIT_STATE_RESPONSE:
     case ECSMSDllMsgType::AVD_STATE_RESPONSE:
     case ECSMSDllMsgType::AVD_STATUS:
-        streamBuffer.push_back(processAutoViolateResponse(respType, data));
+        response.push(processAutoViolateResponse(respType, data));
         break;
     case ECSMSDllMsgType::GET_MEAS:
     case ECSMSDllMsgType::VALIDATE_MEAS:
-        streamBuffer.push_back(processMeasResponse(respType, sourceAddr, data));
+        response.push(processMeasResponse(respType, sourceAddr, data));
         break;
     case ECSMSDllMsgType::SET_PAN_PARAMS:
     case ECSMSDllMsgType::SET_AUDIO_PARAMS:
     case ECSMSDllMsgType::FREE_AUDIO_CHANNEL:
-        streamBuffer.push_back(processDemodCtrlResponse(respType, data));
+        response.push(processDemodCtrlResponse(respType, data));
         break;
     case ECSMSDllMsgType::GET_PAN:
-        response = processPanResponse(respType, data);
-        logEtherDLL.info("GET_PAN response: " + response);
-        streamBuffer.push_back(response);
-        //streamBuffer.push_back(processPanResponse(respType, data));
+        response.push(processPanResponse(respType, data));
         break;
     case ECSMSDllMsgType::GET_DM:
 
@@ -1056,16 +1065,12 @@ void OnDataFunc(_In_  unsigned long serverId, _In_ ECSMSDllMsgType respType, _In
     default:
         break;
     }
-
-    log.info("OnData received with type " + respType);
-    logEtherDLL.info("OnData received destination address " + desstAddr);
-    logEtherDLL.info("OnData received server ID " + serverId);
 }
 
 // ----------------------------------------------------------------------
-/*
-    Error callback for Scorpio API
-*/
+/** @brief Error callback for Scorpio API
+ * 
+**/
 void OnErrorFunc(_In_  unsigned long serverId, _In_ const std::wstring& errorMsg)
 {
     std::string str(errorMsg.begin(), errorMsg.end());
@@ -1078,9 +1083,9 @@ void OnErrorFunc(_In_  unsigned long serverId, _In_ const std::wstring& errorMsg
 }
 
 // ----------------------------------------------------------------------
-/*
-    Realtime callback for Scorpio API
-*/
+/** @brief Realtime callback for Scorpio API
+ * 
+**/
 void OnRealTimeDataFunc(_In_  unsigned long serverId, _In_ ECSMSDllMsgType respType, _In_ SSmsRealtimeMsg::UBody* data)
 {
     streamBuffer.push_back(ProcessRealTimeData(respType, data));
