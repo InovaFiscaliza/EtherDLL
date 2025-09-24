@@ -108,7 +108,6 @@
     <ClInclude Include="dllSpecific\scorpio\MoreEquipCtrlMsg.h" />
     <ClInclude Include="dllSpecific\scorpio\OccupSpectConnect.h" />
     <ClInclude Include="dllSpecific\scorpio\stdafx.h" />
-    <ClInclude Include="EtherDLL.hpp" />
     <ClInclude Include="EtherDLLAudio.hpp" />
     <ClInclude Include="EtherDLLAudioCommon.h" />
     <ClInclude Include="EtherDLLClient.hpp" />

@@ -437,9 +437,6 @@
     <ClInclude Include="dllSpecific\scorpio\etherDLLCodes.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="EtherDLL.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="dllSpecific\scorpio\etherDLLDataProcess.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
