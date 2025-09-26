@@ -108,8 +108,6 @@
     <ClInclude Include="dllSpecific\scorpio\MoreEquipCtrlMsg.h" />
     <ClInclude Include="dllSpecific\scorpio\OccupSpectConnect.h" />
     <ClInclude Include="dllSpecific\scorpio\stdafx.h" />
-    <ClInclude Include="EtherDLLAudio.hpp" />
-    <ClInclude Include="EtherDLLAudioCommon.h" />
     <ClInclude Include="EtherDLLClient.hpp" />
     <ClInclude Include="EtherDLLConstants.hpp" />
     <ClInclude Include="EtherDLLLog.hpp" />
@@ -219,28 +217,6 @@
     <ClInclude Include="spdlog\stopwatch.h" />
     <ClInclude Include="spdlog\tweakme.h" />
     <ClInclude Include="spdlog\version.h" />
-    <ClInclude Include="wil\com.h" />
-    <ClInclude Include="wil\common.h" />
-    <ClInclude Include="wil\cppwinrt.h" />
-    <ClInclude Include="wil\cppwinrt_wrl.h" />
-    <ClInclude Include="wil\filesystem.h" />
-    <ClInclude Include="wil\nt_result_macros.h" />
-    <ClInclude Include="wil\registry.h" />
-    <ClInclude Include="wil\resource.h" />
-    <ClInclude Include="wil\result.h" />
-    <ClInclude Include="wil\result_macros.h" />
-    <ClInclude Include="wil\result_originate.h" />
-    <ClInclude Include="wil\rpc_helpers.h" />
-    <ClInclude Include="wil\safecast.h" />
-    <ClInclude Include="wil\stl.h" />
-    <ClInclude Include="wil\token_helpers.h" />
-    <ClInclude Include="wil\win32_helpers.h" />
-    <ClInclude Include="wil\winrt.h" />
-    <ClInclude Include="wil\wistd_config.h" />
-    <ClInclude Include="wil\wistd_functional.h" />
-    <ClInclude Include="wil\wistd_memory.h" />
-    <ClInclude Include="wil\wistd_type_traits.h" />
-    <ClInclude Include="wil\wrl.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="base64\base64.cpp" />
@@ -253,7 +229,6 @@
     <ClCompile Include="dllSpecific\scorpio\scorpioDLLRequest.cpp" />
     <ClCompile Include="dllSpecific\scorpio\stdafx.cpp" />
     <ClCompile Include="EtherDLL.cpp" />
-    <ClCompile Include="EtherDLLAudio.cpp" />
     <ClCompile Include="EtherDLLUtils.cpp" />
     <ClCompile Include="EtherDLLLog.cpp" />
   </ItemGroup>

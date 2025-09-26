@@ -60,6 +60,6 @@ SOccupReqData* jsonToSOccupReqData(nlohmann::json jsonObj);
 SOccDFReqData* jsonToSOccDFReqData(nlohmann::json jsonObj);
 SAVDReqData* jsonToSAVDReqData(nlohmann::json jsonObj);
 
-std::string validateRequest(json request, ECSMSDllMsgType msgType, spdlog::logger& log);
-void DLLFunctionCall(DLLConnectionData DLLConnID, json request, CLoopbackCapture& loopbackCapture, spdlog::logger& log);
-void processRequestQueue(DLLConnectionData DLLConnID, MessageQueue& request, edll::INT_CODE& interruptionCode, spdlog::logger& log);
+std::string validateRequest(json request, ECSMSDllMsgType msgType, spdlog::logger& logger);
+void DLLFunctionCall(DLLConnectionData DLLConnID, json request, CLoopbackCapture& loopbackCapture, spdlog::logger& logger);
+void processRequestQueue(DLLConnectionData DLLConnID, MessageQueue& request, edll::INT_CODE& interruptionCode, spdlog::logger& logger);

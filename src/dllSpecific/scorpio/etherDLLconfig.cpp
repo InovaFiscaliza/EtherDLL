@@ -97,11 +97,11 @@ void newDefaultConfigFile(const std::string& filename)
 * 
 * @param config: JSON object containing the configuration parameters
 * @param station: DLLConnectionData structure to be populated with connection parameters
-* @param log: spdlog logger object for logging messages
+* @param logger: spdlog logger object for logging messages
 * @return bool: True if connection is successful, false otherwise
 * @throws NO EXCEPTION HANDLING
 */
-bool connectAPI(DLLConnectionData& stationConnID, const nlohmann::json& config, spdlog::logger& log)
+bool connectAPI(DLLConnectionData& stationConnID, const nlohmann::json& config, spdlog::logger& logger)
 {
 	std::string message;
 	SScorpioAPIClient station;
@@ -129,11 +129,11 @@ bool connectAPI(DLLConnectionData& stationConnID, const nlohmann::json& config, 
 	if (errCode != ERetCode::API_SUCCESS)
 	{
 		message = "Object associated with the API was not created: " + ERetCodeToString(errCode);
-		log.error(message);
+		logger.error(message);
 		return false;
 	}
 
-	log.info("Object creation successful");
+	logger.info("Object creation successful");
 
 	// Test connection to the station
 	SCapabilities StationCapabilities;
@@ -143,12 +143,12 @@ bool connectAPI(DLLConnectionData& stationConnID, const nlohmann::json& config, 
 	if (errCode != ERetCode::API_SUCCESS)
 	{
 		message = "Failed to connect to " + hostNameStr + " [" + portStr + "]. Erro " + ERetCodeToString(errCode);
-		log.error(message);
+		logger.error(message);
 		return false;
 	}
 
 	message = "Connected to station " + hostNameStr + " [" + portStr + "]";
-	log.info(message);
+	logger.info(message);
 	return true;
 }
 
@@ -156,23 +156,23 @@ bool connectAPI(DLLConnectionData& stationConnID, const nlohmann::json& config, 
 /** @brief Disconnect station and socket clients
 * 
 * @param stationConnID: DLLConnectionData structure containing connection parameters
-* @param log: spdlog logger object for logging messages
+* @param logger: spdlog logger object for logging messages
 * @return bool: True if disconnection is successful, false otherwise
 * @throws NO EXCEPTION HANDLING
 */
-bool disconnectAPI(DLLConnectionData& stationConnID, spdlog::logger& log)
+bool disconnectAPI(DLLConnectionData& stationConnID, spdlog::logger& logger)
 {
 
 	ERetCode errCode = Disconnect(stationConnID);
-	log.warn("Disconnecting station returned:" + ERetCodeToString(errCode));
+	logger.warn("Disconnecting station returned:" + ERetCodeToString(errCode));
 
 	// TODO: DLL function not returning API_SUCCESS - Need to investigate
 	if (errCode != ERetCode::API_SUCCESS)
 	{
-		log.error("Error disconnecting from station " + ERetCodeToString(errCode));
+		logger.error("Error disconnecting from station " + ERetCodeToString(errCode));
 		return false;
 	}
 	
-	log.info("Disconnected from station");
+	logger.info("Disconnected from station");
 	return true;
 }

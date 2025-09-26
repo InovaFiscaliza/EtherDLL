@@ -77,9 +77,9 @@ std::shared_ptr<spdlog::logger> initializeLog(json config) {
 	}
 
 	std::string log_name = config["name"].get<std::string>();
-	auto log = std::make_shared<spdlog::logger>(log_name);
+	auto logger = std::make_shared<spdlog::logger>(log_name);
 
-    log->sinks().clear();
+    logger->sinks().clear();
 
 	if (config.contains("console")) {
 		auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
@@ -108,7 +108,7 @@ std::shared_ptr<spdlog::logger> initializeLog(json config) {
 				throw std::invalid_argument("Invalid console log level. Use trace, ddebug, info, warning, error or critical.");
 				break;
 			}
-		log->sinks().push_back(console_sink);
+		logger->sinks().push_back(console_sink);
 	}
 
 	if (config.contains("file")) {
@@ -141,8 +141,8 @@ std::shared_ptr<spdlog::logger> initializeLog(json config) {
 			}
 
 		// Add the file sink to the logger
-		log->sinks().push_back(file_sink);
+		logger->sinks().push_back(file_sink);
 	}
 
-	log->info("Starting " + log_name + "...");
+	logger->info("Starting " + log_name + "...");
 }

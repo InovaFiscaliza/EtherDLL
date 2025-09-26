@@ -412,7 +412,7 @@ SAVDReqData* jsonToSAVDReqData(nlohmann::json jsonObj) {
 * @return nlohmann::json: 
 * @throws NO EXCEPTION HANDLING
 **/
-std::string validateRequest(json request, ECSMSDllMsgType msgType, spdlog::logger& log)
+std::string validateRequest(json request, ECSMSDllMsgType msgType, spdlog::logger& logger)
 {
 	std::string msg = "";
 
@@ -454,7 +454,7 @@ std::string validateRequest(json request, ECSMSDllMsgType msgType, spdlog::logge
 		break;
 	}
 
-	log.debug(msg);
+	logger.debug(msg);
 	return msg;
 }
 
@@ -470,7 +470,7 @@ std::string validateRequest(json request, ECSMSDllMsgType msgType, spdlog::logge
  * @return std::string: Empty if all required fields are present, otherwise a string describing the missing fields
  * @throws NO EXCEPTION HANDLING
 **/
-void DLLFunctionCall(DLLConnectionData DLLConnID, json request, CLoopbackCapture& loopbackCapture, spdlog::logger& log)
+void DLLFunctionCall(DLLConnectionData DLLConnID, json request, CLoopbackCapture& loopbackCapture, spdlog::logger& logger)
 {
 	ERetCode errCode = ERetCode::API_SUCCESS;
 	
@@ -479,7 +479,7 @@ void DLLFunctionCall(DLLConnectionData DLLConnID, json request, CLoopbackCapture
 	unsigned long cmd = request["commandCode"].get<unsigned long>();
 	json reqArguments = request["arguments"].get<json>();
 
-	validateRequest(request, (ECSMSDllMsgType)cmd, log);
+	validateRequest(request, (ECSMSDllMsgType)cmd, logger);
 
 	switch (cmd) {
 		case ECSMSDllMsgType::GET_OCCUPANCY:
@@ -521,24 +521,26 @@ void DLLFunctionCall(DLLConnectionData DLLConnID, json request, CLoopbackCapture
 			SAudioParams audioParams = jsonToSAudioParams(reqArguments["audioParams"]);
 			errCode = SetAudio(DLLConnID, audioParams, &requestID);
 
+			/* Todo: Start audio streaming to client
 			if (errCode == ERetCode::API_SUCCESS) {
 				DWORD processId = wcstoul(L"123", nullptr, 0);
 				HRESULT hr = loopbackCapture.StartCaptureAsync(processId, false, L"audio");
 				if (FAILED(hr))
 				{
-					log.error("Failed to start audio capture");
+					logger.error("Failed to start audio capture");
 				}
 				else {
-					log.info("Capturing audio.");
+					logger.info("Capturing audio.");
 				}
 			}
+			*/
 			break;
 		}
 		case ECSMSDllMsgType::FREE_AUDIO_CHANNEL:
 		{
 			errCode = FreeAudio(DLLConnID, reqArguments["channel"].get<unsigned long>(), &requestID);
 			loopbackCapture.StopCaptureAsync();
-			log.info("Finished audio capture.");
+			logger.info("Finished audio capture.");
 			break;
 		}
 		case ECSMSDllMsgType::SET_PAN_PARAMS:
@@ -550,19 +552,19 @@ void DLLFunctionCall(DLLConnectionData DLLConnID, json request, CLoopbackCapture
 			errCode = RequestPan(DLLConnID, panParamsGet, &requestID);
 			break;
 		default:
-			log.error("Command not recognized");
+			logger.error("Command not recognized");
 			break;
 	}
 
 	std::string reqName = request["name"].get<std::string>();
 	if (errCode != ERetCode::API_SUCCESS)
 	{
-		log.error("[" + reqName + "] ERROR. " + ERetCodeToString(errCode));
+		logger.error("[" + reqName + "] ERROR. " + ERetCodeToString(errCode));
 	}
 	else
 	{
-		log.info("[" + reqName + "] command executed");
-		log.debug("Request ID " + std::to_string(requestID) + ": " + reqArguments.dump() + "");
+		logger.info("[" + reqName + "] command executed");
+		logger.debug("Request ID " + std::to_string(requestID) + ": " + reqArguments.dump() + "");
 	}
 }
 
@@ -579,10 +581,10 @@ void DLLFunctionCall(DLLConnectionData DLLConnID, json request, CLoopbackCapture
  * @param config: JSON object containing configuration
  * @param response: Thread-safe message queue containing messages to be sent to the client
  * @param interruptionCode: Signal interruption for service interruption
- * @param log: spdlog logger object for logging messages
+ * @param logger: spdlog logger object for logging messages
  * @throws NO EXCEPTION HANDLING
 */
-void processRequestQueue(DLLConnectionData DLLConnID, MessageQueue& request, edll::INT_CODE& interruptionCode, spdlog::logger& log)
+void processRequestQueue(DLLConnectionData DLLConnID, MessageQueue& request, edll::INT_CODE& interruptionCode, spdlog::logger& logger)
 {
 	CLoopbackCapture loopbackCapture = CLoopbackCapture();
 
@@ -591,7 +593,7 @@ void processRequestQueue(DLLConnectionData DLLConnID, MessageQueue& request, edl
 		json oneRequest = request.waitAndPop(interruptionCode);
 
 		if (oneRequest.is_null() == false) {
-			DLLFunctionCall(DLLConnID, oneRequest, loopbackCapture, log);
+			DLLFunctionCall(DLLConnID, oneRequest, loopbackCapture, logger);
 		}
 		
 	}

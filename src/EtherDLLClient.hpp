@@ -173,7 +173,7 @@ public:
  *
  * @param config: JSON object containing configuration parameters
  * @param interruptionCode: Signal interruption for service interruption
- * @param log: spdlog logger object for logging messages
+ * @param logger: spdlog logger object for logging messages
  * @return ClientConn object if connection is successful
  * @throws NO EXCEPTION HANDLING
  **/
@@ -181,7 +181,7 @@ class ClientConn {
 private:
 	json config;
 	edll::INT_CODE& interruptionCode;
-	spdlog::logger& log;
+	spdlog::logger& logger;
 
 	SOCKET clientSocket = INVALID_SOCKET;
 	std::string clientIP;
@@ -196,7 +196,7 @@ private:
 	 *
 	 * @param config: JSON object containing configuration parameters
 	 * @param interruptionCode: Signal interruption for service interruption
-	 * @param log: spdlog logger object for logging messages
+	 * @param logger: spdlog logger object for logging messages
 	 * @return SOCKET: Client socket if connection is successful, INVALID_SOCKET otherwise
 	 * @throws NO EXCEPTION HANDLING
 	 **
@@ -216,7 +216,7 @@ private:
 		std::string portStr = std::to_string(config["service"]["command"].value("port", edll::DEFAULT_SERVICE_PORT));
 		int iResult = getaddrinfo(NULL, portStr.c_str(), &hints, &result);
 		if (iResult != 0) {
-			log.error("Socket getaddrinfo failed. EC:" + std::to_string(iResult));
+			logger.error("Socket getaddrinfo failed. EC:" + std::to_string(iResult));
 			interruptionCode = edll::Code::CLIENT_ERROR;
 			WSACleanup();
 			return;
@@ -224,7 +224,7 @@ private:
 
 		listenSocket = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
 		if (listenSocket == INVALID_SOCKET) {
-			log.error("Socket creation failed. EC:" + std::to_string(WSAGetLastError()));
+			logger.error("Socket creation failed. EC:" + std::to_string(WSAGetLastError()));
 			interruptionCode = edll::Code::CLIENT_ERROR;
 			freeaddrinfo(result);
 			WSACleanup();
@@ -234,7 +234,7 @@ private:
 		int timeout = config["service"]["command"].value("timeout_s", edll::DEFAULT_TIMEOUT_S) * 1000; // milliseconds
 		iResult = setsockopt(listenSocket, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout, sizeof(timeout));
 		if (iResult == SOCKET_ERROR) {
-			log.error("Socket setsockopt timeout failed. EC:" + std::to_string(WSAGetLastError()));
+			logger.error("Socket setsockopt timeout failed. EC:" + std::to_string(WSAGetLastError()));
 			interruptionCode = edll::Code::CLIENT_ERROR;
 			freeaddrinfo(result);
 			closesocket(listenSocket);
@@ -244,7 +244,7 @@ private:
 
 		iResult = ::bind(listenSocket, result->ai_addr, static_cast<int>(result->ai_addrlen));
 		if (iResult == SOCKET_ERROR) {
-			log.error("Socket bind failed. EC:" + std::to_string(WSAGetLastError()));
+			logger.error("Socket bind failed. EC:" + std::to_string(WSAGetLastError()));
 			interruptionCode = edll::Code::CLIENT_ERROR;
 			freeaddrinfo(result);
 			closesocket(listenSocket);
@@ -256,7 +256,7 @@ private:
 
 		iResult = listen(listenSocket, SOMAXCONN);
 		if (iResult == SOCKET_ERROR) {
-			log.error("Socket listen failed. EC:" + std::to_string(WSAGetLastError()));
+			logger.error("Socket listen failed. EC:" + std::to_string(WSAGetLastError()));
 			interruptionCode = edll::Code::CLIENT_ERROR;
 			closesocket(listenSocket);
 			WSACleanup();
@@ -268,7 +268,7 @@ private:
 
 		while (interruptionCode == edll::Code::RUNNING) {
 			// call the connection handler 
-			log.info("Waiting for client connections on port " + portStr);
+			logger.info("Waiting for client connections on port " + portStr);
 
 			clientSocket = accept(listenSocket, (struct sockaddr*)&clientAddr, NULL);
 
@@ -282,19 +282,19 @@ private:
 				if (getpeername(clientSocket, (struct sockaddr*)&clientAddr, &addrLen) == 0) {
 					clientIP = std::string(inet_ntoa(clientAddr.sin_addr));
 					if (!clientIP.empty())
-						log.debug("Processing message from client IP: " + clientIP);
+						logger.debug("Processing message from client IP: " + clientIP);
 				}
 			}
 
 			if (clientSocket == INVALID_SOCKET) {
-				log.warn("Failed in accept operation with " + clientIP + ".EC:" + std::to_string(WSAGetLastError()));
+				logger.warn("Failed in accept operation with " + clientIP + ".EC:" + std::to_string(WSAGetLastError()));
 			}
 			else {
-				log.info("Accepted connection from " + clientIP);
+				logger.info("Accepted connection from " + clientIP);
 
 				closesocket(listenSocket);
 				WSACleanup();
-				log.info("Stopped waiting for new connections on port " + portStr);
+				logger.info("Stopped waiting for new connections on port " + portStr);
 
 				return;
 			}
@@ -312,9 +312,9 @@ public:
 	 * @throws NO EXCEPTION HANDLING
 	**/
 	ClientConn(json config,
-		edll::INT_CODE& interruptionCode, spdlog::logger& log)
+		edll::INT_CODE& interruptionCode, spdlog::logger& logger)
 		: config(config),
-		interruptionCode(interruptionCode), log(log), clientIP("")
+		interruptionCode(interruptionCode), logger(logger), clientIP("")
 	{
 		establishConnection();
 	}
@@ -335,7 +335,7 @@ public:
 	 * @param config: JSON object containing configuration
 	 * @param request: Thread-safe message queue containing messages to be sent to the DLL
 	 * @param interruptionCode: Signal interruption for service interruption
-	 * @param log: spdlog logger object for logging messages
+	 * @param logger: spdlog logger object for logging messages
 	 * @throws NO EXCEPTION HANDLING
 	*/
 	void clientRequestToDLL(MessageQueue& request)
@@ -393,13 +393,13 @@ public:
 							jsonObj[edll::MSG_KEY_QUEUE_ID] = jsonObj[idStr];
 						}
 						
-						log.debug("Received message ID: " + jsonObj.dump());
+						logger.debug("Received message ID: " + jsonObj.dump());
 
 						std::string ack = ackStr + jsonObj[idStr] + msgEndStr;
 						iResult = send(clientSocket, ack.c_str(), ack.length(), 0);
 					}
 					else {
-						log.warn("Received invalid JSON message: " + completeMessage);
+						logger.warn("Received invalid JSON message: " + completeMessage);
 						std::string nack = nackStr + std::to_string(completeMessage.length()) + msgEndStr;
 						iResult = send(clientSocket, nack.c_str(), nack.length(), 0);
 					}
@@ -407,7 +407,7 @@ public:
 					// keep any extra data after the end of the message for the next iteration
 					if (pos != accumulatedData.length() - msgEndStr.length()) {
 						accumulatedData = accumulatedData.substr(pos + msgEndStr.length(), std::string::npos);
-						log.debug("Keeping data for next iteration: " + accumulatedData);
+						logger.debug("Keeping data for next iteration: " + accumulatedData);
 						bufferTTL--;
 					}
 					else {
@@ -416,8 +416,8 @@ public:
 					}
 
 					if (iResult == SOCKET_ERROR) {
-						log.warn("Failed sending ACK/NACK message. EC:" + std::to_string(WSAGetLastError()));
-						log.info("Connection with address" + std::to_string(clientSocket) + " lost.");
+						logger.warn("Failed sending ACK/NACK message. EC:" + std::to_string(WSAGetLastError()));
+						logger.info("Connection with address" + std::to_string(clientSocket) + " lost.");
 						return;
 					}
 				}
@@ -431,13 +431,13 @@ public:
 				}
 				else {
 					// Unkwonn connection error
-					log.error("Client connection error: " + std::to_string(error));
+					logger.error("Client connection error: " + std::to_string(error));
 					return;
 				}
 
 				if (bufferTTL == 0) {
 					if (accumulatedData.length() > 0) {
-						log.debug("Buffer TTL expired. Clearing accumulated data: " + accumulatedData);
+						logger.debug("Buffer TTL expired. Clearing accumulated data: " + accumulatedData);
 						accumulatedData.clear();
 					}
 					bufferTTL = bufferTTLInit;
@@ -459,7 +459,7 @@ public:
 	 * @param config: JSON object containing configuration
 	 * @param response: Thread-safe message queue containing messages to be sent to the client
 	 * @param interruptionCode: Signal interruption for service interruption
-	 * @param log: spdlog logger object for logging messages
+	 * @param logger: spdlog logger object for logging messages
 	 * @throws NO EXCEPTION HANDLING
 	*/
 	void DLLResponseToClient(MessageQueue& response)
@@ -486,7 +486,7 @@ public:
 
 				iResult = send(clientSocket, message.c_str(), static_cast<int>(message.length()), 0);
 				if (iResult == SOCKET_ERROR) {
-					log.warn("Data send failed. EC:" + std::to_string(WSAGetLastError()));
+					logger.warn("Data send failed. EC:" + std::to_string(WSAGetLastError()));
 					return;
 				}
 			}
@@ -500,12 +500,12 @@ public:
 					iResult = send(clientSocket, ping.c_str(), ping.length(), 0);
 
 					if (iResult == SOCKET_ERROR) {
-						log.warn("PING send failed. EC:" + std::to_string(WSAGetLastError()));
-						log.info("Connection with address" + std::to_string(clientSocket) + " lost.");
+						logger.warn("PING send failed. EC:" + std::to_string(WSAGetLastError()));
+						logger.info("Connection with address" + std::to_string(clientSocket) + " lost.");
 						return;
 					}
 
-					log.info("Waiting for commands from client...");
+					logger.info("Waiting for commands from client...");
 					pingPeriod = pingPeriodInit;
 				}
 				else {
@@ -556,7 +556,7 @@ public:
 		if (clientSocket != INVALID_SOCKET) {
 			closesocket(clientSocket);
 			clientSocket = INVALID_SOCKET;
-			log.info("Closed connection with client " + clientIP);
+			logger.info("Closed connection with client " + clientIP);
 			clientIP = "";
 		}
 	}

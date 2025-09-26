@@ -67,5 +67,5 @@ const DLLConnectionData DEFAULT_DLL_CONNECTION_DATA = 0;
 
 // Function prototypes
 void newDefaultConfigFile(const std::string& filename);
-bool connectAPI(DLLConnectionData& stationConnID, const nlohmann::json& config, spdlog::logger& log);
-bool disconnectAPI(DLLConnectionData& stationConnID, spdlog::logger& log);
+bool connectAPI(DLLConnectionData& stationConnID, const nlohmann::json& config, spdlog::logger& logger);
+bool disconnectAPI(DLLConnectionData& stationConnID, spdlog::logger& logger);

@@ -25,7 +25,6 @@
 #include <csignal>
 #include <fstream>
 #include <iostream>
-#include <windows.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
 
@@ -35,7 +34,6 @@
 
 // Include general EtherDLL headers
 #include "EtherDLLLog.hpp"
-#include "EtherDLLAudio.hpp"
 #include "EtherDLLUtils.hpp"
 #include "EtherDLLConstants.hpp"
 #include "EtherDLLClient.hpp"
@@ -45,7 +43,6 @@
 #include "etherDLLConfig.hpp"
 #include "etherDLLRequest.hpp"
 #include "etherDLLResponse.hpp"
-#include "filesystem"
 
  // Libs for socket
 #pragma comment (lib, "Ws2_32.lib")
@@ -61,7 +58,7 @@ using json = nlohmann::json;
 	Global variables related to the application
 */
 // Logger object
-spdlog::logger log;
+spdlog::logger logger;
 
 // Code to represent the cause for not running
 edll::INT_CODE interruptionCode = edll::Code::RUNNING;
@@ -79,16 +76,16 @@ static void signalHandler(int signal) {
 	if (signal == SIGINT)
 	{
 		interruptionCode = edll::Code::CTRL_C_INTERRUPT;
-		log.critical("Received interruption signal (ctrl+C)");
+		logger.critical("Received interruption signal (ctrl+C)");
 	}
 	else if (signal == SIGTERM)
 	{
 		interruptionCode = edll::Code::KILL_INTERRUPT;
-		log.critical("Received termination signal (kill)");
+		logger.critical("Received termination signal (kill)");
 	}
 	else 	{
 		std::string message = "Received unknown signal. #LttOS: " + std::to_string(signal);
-		log.warn(message);
+		logger.warn(message);
 	}
 }
 
@@ -235,14 +232,14 @@ int main(int argc, char* argv[]) {
 
 	json config = readConfigFile(configFileName);
 
-	auto logPtr = initializeLog(config["log"].get<json>());
+	auto logPtr = initializeLog(config["logger"].get<json>());
     if (logPtr) {
-        log = *logPtr;
+        logger = *logPtr;
     }
 
 	// Initialize DLL connection
 	DLLConnectionData DLLConnID = DEFAULT_DLL_CONNECTION_DATA;
-	if (!connectAPI(DLLConnID, config, log)) {
+	if (!connectAPI(DLLConnID, config, logger)) {
 		interruptionCode = edll::Code::STATION_ERROR;
 		return static_cast<int>(interruptionCode);
 	}
@@ -255,7 +252,7 @@ int main(int argc, char* argv[]) {
 	while (interruptionCode == edll::Code::RUNNING)
 	{
 		// Inicialise ClientConn object to wait for a client connection
-		ClientConn clientConn(config, interruptionCode, log);
+		ClientConn clientConn(config, interruptionCode, logger);
 
 		// Reset completion flag
 		anyThreadCompleted = false;
@@ -277,7 +274,7 @@ int main(int argc, char* argv[]) {
 			});
 
 		auto requestProcFuture = std::async(std::launch::async, [&]() {
-			processRequestQueue(DLLConnID, request, interruptionCode, log);
+			processRequestQueue(DLLConnID, request, interruptionCode, logger);
 			signalCompletion();
 			return true;
 			});
@@ -295,22 +292,22 @@ int main(int argc, char* argv[]) {
 				});
 		}
 
-		log.info("Service interrupted");
+		logger.info("Service interrupted");
 
 		// Clean up
 		if (!clientConn.isConnected()) {
-			log.info("Client disconnected.");
+			logger.info("Client disconnected.");
 		}
 
 		clientConn.closeConnection();
 	}
 
 	// Close the connection
-	if (!disconnectAPI(DLLConnID, log)) {
-		log.error("Failed to disconnect from station.");
+	if (!disconnectAPI(DLLConnID, logger)) {
+		logger.error("Failed to disconnect from station.");
 	}
-	log.info("Service stopped.");
-	log.flush();
+	logger.info("Service stopped.");
+	logger.flush();
 
 	return static_cast<int>(interruptionCode);
 }
