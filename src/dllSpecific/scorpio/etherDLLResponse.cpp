@@ -53,6 +53,7 @@
 using json = nlohmann::json;
 
 extern MessageQueue response;
+extern spdlog::logger log;
 
 // ----------------------------------------------------------------------
 /** @brief Convert response of BIT command in JSON
@@ -679,13 +680,13 @@ json processOccupancyDFResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMs
                 SEquipCtrlMsg::SFrequencyVsChannelResp* OCCDFResponse = reinterpret_cast<SEquipCtrlMsg::SFrequencyVsChannelResp*>(data);
 
                 std::vector<float> freqVsChanData(OCCDFResponse->occHdr.numTotalChannels);
-                float maxValue = std::numeric_limits<float>::max();
+                float maxValue = (std::numeric_limits<float>::max)();
 				float minValue = -maxValue;
 
                 int j = (int)OCCDFResponse->occHdr.firstChannel;
                 for (int i = 0; i < int(OCCDFResponse->occHdr.numChannels); i++, j++)
 				{
-                    freqVsChanData[j] = static_cast<float>(Units::Frequency(OCCDFResponse->frequencies[i]).Hz<double>() / mcs::MHZ_MULTIPLIER);
+                    freqVsChanData[j] = static_cast<float>(Units::Frequency(OCCDFResponse->frequencies[i]).Hz<double>() / edll::MHZ_MULTIPLIER);
                     if (freqVsChanData[j] < minValue) minValue = freqVsChanData[j];
                     if (freqVsChanData[j] > maxValue) maxValue = freqVsChanData[j];
 				}
@@ -1005,17 +1006,17 @@ json ProcessGpsData(SEquipCtrlMsg::SGpsResponse* gpsResponse)
 **/
 void OnDataFunc(_In_  unsigned long serverId, _In_ ECSMSDllMsgType respType, _In_ unsigned long sourceAddr, _In_ unsigned long requestID, _In_ SEquipCtrlMsg::UBody* data)
 {
-
+	json responseJson = {};
 
     switch (respType)
     {
     case ECSMSDllMsgType::GET_BIST:
     case ECSMSDllMsgType::GET_BIST_RESULT:
     case ECSMSDllMsgType::GET_DIAGNOSTICS:
-        response.push(processBITEResponse(respType, data));
+        responseJson = processBITEResponse(respType, data);
         break;
     case ECSMSDllMsgType::GET_ANT_LIST_INFO:
-        response.push(ProcessAntListResponse(respType, data));
+        responseJson = ProcessAntListResponse(respType, data);
         break;
     case ECSMSDllMsgType::OCC_MSGLEN_DIST_RESPONSE:
     case ECSMSDllMsgType::OCC_FREQ_VS_CHANNEL:
@@ -1028,14 +1029,14 @@ void OnDataFunc(_In_  unsigned long serverId, _In_ ECSMSDllMsgType respType, _In
     case ECSMSDllMsgType::OCC_EFLD_CHANNEL_RESULT:
     case ECSMSDllMsgType::OCC_MSGLEN_CHANNEL_RESULT:
     case ECSMSDllMsgType::OCC_EFLD_TIMEOFDAY_RESULT:
-        response.push(processOccupancyResponse(respType, data));
+        responseJson = processOccupancyResponse(respType, data);
         break;
     case ECSMSDllMsgType::OCCDF_FREQ_VS_CHANNEL:
     case ECSMSDllMsgType::OCCDF_SCANDF_VS_CHANNEL:
     case ECSMSDllMsgType::OCCDF_STATUS:
     case ECSMSDllMsgType::OCCDF_STATE_RESPONSE:
     case ECSMSDllMsgType::OCCDF_SOLICIT_STATE_RESPONSE:
-        response.push(processOccupancyDFResponse(respType, data));
+        responseJson = processOccupancyDFResponse(respType, data);
         break;
     case ECSMSDllMsgType::AVD_FREQ_VS_CHANNEL:
     case ECSMSDllMsgType::AVD_OCC_CHANNEL_RESULT:
@@ -1044,19 +1045,19 @@ void OnDataFunc(_In_  unsigned long serverId, _In_ ECSMSDllMsgType respType, _In
     case ECSMSDllMsgType::AVD_SOLICIT_STATE_RESPONSE:
     case ECSMSDllMsgType::AVD_STATE_RESPONSE:
     case ECSMSDllMsgType::AVD_STATUS:
-        response.push(processAutoViolateResponse(respType, data));
+        responseJson = processAutoViolateResponse(respType, data);
         break;
     case ECSMSDllMsgType::GET_MEAS:
     case ECSMSDllMsgType::VALIDATE_MEAS:
-        response.push(processMeasResponse(respType, sourceAddr, data));
+        responseJson = processMeasResponse(respType, sourceAddr, data);
         break;
     case ECSMSDllMsgType::SET_PAN_PARAMS:
     case ECSMSDllMsgType::SET_AUDIO_PARAMS:
     case ECSMSDllMsgType::FREE_AUDIO_CHANNEL:
-        response.push(processDemodCtrlResponse(respType, data));
+        responseJson = processDemodCtrlResponse(respType, data);
         break;
     case ECSMSDllMsgType::GET_PAN:
-        response.push(processPanResponse(respType, data));
+        responseJson = processPanResponse(respType, data);
         break;
     case ECSMSDllMsgType::GET_DM:
 
@@ -1065,6 +1066,10 @@ void OnDataFunc(_In_  unsigned long serverId, _In_ ECSMSDllMsgType respType, _In
     default:
         break;
     }
+
+    response.push(responseJson);
+
+	log.debug("OnDataFunc: serverId=%lu, respType=%d, sourceAddr=%lu, requestID=%lu", serverId, static_cast<int>(respType), sourceAddr, requestID);
 }
 
 // ----------------------------------------------------------------------
@@ -1073,13 +1078,13 @@ void OnDataFunc(_In_  unsigned long serverId, _In_ ECSMSDllMsgType respType, _In
 **/
 void OnErrorFunc(_In_  unsigned long serverId, _In_ const std::wstring& errorMsg)
 {
-    std::string str(errorMsg.begin(), errorMsg.end());
-    logEtherDLL.error(str);
-    std::string strData = "{\"serverId\":" + std::to_string(serverId) + ", \"errorMsg\":\"" + str + "\"}";
-    errorBuffer.push_back(strData);
-    logEtherDLL.info("OnErrorFunc received error message: " + str);
-    logEtherDLL.info("OnErrorFunc received server ID: " + serverId);
+	json errorJson = {};
 
+    errorJson["serverId"] = serverId;
+    errorJson["errorMsg"] = std::string(errorMsg.begin(), errorMsg.end());
+
+	log.debug("OnErrorFunc: serverId=%lu, errorMsg=%s", serverId, errorMsg.c_str());
+    response.push(errorJson);
 }
 
 // ----------------------------------------------------------------------
@@ -1088,7 +1093,10 @@ void OnErrorFunc(_In_  unsigned long serverId, _In_ const std::wstring& errorMsg
 **/
 void OnRealTimeDataFunc(_In_  unsigned long serverId, _In_ ECSMSDllMsgType respType, _In_ SSmsRealtimeMsg::UBody* data)
 {
-    streamBuffer.push_back(ProcessRealTimeData(respType, data));
-    logEtherDLL.info("OnRealtimeData received with type " + respType);
-    logEtherDLL.info("OnRealtimeData received server ID " + serverId);
+    json responseJson = {};
+
+    responseJson = ProcessRealTimeData(respType, data);
+    response.push(responseJson);
+
+	log.debug("OnRealTimeDataFunc: serverId=%lu, respType=%d", serverId, static_cast<int>(respType));
 }
