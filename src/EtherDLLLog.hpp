@@ -17,12 +17,22 @@
  * - spdlog/spdlog.h
  *
  **/
+// ----------------------------------------------------------------------
+#pragma once
 
- // ----------------------------------------------------------------------
-#pragma once 
+// Include to DLL specific headers
 
-#include <spdlog/spdlog.h>
+// Include core EtherDLL libraries
+
+// Include project libraries
 #include <nlohmann/json.hpp>
+#include <spdlog/spdlog.h>
 
+// Include general C++ libraries
+
+// For convenience
+using json = nlohmann::json;
+
+// Function prototypes
 bool validLogConfig(nlohmann::json config);
 std::shared_ptr<spdlog::logger> initializeLog(nlohmann::json config);

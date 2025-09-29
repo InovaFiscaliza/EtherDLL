@@ -15,18 +15,23 @@
  **/
 
  // ----------------------------------------------------------------------
+// Include to DLL specific headers
+
+// Include core EtherDLL libraries
 #include "EtherDLLUtils.hpp"
 
+// Include project libraries
 #include <nlohmann/json.hpp>
 
+// Include general C++ libraries
 #include <ctime>
 #include <chrono>
 #include <fmt/chrono.h>
 #include <cmath>
-
-using json = nlohmann::json;
-
 #include <iostream>
+
+// For convenience
+using json = nlohmann::json;
 
 
 // ----------------------------------------------------------------------

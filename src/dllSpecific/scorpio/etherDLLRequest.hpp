@@ -20,32 +20,25 @@
  // ----------------------------------------------------------------------
 #pragma once
 
- // Include core EtherDLL libraries
-#include "EtherDLLClient.hpp"
-#include "EtherDLLConstants.hpp"
-#include "EtherDLLAudio.hpp"
-#include "EtherDLLAudioCommon.h"
+// Include provided DLL libraries
+#include "ScorpioAPITypes.h"
+#include "ScorpioAPIDll.h"
 
 // Include DLL specific libraries
 #include "etherDLLRequest.hpp"
 #include "etherDLLCodes.hpp"
-#include "etherDLLConfig.hpp"
+#include "etherDLLInit.hpp"
 
-// Include provided DLL libraries
-#include "ScorpioAPITypes.h"
-#include "ScorpioAPIDll.h"
-/*
-#include "stdafx.h"
-#include "Units.h"
-#include "EquipCtrlMsg.h"
-*/
-
-// Include general C++ libraries
-#include <string>
+// Include core EtherDLL libraries
+#include "EtherDLLClient.hpp"
+#include "EtherDLLConstants.hpp"
 
 // Include project libraries
 #include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
+
+// Include general C++ libraries
+#include <string>
 
 // For convenience
 using json = nlohmann::json;

@@ -98,7 +98,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="base64\base64.h" />
-    <ClInclude Include="dllSpecific\scorpio\etherDLLConfig.hpp" />
+    <ClInclude Include="dllSpecific\scorpio\etherDLLInit.hpp" />
     <ClInclude Include="dllSpecific\scorpio\etherDLLDataProcess.hpp" />
     <ClInclude Include="dllSpecific\scorpio\etherDLLRequest.hpp" />
     <ClInclude Include="dllSpecific\scorpio\etherDLLResponse.hpp" />
@@ -220,11 +220,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="base64\base64.cpp" />
-    <ClCompile Include="dllSpecific\scorpio\etherDLLconfig.cpp" />
+    <ClCompile Include="dllSpecific\scorpio\etherDLLInit.cpp" />
     <ClCompile Include="dllSpecific\scorpio\etherDLLDataProcess.cpp" />
     <ClCompile Include="dllSpecific\scorpio\etherDLLRequest.cpp" />
     <ClCompile Include="dllSpecific\scorpio\etherDLLResponse.cpp" />
-    <ClCompile Include="dllSpecific\scorpio\etherDLLCodes.cpp" />
     <ClCompile Include="dllSpecific\scorpio\scorpioDLLconfig.cpp" />
     <ClCompile Include="dllSpecific\scorpio\scorpioDLLRequest.cpp" />
     <ClCompile Include="dllSpecific\scorpio\stdafx.cpp" />

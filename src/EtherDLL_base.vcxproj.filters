@@ -11,12 +11,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="EtherDLLAudio.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="EtherDLLAudioCommon.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="EtherDLLConstants.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -359,73 +353,7 @@
     <ClInclude Include="spdlog\version.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="wil\com.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="wil\common.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="wil\cppwinrt.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="wil\cppwinrt_wrl.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="wil\filesystem.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="wil\nt_result_macros.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="wil\registry.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="wil\resource.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="wil\result.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="wil\result_macros.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="wil\result_originate.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="wil\rpc_helpers.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="wil\safecast.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="wil\stl.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="wil\token_helpers.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="wil\win32_helpers.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="wil\winrt.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="wil\wistd_config.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="wil\wistd_functional.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="wil\wistd_memory.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="wil\wistd_type_traits.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="wil\wrl.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="dllSpecific\scorpio\etherDLLConfig.hpp">
+    <ClInclude Include="dllSpecific\scorpio\etherDLLInit.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="dllSpecific\scorpio\etherDLLRequest.hpp">
@@ -448,9 +376,6 @@
     <ClCompile Include="EtherDLL.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="EtherDLLAudio.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="EtherDLLUtils.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -469,16 +394,13 @@
     <ClCompile Include="dllSpecific\scorpio\stdafx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="dllSpecific\scorpio\etherDLLconfig.cpp">
+    <ClCompile Include="dllSpecific\scorpio\etherDLLInit.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="dllSpecific\scorpio\etherDLLRequest.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="dllSpecific\scorpio\etherDLLResponse.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="dllSpecific\scorpio\etherDLLCodes.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="dllSpecific\scorpio\etherDLLDataProcess.cpp">

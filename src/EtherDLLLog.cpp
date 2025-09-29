@@ -14,19 +14,23 @@
  * - spdlog/spdlog.h
  *
  **/
-
  // ----------------------------------------------------------------------
+// Include to DLL specific headers
+
+// Include core EtherDLL libraries
 #include "EtherDLLLog.hpp"
 
-#include <string>
-
+// Include project libraries
 #include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
 #include <sinks/basic_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 
+// Include general C++ libraries
+#include <string>
+
+// For convenience
 using json = nlohmann::json;
-using namespace spdlog;
 
 // ----------------------------------------------------------------------
 /**

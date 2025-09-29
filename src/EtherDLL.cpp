@@ -17,6 +17,22 @@
 **/
 
 // ----------------------------------------------------------------------
+// Include to DLL specific headers
+#include "etherDLLCodes.hpp"
+#include "etherDLLInit.hpp"
+#include "etherDLLRequest.hpp"
+#include "etherDLLResponse.hpp"
+
+// Include core EtherDLL headers
+#include "EtherDLLLog.hpp"
+#include "EtherDLLUtils.hpp"
+#include "EtherDLLConstants.hpp"
+#include "EtherDLLClient.hpp"
+
+// Include additional libraries
+#include <nlohmann/json.hpp>
+#include <spdlog/spdlog.h>
+
 // Include the standard C++ headers
 #include <mutex>
 #include <future>
@@ -28,23 +44,7 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 
-// Include additional libraries
-#include <nlohmann/json.hpp>
-#include <spdlog/spdlog.h>
-
-// Include general EtherDLL headers
-#include "EtherDLLLog.hpp"
-#include "EtherDLLUtils.hpp"
-#include "EtherDLLConstants.hpp"
-#include "EtherDLLClient.hpp"
-
-// Include to DLL specific headers
-#include "etherDLLCodes.hpp"
-#include "etherDLLConfig.hpp"
-#include "etherDLLRequest.hpp"
-#include "etherDLLResponse.hpp"
-
- // Libs for socket
+// Libs for socket
 #pragma comment (lib, "Ws2_32.lib")
 #pragma comment (lib, "Mswsock.lib")
 #pragma comment (lib, "AdvApi32.lib")

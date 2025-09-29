@@ -1,5 +1,5 @@
 /**
-* @file etherDLLconfig.hpp
+* @file etherDLLInit.hpp
 *
 * @brief Heder file for configuration file creation with default values
 * 
@@ -18,14 +18,15 @@
 
 #pragma once
 
+// Include DLL specific libraries
+
 // Include core EtherDLL libraries
 #include "EtherDLLClient.hpp"
 #include "EtherDLLConstants.hpp"
 
-// Include DLL specific libraries
-
-// Include provided DLL libraries
-
+// Include project libraries
+#include <nlohmann/json.hpp>
+#include <spdlog/spdlog.h>
 
 // Include general C++ libraries
 #include <string>
@@ -40,10 +41,6 @@
 #pragma comment (lib, "Ws2_32.lib")
 #pragma comment (lib, "Mswsock.lib")
 #pragma comment (lib, "AdvApi32.lib")
-
-// Include project libraries
-#include <nlohmann/json.hpp>
-#include <spdlog/spdlog.h>
 
 // For convenience
 using json = nlohmann::json;

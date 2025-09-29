@@ -15,10 +15,20 @@
  // ----------------------------------------------------------------------
 #pragma once
 
+// Include to DLL specific headers
+
+// Include core EtherDLL libraries
+
+// Include project libraries
+
+// Include general C++ libraries
 #include <sstream>
 #include <fstream>
 #include <string>
 #include <vector>
+
+// For convenience
+using json = nlohmann::json;
 
 // Constants
 static const std::string base64_chars =

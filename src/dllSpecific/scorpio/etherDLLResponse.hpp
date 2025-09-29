@@ -19,20 +19,20 @@
 // ----------------------------------------------------------------------
 #pragma once
 
-// Include core EtherDLL libraries
-
-// Include DLL specific libraries
-
 // Include provided DLL libraries
 #include "ScorpioAPITypes.h"
 #include "EquipCtrlMsg.h"
 #include "SmsRealtimeMsg.h"
 
-// Include general C++ libraries
-#include <string>
+// Include DLL specific libraries
+
+// Include core EtherDLL libraries
 
 // Include project libraries
 #include <nlohmann/json.hpp>
+
+// Include general C++ libraries
+#include <string>
 
 // For convenience
 using json = nlohmann::json;
