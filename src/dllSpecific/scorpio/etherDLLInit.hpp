@@ -1,5 +1,5 @@
 /**
-* @file etherDLLconfig.hpp
+* @file etherDLLInit.hpp
 *
 * @brief Heder file for configuration file creation with default values
 * 
@@ -34,20 +34,19 @@
 // ----------------------------------------------------------------------
 #pragma once
 
-// Include core EtherDLL libraries
-
-
-// Include DLL specific libraries
-
 // Include provided DLL libraries
 #include <ScorpioAPITypes.h>
 
-// Include general C++ libraries
-#include <string>
+// Include DLL specific libraries
+
+// Include core EtherDLL libraries
 
 // Include project libraries
 #include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
+
+// Include general C++ libraries
+#include <string>
 
 // For convenience
 using json = nlohmann::json;
