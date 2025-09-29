@@ -478,39 +478,59 @@ void DLLFunctionCall(DLLConnectionData DLLConnID, json request, spdlog::logger& 
 
 	switch (cmd) {
 		case ECSMSDllMsgType::GET_OCCUPANCY:
+		{
 			SOccupReqData* occupDFReqMsg = jsonToSOccupReqData(reqArguments);
 			errCode = RequestOccupancy(DLLConnID, occupDFReqMsg, &requestID);
 			break;
+		}
 		case ECSMSDllMsgType::GET_OCCUPANCYDF:
+		{
 			SOccDFReqData* occDFReqMsg = jsonToSOccDFReqData(reqArguments);
 			errCode = RequestOccupancyDF(DLLConnID, occDFReqMsg, &requestID);
 			break;
+		}
 		case ECSMSDllMsgType::GET_AVD:
+		{
 			SAVDReqData* avdReqMsg = jsonToSAVDReqData(reqArguments);
 			errCode = RequestAVD(DLLConnID, avdReqMsg, &requestID);
 			break;
+		}
 		case ECSMSDllMsgType::GET_MEAS:
+		{
 			SMeasReqData* m_measureReqMsg = jsonToSMeasReqData(reqArguments);
 			errCode = RequestMeasurement(DLLConnID, m_measureReqMsg, &requestID);
 			break;
+		}
 		case ECSMSDllMsgType::GET_TASK_STATUS:
+		{
 			errCode = RequestTaskStatus(DLLConnID, requestID);
 			break;
+		}
 		case ECSMSDllMsgType::GET_TASK_STATE:
+		{
 			errCode = RequestTaskState(DLLConnID, (ECSMSDllMsgType)reqArguments["taskType"].get<unsigned long>(), requestID);
 			break;
+		}
 		case ECSMSDllMsgType::TASK_SUSPEND:
+		{
 			errCode = SuspendTask(DLLConnID, (ECSMSDllMsgType)reqArguments["taskType"].get<unsigned long>(), requestID);
 			break;
+		}
 		case ECSMSDllMsgType::TASK_RESUME:
+		{
 			errCode = ResumeTask(DLLConnID, (ECSMSDllMsgType)reqArguments["taskType"].get<unsigned long>(), requestID);
 			break;
+		}
 		case ECSMSDllMsgType::TASK_TERMINATE:
+		{
 			errCode = TerminateTask(DLLConnID, requestID);
 			break;
+		}
 		case ECSMSDllMsgType::GET_BIST:
+		{
 			errCode = RequestBist(DLLConnID, (EBistScope)reqArguments["scope"].get<int>(), &requestID);
 			break;
+		}
 		case ECSMSDllMsgType::SET_AUDIO_PARAMS:
 		{
 			SAudioParams audioParams = jsonToSAudioParams(reqArguments["audioParams"]);
@@ -538,16 +558,23 @@ void DLLFunctionCall(DLLConnectionData DLLConnID, json request, spdlog::logger& 
 			break;
 		}
 		case ECSMSDllMsgType::SET_PAN_PARAMS:
+		{
 			SPanParams panParams = jsonToSPanParams(reqArguments["panParams"]);
 			errCode = SetPanParams(DLLConnID, panParams, &requestID);
 			break;
+		}
 		case ECSMSDllMsgType::GET_PAN:
+		{
 			SGetPanParams panParamsGet = jsonToSGetPanParams(reqArguments["panParams"]);
 			errCode = RequestPan(DLLConnID, panParamsGet, &requestID);
 			break;
+		}
 		default:
-			getLogger().error("Command not recognized");
+		{
+			getLogger().error("Unknown message type");
+			errCode = ERetCode::CMD_SENT_ERROR;
 			break;
+		}
 	}
 
 	std::string reqName = request["name"].get<std::string>();
