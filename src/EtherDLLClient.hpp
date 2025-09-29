@@ -422,11 +422,7 @@ public:
 			else {
 				int error = WSAGetLastError();
 
-				if (error == WSAEWOULDBLOCK) {
-					// No data available to read
-					std::this_thread::sleep_for(std::chrono::milliseconds(config["service"].value("sleep_ms", edll::DEFAULT_SLEEP_MS)));
-				}
-				else {
+				if (error != WSAEWOULDBLOCK) {
 					// Unkwonn connection error
 					logger.error("Client connection error: " + std::to_string(error));
 					return;
@@ -477,6 +473,9 @@ public:
 
 		int iResult = 0;
 
+		// TODO: Improve this loop to use hold the thread until there is data to send or interruption is signaled.
+		// TODO: Move the ping timer to a separate thread to avoid delays in sending messages when there is no data to send.
+		// TODO: Implement ping reset to avoid sending pings when there is data to send.
 		while (interruptionCode == edll::Code::RUNNING) {
 			if (!response.empty()) {
 				std::string message = response.pop().dump() + msgEndStr;
