@@ -42,7 +42,7 @@ struct SpectrumInfo {
 
 // Constants
 constexpr double FREQ_FACTOR = 1920.0;
-constexpr double BYTE_POWER_OFFSET = 192.0;
+constexpr float BYTE_POWER_OFFSET = 192.0;
 
 // Function prototypes
 int ScanDataExpand(int ninput, int* input, int noutput, int* output);
