@@ -1,5 +1,5 @@
 /**
-* @file etherDLLconfig.cpp
+* @file etherDLLInit.cpp
 * 
 * @brief Configuration file creation with default values
 * * This source file contains the implementation for creating a new configuration file
@@ -18,30 +18,27 @@
 * 
 **/
 
-
 // ----------------------------------------------------------------------
-#pragma once
+// Include provided DLL libraries
+#include <ScorpioAPITypes.h>
+#include <ScorpioAPIDll.h>
+
+// Include DLL specific libraries
+#include "etherDLLInit.hpp"
+#include "etherDLLCodes.hpp"
+#include "etherDLLResponse.hpp"
 
 // Include core EtherDLL libraries
 #include "EtherDLLUtils.hpp"
 
-// Include DLL specific libraries
-#include "etherDLLConfig.hpp"
-#include "etherDLLCodes.hpp"
-#include "etherDLLResponse.hpp"
-
-// Include provided DLL libraries
-#include <ScorpioAPITypes.h>
-#include <ScorpioAPIDll.h>
+// Include project libraries
+#include <nlohmann/json.hpp>
+#include <spdlog/spdlog.h>
 
 // Include general C++ libraries
 #include <string>
 #include <fstream>
 #include <stdexcept>
-
-// Include project libraries
-#include <nlohmann/json.hpp>
-#include <spdlog/spdlog.h>
 
 // For convenience
 using json = nlohmann::json;
