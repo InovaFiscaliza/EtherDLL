@@ -14,7 +14,7 @@
 * 
 * * * Dependencies:
 * * - nlohmann/json.hpp
-* * - scorpioDLLConfig.h
+* * - spdlog/spdlog.h
 * 
 **/
 
@@ -68,12 +68,12 @@ void newDefaultConfigFile(const std::string& filename)
     try {
         std::ofstream file(filename);
 
-        // Verificação se arquivo está ser aberto
+        // Verificaï¿½ï¿½o se arquivo estï¿½ ser aberto
         if (!file.is_open()) {
-            throw std::runtime_error("Não foi possível abrir/criar o arquivo: " + filename);
+            throw std::runtime_error("Nï¿½o foi possï¿½vel abrir/criar o arquivo: " + filename);
         }
 
-        // Habilitar exceções para operações futuras ofstream
+        // Habilitar exceï¿½ï¿½es para operaï¿½ï¿½es futuras ofstream
         file.exceptions(std::ios::failbit | std::ios::badbit);
 
         file << default_config;
@@ -83,7 +83,7 @@ void newDefaultConfigFile(const std::string& filename)
         throw std::runtime_error("Erro de I/O no arquivo: " + filename + " - " + e.what());
     }
     catch (const std::exception& e) {
-        throw std::runtime_error("Falha ao criar arquivo de configuração: " + std::string(e.what()));
+        throw std::runtime_error("Falha ao criar arquivo de configuraï¿½ï¿½o: " + std::string(e.what()));
     }
 }
 
