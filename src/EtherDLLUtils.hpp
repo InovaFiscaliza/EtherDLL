@@ -27,9 +27,6 @@
 #include <string>
 #include <vector>
 
-// For convenience
-using json = nlohmann::json;
-
 // Constants
 static const std::string base64_chars =
 "ABCDEFGHIJKLMNOPQRSTUVWXYZ"

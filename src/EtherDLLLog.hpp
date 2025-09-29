@@ -33,6 +33,29 @@
 // For convenience
 using json = nlohmann::json;
 
+
+// Logger object
+std::unique_ptr<spdlog::logger> loggerPtr = nullptr;
+
+
 // Function prototypes
 bool validLogConfig(nlohmann::json config);
 std::shared_ptr<spdlog::logger> initializeLog(nlohmann::json config);
+
+// ----------------------------------------------------------------------
+/** @brief Helper function to get logger reference
+ *
+ * This function returns a reference to the globally initialized logger.
+ * If the logger is not initialized, it throws a runtime error.
+ *
+ * @return spdlog::logger&: Reference to the initialized logger
+ * @throws std::runtime_error if the logger is not initialized
+ **/
+spdlog::logger& getLogger() {
+	if (!loggerPtr) {
+		throw std::runtime_error("Logger not initialized");
+	}
+	return *loggerPtr;
+}
+
+

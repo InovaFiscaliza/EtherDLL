@@ -21,6 +21,7 @@
 #pragma once
 
 // Include provided DLL libraries
+#include "StdAfx.h"
 #include "ScorpioAPITypes.h"
 #include "EquipCtrlMsg.h"
 

@@ -23,6 +23,7 @@
 #pragma once
 
 // Include provided DLL libraries
+#include "StdAfx.h"
 #include "ScorpioAPITypes.h"
 #include "EquipCtrlMsg.h"
 #include "SmsRealtimeMsg.h"
@@ -36,6 +37,7 @@
 #include "EtherDLLConstants.hpp"
 #include "EtherDLLUtils.hpp"
 #include "EtherDLLClient.hpp"
+#include "EtherDLLLog.hpp"
 
 // Include project libraries
 #include <nlohmann/json.hpp>
@@ -1069,7 +1071,7 @@ void OnDataFunc(_In_  unsigned long serverId, _In_ ECSMSDllMsgType respType, _In
 
     response.push(responseJson);
 
-	logger.debug("OnDataFunc: serverId=%lu, respType=%d, sourceAddr=%lu, requestID=%lu", serverId, static_cast<int>(respType), sourceAddr, requestID);
+	getLogger().debug("OnDataFunc: serverId=%lu, respType=%d, sourceAddr=%lu, requestID=%lu", serverId, static_cast<int>(respType), sourceAddr, requestID);
 }
 
 // ----------------------------------------------------------------------
@@ -1083,7 +1085,7 @@ void OnErrorFunc(_In_  unsigned long serverId, _In_ const std::wstring& errorMsg
     errorJson["serverId"] = serverId;
     errorJson["errorMsg"] = std::string(errorMsg.begin(), errorMsg.end());
 
-	logger.debug("OnErrorFunc: serverId=%lu, errorMsg=%s", serverId, errorMsg.c_str());
+	getLogger().debug("OnErrorFunc: serverId=%lu, errorMsg=%s", serverId, errorMsg.c_str());
     response.push(errorJson);
 }
 
@@ -1098,5 +1100,5 @@ void OnRealTimeDataFunc(_In_  unsigned long serverId, _In_ ECSMSDllMsgType respT
     responseJson = ProcessRealTimeData(respType, data);
     response.push(responseJson);
 
-	logger.debug("OnRealTimeDataFunc: serverId=%lu, respType=%d", serverId, static_cast<int>(respType));
+	getLogger().debug("OnRealTimeDataFunc: serverId=%lu, respType=%d", serverId, static_cast<int>(respType));
 }

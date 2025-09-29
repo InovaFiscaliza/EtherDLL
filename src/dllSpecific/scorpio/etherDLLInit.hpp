@@ -35,6 +35,10 @@
 #pragma once
 
 // Include provided DLL libraries
+#include "StdAfx.h"
+#include "MoreEquipCtrlMsg.h"
+#include "OccupSpectConnect.h"
+
 #include <ScorpioAPITypes.h>
 
 // Include DLL specific libraries

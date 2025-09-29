@@ -20,6 +20,7 @@
 
 // ----------------------------------------------------------------------
 // Include provided DLL libraries
+#include "StdAfx.h"
 #include <ScorpioAPITypes.h>
 #include <ScorpioAPIDll.h>
 
@@ -30,6 +31,7 @@
 
 // Include core EtherDLL libraries
 #include "EtherDLLUtils.hpp"
+#include "EtherDLLLog.hpp"
 
 // Include project libraries
 #include <nlohmann/json.hpp>
@@ -126,11 +128,11 @@ bool connectAPI(DLLConnectionData& stationConnID, const nlohmann::json& config, 
 	if (errCode != ERetCode::API_SUCCESS)
 	{
 		message = "Object associated with the API was not created: " + ERetCodeToString(errCode);
-		logger.error(message);
+		getLogger().error(message);
 		return false;
 	}
 
-	logger.info("Object creation successful");
+	getLogger().info("Object creation successful");
 
 	// Test connection to the station
 	SCapabilities StationCapabilities;
@@ -140,12 +142,12 @@ bool connectAPI(DLLConnectionData& stationConnID, const nlohmann::json& config, 
 	if (errCode != ERetCode::API_SUCCESS)
 	{
 		message = "Failed to connect to " + hostNameStr + " [" + portStr + "]. Erro " + ERetCodeToString(errCode);
-		logger.error(message);
+		getLogger().error(message);
 		return false;
 	}
 
 	message = "Connected to station " + hostNameStr + " [" + portStr + "]";
-	logger.info(message);
+	getLogger().info(message);
 	return true;
 }
 
@@ -161,15 +163,15 @@ bool disconnectAPI(DLLConnectionData& stationConnID, spdlog::logger& logger)
 {
 
 	ERetCode errCode = Disconnect(stationConnID);
-	logger.warn("Disconnecting station returned:" + ERetCodeToString(errCode));
+	getLogger().warn("Disconnecting station returned:" + ERetCodeToString(errCode));
 
 	// TODO: DLL function not returning API_SUCCESS - Need to investigate
 	if (errCode != ERetCode::API_SUCCESS)
 	{
-		logger.error("Error disconnecting from station " + ERetCodeToString(errCode));
+		getLogger().error("Error disconnecting from station " + ERetCodeToString(errCode));
 		return false;
 	}
 	
-	logger.info("Disconnected from station");
+	getLogger().info("Disconnected from station");
 	return true;
 }

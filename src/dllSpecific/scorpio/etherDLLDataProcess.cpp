@@ -22,6 +22,7 @@
 
 // ----------------------------------------------------------------------
 // Include provided DLL libraries
+#include "StdAfx.h"
 #include "EquipCtrlMsg.h"
 
 // Include DLL specific libraries

@@ -32,6 +32,7 @@
 // For convenience
 using json = nlohmann::json;
 
+
 // ----------------------------------------------------------------------
 /**
 * @brief Test JSON object contains the required information for logging configuration.

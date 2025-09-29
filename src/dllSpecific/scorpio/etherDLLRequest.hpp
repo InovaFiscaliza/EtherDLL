@@ -21,6 +21,7 @@
 #pragma once
 
 // Include provided DLL libraries
+#include "StdAfx.h"
 #include "ScorpioAPITypes.h"
 #include "ScorpioAPIDll.h"
 
@@ -54,5 +55,5 @@ SOccDFReqData* jsonToSOccDFReqData(nlohmann::json jsonObj);
 SAVDReqData* jsonToSAVDReqData(nlohmann::json jsonObj);
 
 std::string validateRequest(json request, ECSMSDllMsgType msgType, spdlog::logger& logger);
-void DLLFunctionCall(DLLConnectionData DLLConnID, json request, CLoopbackCapture& loopbackCapture, spdlog::logger& logger);
+void DLLFunctionCall(DLLConnectionData DLLConnID, json request, spdlog::logger& logger);
 void processRequestQueue(DLLConnectionData DLLConnID, MessageQueue& request, edll::INT_CODE& interruptionCode, spdlog::logger& logger);

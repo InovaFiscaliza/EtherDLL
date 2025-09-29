@@ -57,9 +57,6 @@ using json = nlohmann::json;
 /*
 	Global variables related to the application
 */
-// Logger object
-spdlog::logger logger;
-
 // Code to represent the cause for not running
 edll::INT_CODE interruptionCode = edll::Code::RUNNING;
 
@@ -76,16 +73,16 @@ static void signalHandler(int signal) {
 	if (signal == SIGINT)
 	{
 		interruptionCode = edll::Code::CTRL_C_INTERRUPT;
-		logger.critical("Received interruption signal (ctrl+C)");
+		getLogger().critical("Received interrupt signal (Ctrl+C)");
 	}
 	else if (signal == SIGTERM)
 	{
 		interruptionCode = edll::Code::KILL_INTERRUPT;
-		logger.critical("Received termination signal (kill)");
+		getLogger().critical("Received termination signal (kill)");
 	}
 	else 	{
 		std::string message = "Received unknown signal. #LttOS: " + std::to_string(signal);
-		logger.warn(message);
+		getLogger().warn(message);
 	}
 }
 
@@ -153,8 +150,10 @@ static void print_help() {
 	std::cout << "  -h, --help       Show this help message and exit" << std::endl;
 	std::cout << "  -f, --file	     JSON configuration file to use instead of default" << std::endl;
 	std::cout << std::endl;
-	std::cout << " * If argument is provided, looks for the default filename 'EtherDLLConfig.json'" << std::endl;
+	std::cout << " * If argument is provided, EtherDLL try to read the file 'EtherDLLConfig.json'" << std::endl;
 	std::cout << " * If the configuration file does not exist, a default one will be created." << std::endl;
+	std::cout << std::endl;
+	std::cout << "--------------------------------------------------------------------------------" << std::endl;
 	std::cout << std::endl;
 }
 
@@ -186,7 +185,7 @@ static  std::string handleInputArguments(int argc, char* argv[]) {
 			case 'H': {
 				print_help();
 				if (argc != 2) {
-					throw std::invalid_argument("Too many arguments provided. (Provided " + std::to_string(argc) + " arguments, expected 2)");
+					throw std::invalid_argument("Too many arguments provided. (Provided " + std::to_string(argc) + " arguments, expected 1)");
 				}
 				exit(0);
 			}
@@ -233,13 +232,13 @@ int main(int argc, char* argv[]) {
 	json config = readConfigFile(configFileName);
 
 	auto logPtr = initializeLog(config["logger"].get<json>());
-    if (logPtr) {
-        logger = *logPtr;
-    }
+	if (logPtr) {
+		loggerPtr = std::make_unique<spdlog::logger>(*logPtr);
+	}
 
 	// Initialize DLL connection
 	DLLConnectionData DLLConnID = DEFAULT_DLL_CONNECTION_DATA;
-	if (!connectAPI(DLLConnID, config, logger)) {
+	if (!connectAPI(DLLConnID, config, getLogger())) {
 		interruptionCode = edll::Code::STATION_ERROR;
 		return static_cast<int>(interruptionCode);
 	}
@@ -252,7 +251,7 @@ int main(int argc, char* argv[]) {
 	while (interruptionCode == edll::Code::RUNNING)
 	{
 		// Inicialise ClientConn object to wait for a client connection
-		ClientConn clientConn(config, interruptionCode, logger);
+		ClientConn clientConn(config, interruptionCode, getLogger());
 
 		// Reset completion flag
 		anyThreadCompleted = false;
@@ -274,7 +273,7 @@ int main(int argc, char* argv[]) {
 			});
 
 		auto requestProcFuture = std::async(std::launch::async, [&]() {
-			processRequestQueue(DLLConnID, request, interruptionCode, logger);
+			processRequestQueue(DLLConnID, request, interruptionCode, getLogger());
 			signalCompletion();
 			return true;
 			});
@@ -292,22 +291,22 @@ int main(int argc, char* argv[]) {
 				});
 		}
 
-		logger.info("Service interrupted");
+		getLogger().info("Service interrupted");
 
 		// Clean up
 		if (!clientConn.isConnected()) {
-			logger.info("Client disconnected.");
+			getLogger().info("Client disconnected.");
 		}
 
 		clientConn.closeConnection();
 	}
 
 	// Close the connection
-	if (!disconnectAPI(DLLConnID, logger)) {
-		logger.error("Failed to disconnect from station.");
+	if (!disconnectAPI(DLLConnID, getLogger())) {
+		getLogger().error("Failed to disconnect from station.");
 	}
-	logger.info("Service stopped.");
-	logger.flush();
+	getLogger().info("Service stopped.");
+	getLogger().flush();
 
 	return static_cast<int>(interruptionCode);
 }

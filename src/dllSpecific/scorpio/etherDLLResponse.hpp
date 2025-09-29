@@ -20,6 +20,7 @@
 #pragma once
 
 // Include provided DLL libraries
+#include "StdAfx.h"
 #include "ScorpioAPITypes.h"
 #include "EquipCtrlMsg.h"
 #include "SmsRealtimeMsg.h"
@@ -36,9 +37,6 @@
 
 // For convenience
 using json = nlohmann::json;
-
-constexpr double PAN_OFFSET = 192.0;
-constexpr double FREQ_FACTOR = 1920.0;
 
 // ----------------------------------------------------------------------
 // Callback function prototypes
