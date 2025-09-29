@@ -17,20 +17,32 @@
  * * * Dependencies:
  *
 **/
-
 // ----------------------------------------------------------------------
 #pragma once
 
-// Include to solution specific libraries
+// Include provided DLL libraries
+
+// Include DLL specific libraries
+
+// Include core EtherDLL libraries
+
+// Include project libraries
+
+// Include general C++ libraries
 #include <string>
 
+// For convenience
 
-// Spectrum calculation utility
+// Data structures
 struct SpectrumInfo {
     double startFrequency;  // MHz
     double stopFrequency;   // MHz  
     double binSize;         // Hz
 };
+
+// Constants
+constexpr double FREQ_FACTOR = 1920.0;
+constexpr double BYTE_POWER_OFFSET = 192.0;
 
 // Function prototypes
 int ScanDataExpand(int ninput, int* input, int noutput, int* output);

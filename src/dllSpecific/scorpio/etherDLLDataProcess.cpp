@@ -20,19 +20,26 @@
 * *     - etherDLLResponse.hpp
 **/
 
-
 // ----------------------------------------------------------------------
+// Include provided DLL libraries
+#include "EquipCtrlMsg.h"
+
+// Include DLL specific libraries
 #include "etherDLLDataProcess.hpp"
 #include "etherDLLResponse.hpp"
 
+// Include core EtherDLL libraries
 #include "EtherDLLConstants.hpp"
 
-#include "EquipCtrlMsg.h"
+// Include project libraries
 
+// Include general C++ libraries
 #include <string>
 #include <vector>
 #include <cstdint>
 #include <limits>
+
+// For convenience
 
 
 // ----------------------------------------------------------------------
@@ -97,7 +104,6 @@ static const unsigned char* parsedBinData(const unsigned char* binData, unsigned
     static_assert(sizeof(float) == 4, "Esperado float32");
 
 	// TODO REMOVE THUS CONSTANT
-    const float dbmOffset = 192.0f;
     const size_t nRequested = static_cast<size_t>(numBins);
 
     // Buffer persistente por thread para evitar retorno de ponteiro pendente
@@ -107,7 +113,7 @@ static const unsigned char* parsedBinData(const unsigned char* binData, unsigned
     float* outFloats = reinterpret_cast<float*>(parsedData.data());
 
     for (size_t i = 0; i < nRequested; ++i) {
-        outFloats[i] = static_cast<float>(binData[i]) - dbmOffset;
+        outFloats[i] = static_cast<float>(binData[i]) - BYTE_POWER_OFFSET;
     }
 
     return parsedData.data();
@@ -130,10 +136,10 @@ static const unsigned char* parsedBinData(const unsigned char* binData, unsigned
 SpectrumInfo calculateSpectrumInfo(const SEquipCtrlMsg::SGetPanResp* panResponse)
 {
     // Convert central frequency from internal units to MHz
-    double centralFrequency = double(panResponse->freq.internal) / (edll::FREQ_FACTOR * edll::MHZ_MULTIPLIER);
+    double centralFrequency = double(panResponse->freq.internal) / (FREQ_FACTOR * edll::MHZ_MULTIPLIER);
 
     // Convert bin size from internal units to Hz
-    double binSize = double(panResponse->binSize.internal) / edll::FREQ_FACTOR;
+    double binSize = double(panResponse->binSize.internal) / FREQ_FACTOR;
 
     // Calculate half span in MHz  
     double halfSpan = (binSize * double(floor(panResponse->numBins / double(2.0)))) / double(1000000.0);
