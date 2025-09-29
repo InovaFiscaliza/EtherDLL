@@ -150,4 +150,6 @@ std::shared_ptr<spdlog::logger> initializeLog(json config) {
 	}
 
 	logger->info("Starting " + log_name + "...");
+
+	return logger;
 }
