@@ -64,6 +64,9 @@ edll::INT_CODE interruptionCode = edll::Code::RUNNING;
 MessageQueue request;
 MessageQueue response;
 
+// Logger pointer
+spdlog::logger* loggerPtr = nullptr;
+
 // ----------------------------------------------------------------------
 /*
 	Handle interruptio signals 'ctrl+C' and 'kill'
@@ -73,16 +76,16 @@ static void signalHandler(int signal) {
 	if (signal == SIGINT)
 	{
 		interruptionCode = edll::Code::CTRL_C_INTERRUPT;
-		getLogger().critical("Received interrupt signal (Ctrl+C)");
+		loggerPtr->critical("Received interrupt signal (Ctrl+C)");
 	}
 	else if (signal == SIGTERM)
 	{
 		interruptionCode = edll::Code::KILL_INTERRUPT;
-		getLogger().critical("Received termination signal (kill)");
+		loggerPtr->critical("Received termination signal (kill)");
 	}
 	else 	{
 		std::string message = "Received unknown signal. #LttOS: " + std::to_string(signal);
-		getLogger().warn(message);
+		loggerPtr->warn(message);
 	}
 }
 
@@ -91,6 +94,7 @@ static void signalHandler(int signal) {
 	Register the signal callback handlers
 */
 static void registerSignalHandlers() {
+	
 	std::signal(SIGINT, signalHandler);  // Handles Ctrl+C
 	std::signal(SIGTERM, signalHandler); // Handles kill command
 }
@@ -225,21 +229,24 @@ static  std::string handleInputArguments(int argc, char* argv[]) {
 */
 int main(int argc, char* argv[]) {
 
-	registerSignalHandlers();
-
 	std::string configFileName = handleInputArguments(argc, argv);
 
 	json config = readConfigFile(configFileName);
 
-	auto logPtr = initializeLog(config["logger"].get<json>());
-	if (logPtr) {
-		loggerPtr = std::make_unique<spdlog::logger>(*logPtr);
-	}
+	std::string log_name = config["log"].value("name", "EtherDLL");
+
+	auto logger_ptr = std::make_shared<spdlog::logger>(log_name);
+	loggerPtr = logger_ptr.get();
+
+	initializeLog(config, *logger_ptr);
+
+	registerSignalHandlers();
 
 	// Initialize DLL connection
 	DLLConnectionData DLLConnID = DEFAULT_DLL_CONNECTION_DATA;
-	if (!connectAPI(DLLConnID, config, getLogger())) {
+	if (!connectAPI(DLLConnID, config, *logger_ptr)) {
 		interruptionCode = edll::Code::STATION_ERROR;
+		logger_ptr->error("Failed to connect to station. Exiting.");
 		return static_cast<int>(interruptionCode);
 	}
 
@@ -251,7 +258,7 @@ int main(int argc, char* argv[]) {
 	while (interruptionCode == edll::Code::RUNNING)
 	{
 		// Inicialise ClientConn object to wait for a client connection
-		ClientConn clientConn(config, interruptionCode, getLogger());
+		ClientConn clientConn(config, interruptionCode, *logger_ptr);
 
 		// Reset completion flag
 		anyThreadCompleted = false;
@@ -273,7 +280,7 @@ int main(int argc, char* argv[]) {
 			});
 
 		auto requestProcFuture = std::async(std::launch::async, [&]() {
-			processRequestQueue(DLLConnID, request, interruptionCode, getLogger());
+			processRequestQueue(DLLConnID, request, interruptionCode, *logger_ptr);
 			signalCompletion();
 			return true;
 			});
@@ -291,22 +298,22 @@ int main(int argc, char* argv[]) {
 				});
 		}
 
-		getLogger().info("Service interrupted");
+		logger_ptr->info("Service interrupted");
 
 		// Clean up
 		if (!clientConn.isConnected()) {
-			getLogger().info("Client disconnected.");
+			logger_ptr->info("Client disconnected.");
 		}
 
 		clientConn.closeConnection();
 	}
 
 	// Close the connection
-	if (!disconnectAPI(DLLConnID, getLogger())) {
-		getLogger().error("Failed to disconnect from station.");
+	if (!disconnectAPI(DLLConnID, *logger_ptr)) {
+		logger_ptr->error("Failed to disconnect from station.");
 	}
-	getLogger().info("Service stopped.");
-	getLogger().flush();
+	logger_ptr->info("Service stopped.");
+	logger_ptr->flush();
 
 	return static_cast<int>(interruptionCode);
 }

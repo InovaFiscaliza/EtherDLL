@@ -6,7 +6,7 @@ R"({
     },
     "file": {
       "level": "trace",
-      "path": "log.txt"
+      "filename": "log.txt"
     }
   },
   "station": {
@@ -25,8 +25,8 @@ R"({
           "ping" : "PING",
           "ack" : "ACK",
           "nack" : "NACK",
-          "end" : "\\r\\n"
-          "id" : "ID""
+          "end" : "\\r\\n",
+          "id" : "ID"
       }
   },
   "default": {
