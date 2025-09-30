@@ -44,7 +44,7 @@
 using json = nlohmann::json;
 
 // Global variables
-// extern spdlog::logger* logger_ptr;
+extern spdlog::logger* loggerPtr;
 
 
 // ----------------------------------------------------------------------
@@ -453,7 +453,7 @@ std::string validateRequest(json request, ECSMSDllMsgType msgType, spdlog::logge
 		break;
 	}
 
-	// logger_ptr->debug(msg);
+	loggerPtr->debug(msg);
 	return msg;
 }
 
@@ -558,7 +558,7 @@ void DLLFunctionCall(DLLConnectionData DLLConnID, json request, spdlog::logger& 
 		case ECSMSDllMsgType::FREE_AUDIO_CHANNEL:
 		{
 			errCode = FreeAudio(DLLConnID, reqArguments["channel"].get<unsigned long>(), &requestID);
-			// logger_ptr->info("Finished audio capture.");
+			loggerPtr->info("Finished audio capture.");
 			break;
 		}
 		case ECSMSDllMsgType::SET_PAN_PARAMS:
@@ -575,7 +575,7 @@ void DLLFunctionCall(DLLConnectionData DLLConnID, json request, spdlog::logger& 
 		}
 		default:
 		{
-			// logger_ptr->error("Unknown message type");
+			loggerPtr->error("Unknown message type");
 			errCode = ERetCode::CMD_SENT_ERROR;
 			break;
 		}
@@ -584,12 +584,12 @@ void DLLFunctionCall(DLLConnectionData DLLConnID, json request, spdlog::logger& 
 	std::string reqName = request["name"].get<std::string>();
 	if (errCode != ERetCode::API_SUCCESS)
 	{
-		// logger_ptr->error("[" + reqName + "] ERROR. " + ERetCodeToString(errCode));
+		loggerPtr->error("[" + reqName + "] ERROR. " + ERetCodeToString(errCode));
 	}
 	else
 	{
-		// logger_ptr->info("[" + reqName + "] command executed");
-		// logger_ptr->debug("Request ID " + std::to_string(requestID) + ": " + reqArguments.dump() + "");
+		loggerPtr->info("[" + reqName + "] command executed");
+		loggerPtr->debug("Request ID " + std::to_string(requestID) + ": " + reqArguments.dump() + "");
 	}
 }
 

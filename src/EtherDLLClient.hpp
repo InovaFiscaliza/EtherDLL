@@ -46,7 +46,7 @@
 using json = nlohmann::json;
 
 // Global variables
-// extern spdlog::logger* logger_ptr;
+extern spdlog::logger* loggerPtr;
 
 
 // ----------------------------------------------------------------------
@@ -216,7 +216,7 @@ private:
 		std::string portStr = std::to_string(config["service"]["command"].value("port", edll::DEFAULT_SERVICE_PORT));
 		int iResult = getaddrinfo(NULL, portStr.c_str(), &hints, &result);
 		if (iResult != 0) {
-			// logger_ptr->error("Socket getaddrinfo failed. EC:" + std::to_string(iResult));
+			loggerPtr->error("Socket getaddrinfo failed. EC:" + std::to_string(iResult));
 			interruptionCode = edll::Code::CLIENT_ERROR;
 			WSACleanup();
 			return;
@@ -224,7 +224,7 @@ private:
 
 		listenSocket = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
 		if (listenSocket == INVALID_SOCKET) {
-			// logger_ptr->error("Socket creation failed. EC:" + std::to_string(WSAGetLastError()));
+			loggerPtr->error("Socket creation failed. EC:" + std::to_string(WSAGetLastError()));
 			interruptionCode = edll::Code::CLIENT_ERROR;
 			freeaddrinfo(result);
 			WSACleanup();
@@ -234,7 +234,7 @@ private:
 		int timeout = config["service"]["command"].value("timeout_s", edll::DEFAULT_TIMEOUT_S) * 1000; // milliseconds
 		iResult = setsockopt(listenSocket, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout, sizeof(timeout));
 		if (iResult == SOCKET_ERROR) {
-			// logger_ptr->error("Socket setsockopt timeout failed. EC:" + std::to_string(WSAGetLastError()));
+			loggerPtr->error("Socket setsockopt timeout failed. EC:" + std::to_string(WSAGetLastError()));
 			interruptionCode = edll::Code::CLIENT_ERROR;
 			freeaddrinfo(result);
 			closesocket(listenSocket);
@@ -244,7 +244,7 @@ private:
 
 		iResult = ::bind(listenSocket, result->ai_addr, static_cast<int>(result->ai_addrlen));
 		if (iResult == SOCKET_ERROR) {
-			// logger_ptr->error("Socket bind failed. EC:" + std::to_string(WSAGetLastError()));
+			loggerPtr->error("Socket bind failed. EC:" + std::to_string(WSAGetLastError()));
 			interruptionCode = edll::Code::CLIENT_ERROR;
 			freeaddrinfo(result);
 			closesocket(listenSocket);
@@ -256,7 +256,7 @@ private:
 
 		iResult = listen(listenSocket, SOMAXCONN);
 		if (iResult == SOCKET_ERROR) {
-			// logger_ptr->error("Socket listen failed. EC:" + std::to_string(WSAGetLastError()));
+			loggerPtr->error("Socket listen failed. EC:" + std::to_string(WSAGetLastError()));
 			interruptionCode = edll::Code::CLIENT_ERROR;
 			closesocket(listenSocket);
 			WSACleanup();
@@ -268,7 +268,7 @@ private:
 
 		while (interruptionCode == edll::Code::RUNNING) {
 			// call the connection handler 
-			// logger_ptr->info("Waiting for client connections on port " + portStr);
+			loggerPtr->info("Waiting for client connections on port " + portStr);
 
 			clientSocket = accept(listenSocket, (struct sockaddr*)&clientAddr, NULL);
 
@@ -281,22 +281,22 @@ private:
 				int addrLen = sizeof(clientAddr);
 				if (getpeername(clientSocket, (struct sockaddr*)&clientAddr, &addrLen) == 0) {
 					clientIP = std::string(inet_ntoa(clientAddr.sin_addr));
-					/* if (!clientIP.empty()) {
-						// logger_ptr->debug("Processing message from client IP: " + clientIP);
-					} */
+					if (!clientIP.empty()) {
+						loggerPtr->debug("Processing message from client IP: " + clientIP);
+					}
 
 				}
 			}
 
 			if (clientSocket == INVALID_SOCKET) {
-				// logger_ptr->warn("Failed in accept operation with " + clientIP + ".EC:" + std::to_string(WSAGetLastError()));
+				loggerPtr->warn("Failed in accept operation with " + clientIP + ".EC:" + std::to_string(WSAGetLastError()));
 			}
 			else {
-				// logger_ptr->info("Accepted connection from " + clientIP);
+				loggerPtr->info("Accepted connection from " + clientIP);
 
 				closesocket(listenSocket);
 				WSACleanup();
-				// logger_ptr->info("Stopped waiting for new connections on port " + portStr);
+				loggerPtr->info("Stopped waiting for new connections on port " + portStr);
 
 				return;
 			}
@@ -395,13 +395,13 @@ public:
 							jsonObj[edll::MSG_KEY_QUEUE_ID] = jsonObj[idStr];
 						}
 						
-						// logger_ptr->debug("Received message ID: " + jsonObj.dump());
+						loggerPtr->debug("Received message ID: " + jsonObj.dump());
 
 						std::string ack = ackStr + jsonObj[idStr].dump() + msgEndStr;
 						iResult = send(clientSocket, ack.c_str(), ack.length(), 0);
 					}
 					else {
-						// logger_ptr->warn("Received invalid JSON message: " + completeMessage);
+						loggerPtr->warn("Received invalid JSON message: " + completeMessage);
 						std::string nack = nackStr + std::to_string(completeMessage.length()) + msgEndStr;
 						iResult = send(clientSocket, nack.c_str(), nack.length(), 0);
 					}
@@ -409,7 +409,7 @@ public:
 					// keep any extra data after the end of the message for the next iteration
 					if (pos != accumulatedData.length() - msgEndStr.length()) {
 						accumulatedData = accumulatedData.substr(pos + msgEndStr.length(), std::string::npos);
-						// logger_ptr->debug("Keeping data for next iteration: " + accumulatedData);
+						loggerPtr->debug("Keeping data for next iteration: " + accumulatedData);
 						bufferTTL--;
 					}
 					else {
@@ -418,8 +418,8 @@ public:
 					}
 
 					if (iResult == SOCKET_ERROR) {
-						// logger_ptr->warn("Failed sending ACK/NACK message. EC:" + std::to_string(WSAGetLastError()));
-						// logger_ptr->info("Connection with address" + std::to_string(clientSocket) + " lost.");
+						loggerPtr->warn("Failed sending ACK/NACK message. EC:" + std::to_string(WSAGetLastError()));
+						loggerPtr->info("Connection with address" + std::to_string(clientSocket) + " lost.");
 						return;
 					}
 				}
@@ -429,13 +429,13 @@ public:
 
 				if (error != WSAEWOULDBLOCK) {
 					// Unkwonn connection error
-					// logger_ptr->error("Client connection error: " + std::to_string(error));
+					loggerPtr->error("Client connection error: " + std::to_string(error));
 					return;
 				}
 
 				if (bufferTTL == 0) {
 					if (accumulatedData.length() > 0) {
-						// logger_ptr->debug("Buffer TTL expired. Clearing accumulated data: " + accumulatedData);
+						loggerPtr->debug("Buffer TTL expired. Clearing accumulated data: " + accumulatedData);
 						accumulatedData.clear();
 					}
 					bufferTTL = bufferTTLInit;
@@ -487,7 +487,7 @@ public:
 
 				iResult = send(clientSocket, message.c_str(), static_cast<int>(message.length()), 0);
 				if (iResult == SOCKET_ERROR) {
-					// logger_ptr->warn("Data send failed. EC:" + std::to_string(WSAGetLastError()));
+					loggerPtr->warn("Data send failed. EC:" + std::to_string(WSAGetLastError()));
 					return;
 				}
 			}
@@ -501,12 +501,12 @@ public:
 					iResult = send(clientSocket, ping.c_str(), ping.length(), 0);
 
 					if (iResult == SOCKET_ERROR) {
-						// logger_ptr->warn("PING send failed. EC:" + std::to_string(WSAGetLastError()));
-						// logger_ptr->info("Connection with address" + std::to_string(clientSocket) + " lost.");
+						loggerPtr->warn("PING send failed. EC:" + std::to_string(WSAGetLastError()));
+						loggerPtr->info("Connection with address" + std::to_string(clientSocket) + " lost.");
 						return;
 					}
 
-					// logger_ptr->info("Waiting for commands from client...");
+					loggerPtr->info("Waiting for commands from client...");
 					pingPeriod = pingPeriodInit;
 				}
 				else {
@@ -557,7 +557,7 @@ public:
 		if (clientSocket != INVALID_SOCKET) {
 			closesocket(clientSocket);
 			clientSocket = INVALID_SOCKET;
-			// logger_ptr->info("Closed connection with client " + clientIP);
+			loggerPtr->info("Closed connection with client " + clientIP);
 			clientIP = "";
 		}
 	}

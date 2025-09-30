@@ -62,7 +62,7 @@
 using json = nlohmann::json;
 
 // Global variables
-// extern spdlog::logger* logger_ptr;
+extern spdlog::logger* loggerPtr;
 
 // 
 // ----------------------------------------------------------------------
@@ -160,11 +160,9 @@ bool connectAPI(DLLConnectionData& stationConnID, const nlohmann::json& config, 
 	if (errCode != ERetCode::API_SUCCESS)
 	{
 		message = "Object associated with the API was not created: " + ERetCodeToString(errCode);
-		// logger_ptr->error(message);
+		loggerPtr->error(message);
 		return false;
 	}
-
-	// logger_ptr->info("Object creation successful");
 
 	// Test connection to the station
 	SCapabilities StationCapabilities;
@@ -174,12 +172,12 @@ bool connectAPI(DLLConnectionData& stationConnID, const nlohmann::json& config, 
 	if (errCode != ERetCode::API_SUCCESS)
 	{
 		message = "Failed to connect to " + hostNameStr + " [" + portStr + "]. Erro " + ERetCodeToString(errCode);
-		// logger_ptr->error(message);
+		loggerPtr->error(message);
 		return false;
 	}
 
 	message = "Connected to station " + hostNameStr + " [" + portStr + "]";
-	// logger_ptr->info(message);
+	loggerPtr->info(message);
 
 	return true;
 }
@@ -196,15 +194,15 @@ bool disconnectAPI(DLLConnectionData& stationConnID, spdlog::logger& logger)
 {
 
 	ERetCode errCode = Disconnect(stationConnID);
-	// logger_ptr->warn("Disconnecting station returned:" + ERetCodeToString(errCode));
+	loggerPtr->warn("Disconnecting station returned:" + ERetCodeToString(errCode));
 
 	// TODO: DLL function not returning API_SUCCESS - Need to investigate
 	if (errCode != ERetCode::API_SUCCESS)
 	{
-		// logger_ptr->error("Error disconnecting from station " + ERetCodeToString(errCode));
+		loggerPtr->error("Error disconnecting from station " + ERetCodeToString(errCode));
 		return false;
 	}
 
-	// logger_ptr->info("Disconnected from station");
+	loggerPtr->info("Disconnected from station");
 	return true;
 }

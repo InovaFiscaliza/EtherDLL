@@ -53,7 +53,7 @@ using json = nlohmann::json;
 
 // Global variables
 extern MessageQueue response;
-// extern spdlog::logger* logger_ptr;
+extern spdlog::logger* loggerPtr;
 
 
 // ----------------------------------------------------------------------
@@ -1070,7 +1070,9 @@ void OnDataFunc(_In_  unsigned long serverId, _In_ ECSMSDllMsgType respType, _In
 
     response.push(responseJson);
 
-    // logger_ptr->debug("OnDataFunc: serverId=%lu, respType=%d, sourceAddr=%lu, requestID=%lu", serverId, static_cast<int>(respType), sourceAddr, requestID);
+
+    loggerPtr->debug("OnDataFunc: serverId=%lu, respType=%d, sourceAddr=%lu, requestID=%lu", serverId, static_cast<int>(respType), sourceAddr, requestID);
+	loggerPtr->trace("OnDataFunc: responseJson=%s", responseJson.dump().c_str());
 }
 
 // ----------------------------------------------------------------------
@@ -1082,11 +1084,12 @@ void OnErrorFunc(_In_  unsigned long serverId, _In_ const std::wstring& errorMsg
     json errorJson = {};
 
     errorJson["serverId"] = serverId;
-    errorJson["errorMsg"] = std::string(errorMsg.begin(), errorMsg.end());
+    std::string errorMsgStr(errorMsg.begin(), errorMsg.end());
+    errorJson["errorMsg"] = errorMsgStr;
 
     response.push(errorJson);
 
-    // logger_ptr->debug("OnErrorFunc: serverId=%lu, errorMsg=%s", serverId, errorMsg.c_str());
+    loggerPtr->debug("OnErrorFunc: serverId=%lu, errorMsg=%s", serverId, errorMsgStr.c_str());
 }
 
 // ----------------------------------------------------------------------
@@ -1101,5 +1104,6 @@ void OnRealTimeDataFunc(_In_  unsigned long serverId, _In_ ECSMSDllMsgType respT
 
     response.push(responseJson);
 
-    // logger_ptr->debug("OnRealTimeDataFunc: serverId=%lu, respType=%d", serverId, static_cast<int>(respType));
+    loggerPtr->debug("OnRealTimeDataFunc: serverId=%lu, respType=%d", serverId, static_cast<int>(respType));
+	loggerPtr->trace("OnRealTimeDataFunc: responseJson=%s", responseJson.dump().c_str());
 }
