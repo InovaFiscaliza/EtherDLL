@@ -63,6 +63,7 @@
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(SolutionDir);$(SolutionDir)nlohmann;$(SolutionDir)base64;$(SolutionDir)spdlog;$(SolutionDir)wil;$(SolutionDir)dllSpecific\scorpio;$(MSBuildProgramFiles32)\TCI\Scorpio API\Common;$(MSBuildProgramFiles32)\TCI\Scorpio API\GShared\Monitoring System\Shared Include;$(MSBuildProgramFiles32)\TCI\Scorpio API\GShared\IO;$(MSBuildProgramFiles32)\TCI\Scorpio API\GShared\Primitives</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -84,6 +85,7 @@
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(SolutionDir);$(SolutionDir)dllSpecific\scorpio;$(SolutionDir)nlohmann;$(SolutionDir)spdlog;$(MSBuildProgramFiles32)\TCI\Scorpio API\Common;$(MSBuildProgramFiles32)\TCI\Scorpio API\GShared\Monitoring System\Shared Include;$(MSBuildProgramFiles32)\TCI\Scorpio API\GShared\IO;$(MSBuildProgramFiles32)\TCI\Scorpio API\GShared\Primitives</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -219,9 +221,6 @@
     <ClCompile Include="dllSpecific\scorpio\stdafx.cpp" />
     <ClCompile Include="EtherDLL.cpp" />
     <ClCompile Include="EtherDLLUtils.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="dllSpecific\scorpio\etherDLLConfig.json.inc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -7,7 +7,7 @@
 * * @date 2025-09-29
 * * @version 1.0
 *
-* * @note Requires C++11 or later
+* * @note Requires C++17 or later
 * * @note Uses nlohmann/json library for JSON handling
 *
 **/
@@ -19,11 +19,13 @@
 // Include core EtherDLL libraries
 
 // Include project libraries
+#include <nlohmann/json.hpp>
 
 // Include general C++ libraries
 #include <string>
 
 // For convenience
+using json = nlohmann::json;
 
 // ----------------------------------------------------------------------
 namespace edll {
@@ -63,25 +65,164 @@ namespace edll {
 	constexpr double GHZ_MIN_VALUE = 1000.0;
 	constexpr double GHZ_FROM_MHZ = 0.001;
 
+	// JSON elements
+	constexpr const char* JSON_START = "{\"";
+	constexpr const char* JSON_MID = "\":";
+	constexpr const char* JSON_END = "}";
+
 	// Default configuration values allow application to run if no configuration file is provided or can not be created
-    constexpr const char* DEFAULT_CONFIG_FILENAME = "EtherDLLConfig.json";
-    constexpr int DEFAULT_SERVICE_PORT = 5555;
-	constexpr int DEFAULT_TIMEOUT_S = 10;
-	constexpr int DEFAULT_SLEEP_MS = 100;
-	constexpr int DEFAULT_BUFFER_TTL_PERIOD = 5;
+	struct DefaultConfig {
 
-	constexpr int DEFAULT_PING_PERIOD = 10;
-    constexpr bool DEFAULT_PING_STATE = true;
-    constexpr const char* DEFAULT_PING_MSG = "PING";
-    constexpr const char* DEFAULT_ACK_MSG = "ACK";
-	constexpr const char* DEFAULT_NACK_MSG = "NACK";
-	constexpr const char* DEFAULT_END_MSG = "\r\n";
+		static constexpr const char* DEFAULT_CONFIG_FILENAME = "EtherDLLConfig.json";
 
-	// Message keys used in JSON communication
-    constexpr const char* MSG_KEY_CLIENT_ID = "ID";
-	constexpr const char* MSG_KEY_QUEUE_ID = "queue_id";
-    constexpr const char* MSG_KEY_CLIENT_IP = "client_ip";
+		struct Log {
+			static constexpr const char* KEY = "log";
 
-	// Socket buffer size for receiving data
-	constexpr int SOCKET_BUFFER_SIZE = 4096;
+			struct Name {
+				static constexpr const char* KEY = "name";
+				static constexpr const char* VALUE = "EtherDLL";
+			};
+
+			struct Console {
+				static constexpr const char* KEY = "console";
+
+				struct Level {
+					static constexpr const char* KEY = "level";
+					static constexpr const char* VALUE = "info";
+				};
+			};
+
+			struct File {
+				static constexpr const char* KEY = "file";
+
+				struct Level {
+					static constexpr const char* KEY = "level";
+					static constexpr const char* VALUE = "debug";
+				};
+				struct Filename {
+					static constexpr const char* KEY = "filename";
+					static constexpr const char* VALUE = "EtherDLL.log";
+				};
+			};
+		};
+
+		struct Service {
+			static constexpr const char* KEY = "service";
+
+			struct Port {
+				static constexpr const char* KEY = "port";
+				static constexpr int VALUE = 5555;
+			};
+			struct BufferSize {
+				static constexpr const char* KEY = "buffer";
+				static constexpr int VALUE = 4096;
+				static constexpr int MAX_VALUE = 1000000;
+			};
+			struct Timeout {
+				static constexpr const char* KEY = "timeout_s";
+				static constexpr int VALUE = 10;
+			};
+			struct Sleep {
+				static constexpr const char* KEY = "sleep_ms";
+				static constexpr int VALUE = 100;
+			};
+			struct BufferTTL {
+				static constexpr const char* KEY = "buffer_ttl_period";
+				static constexpr int VALUE = 5;
+			};
+			struct PingPeriod {
+				static constexpr const char* KEY = "ping_period";
+				static constexpr int VALUE = 10;
+			};
+			struct PingEnable {
+				static constexpr const char* KEY = "ping_enable";
+				static constexpr bool VALUE = true;
+			};
+			struct Msg {
+				static constexpr const char* KEY = "msg_keys";
+
+				struct End {
+					static constexpr const char* KEY = "end";
+					static constexpr const char* VALUE = "\r\n";
+				};
+				struct Ping {
+					static constexpr const char* KEY = "ping";
+					static constexpr const char* VALUE = "PING";
+				};
+				struct Ack {
+					static constexpr const char* KEY = "ack";
+					static constexpr const char* VALUE = "ACK";
+				};
+				struct Nack {
+					static constexpr const char* KEY = "nack";
+					static constexpr const char* VALUE = "NACK";
+				};
+			};
+			struct Queue {
+				struct ClientId {
+					static constexpr const char* KEY = "id";
+					static constexpr int VALUE = 0;
+				};
+				struct QueueId {
+					static constexpr const char* KEY = "queue_id";
+					static constexpr int VALUE = 0;
+				};
+				struct DLLId {
+					static constexpr const char* KEY = "server_id";
+					static constexpr int VALUE = 0;
+				};
+				struct ClientIp {
+					static constexpr const char* KEY = "client_ip";
+					static constexpr const char* VALUE = "172.24.3.15";
+				};
+				struct CommandCode {
+					static constexpr const char* KEY = "commandCode";
+					static constexpr int VALUE = -1;
+				};
+				struct CommandName {
+					static constexpr const char* KEY = "commandName";
+					static constexpr const char* VALUE = "Error";
+				};
+				struct Arguments {
+					static constexpr const char* KEY = "arguments";
+					static inline const json VALUE = json::object();
+				};
+			};
+		};
+	};
+}
+
+// ------------------------------------------------------
+/** @brief Build a default configuration JSON object from the DefaultConfig struct
+ *
+ * @param  nlohmann::json: JSON object to be populated with default configuration, default is empty object
+ * @return nlohmann::json: JSON object containing the default configuration
+ * @throws NO EXCEPTION HANDLING
+ **/
+json buildCoreDefaultConfigJson(json default_config = json::object()) {
+
+	default_config[edll::DefaultConfig::Log::KEY][edll::DefaultConfig::Log::Name::KEY] = edll::DefaultConfig::Log::Name::VALUE;
+	default_config[edll::DefaultConfig::Log::KEY][edll::DefaultConfig::Log::Console::KEY][edll::DefaultConfig::Log::Console::Level::KEY] = edll::DefaultConfig::Log::Console::Level::VALUE;
+	default_config[edll::DefaultConfig::Log::KEY][edll::DefaultConfig::Log::File::KEY][edll::DefaultConfig::Log::File::Level::KEY] = edll::DefaultConfig::Log::File::Level::VALUE;
+	default_config[edll::DefaultConfig::Log::KEY][edll::DefaultConfig::Log::File::KEY][edll::DefaultConfig::Log::File::Filename::KEY] = edll::DefaultConfig::Log::File::Filename::VALUE;
+	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::Port::KEY] = edll::DefaultConfig::Service::Port::VALUE;
+	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::BufferSize::KEY] = edll::DefaultConfig::Service::BufferSize::VALUE;
+	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::Timeout::KEY] = edll::DefaultConfig::Service::Timeout::VALUE;
+	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::Sleep::KEY] = edll::DefaultConfig::Service::Sleep::VALUE;
+	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::BufferTTL::KEY] = edll::DefaultConfig::Service::BufferTTL::VALUE;
+	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::PingPeriod::KEY] = edll::DefaultConfig::Service::PingPeriod::VALUE;
+	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::PingEnable::KEY] = edll::DefaultConfig::Service::PingEnable::VALUE;
+	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::Msg::KEY][edll::DefaultConfig::Service::Msg::End::KEY] = edll::DefaultConfig::Service::Msg::End::VALUE;
+	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::Msg::KEY][edll::DefaultConfig::Service::Msg::Ping::KEY] = edll::DefaultConfig::Service::Msg::Ping::VALUE;
+	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::Msg::KEY][edll::DefaultConfig::Service::Msg::Ack::KEY] = edll::DefaultConfig::Service::Msg::Ack::VALUE;
+	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::Msg::KEY][edll::DefaultConfig::Service::Msg::Nack::KEY] = edll::DefaultConfig::Service::Msg::Nack::VALUE;
+	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::Queue::ClientId::KEY] = edll::DefaultConfig::Service::Queue::ClientId::VALUE;
+	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::Queue::QueueId::KEY] = edll::DefaultConfig::Service::Queue::QueueId::VALUE;
+	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::Queue::DLLId::KEY] = edll::DefaultConfig::Service::Queue::DLLId::VALUE;
+	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::Queue::ClientIp::KEY] = edll::DefaultConfig::Service::Queue::ClientIp::VALUE;
+	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::Queue::CommandCode::KEY] = edll::DefaultConfig::Service::Queue::CommandCode::VALUE;
+	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::Queue::CommandName::KEY] = edll::DefaultConfig::Service::Queue::CommandName::VALUE;
+	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::Queue::Arguments::KEY] = edll::DefaultConfig::Service::Queue::Arguments::VALUE;
+
+	return default_config;
 }

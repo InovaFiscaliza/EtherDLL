@@ -11,7 +11,7 @@
 * * @date 2025-09-10
 * * @version 1.0
 *
-* * @note Requires C++11 or later
+* * @note Requires C++17 or later
 * * @note Uses nlohmann/json library for JSON handling
 *
 **/
@@ -78,10 +78,13 @@ public:
 	 * @throws NO EXCEPTION HANDLING
 	**/
 	unsigned long push(json item, bool setClientKey = false) {
+
+		using msg = edll::DefaultConfig::Service::Queue;
+
 		std::lock_guard<std::mutex> lock(mtx);
-		item[edll::MSG_KEY_QUEUE_ID] = messageCount;
+		item[msg::QueueId::KEY] = messageCount;
 		if (setClientKey) {
-			item[edll::MSG_KEY_CLIENT_ID] = messageCount;
+			item[msg::ClientId::KEY] = messageCount;
 		}
 		msgQueue.push(item);
 		return messageCount++;
@@ -179,12 +182,35 @@ public:
  **/
 class ClientConn {
 private:
+	using service = edll::DefaultConfig::Service;
+
 	json config;
 	edll::INT_CODE& interruptionCode;
 	spdlog::logger& logger;
 
 	SOCKET clientSocket = INVALID_SOCKET;
 	std::string clientIP;
+
+	std::string msgJsonStartStr = std::string(edll::JSON_START);
+	std::string msgJsonMidStr = std::string(edll::JSON_MID);
+
+	json msgKeys = config[edll::DefaultConfig::Service::KEY].get<json>()[service::Msg::KEY];
+
+	std::string msgEndStr = config[service::Msg::End::KEY].get<std::string>();
+	std::string msgJsonEndStr = std::string(edll::JSON_END) + msgEndStr;
+
+	std::string idStr = config[service::Queue::ClientId::KEY].get<std::string>();
+
+	std::string ackStr = msgJsonStartStr + config[service::Msg::Ack::KEY].get<std::string>() + msgJsonMidStr;
+	std::string nackStr = msgJsonStartStr + config[service::Msg::Nack::KEY].get<std::string>() + msgJsonMidStr;
+
+	std::string pingStr = msgJsonStartStr + config[service::Msg::Ping::KEY].get<std::string>() + msgJsonMidStr;
+	bool pingEnable = config[service::PingEnable::KEY].get<bool>();
+
+
+
+
+
 
 	// ----------------------------------------------------------------------
 	/** @brief Wait and establish connection to a single client.
@@ -213,7 +239,10 @@ private:
 		hints.ai_protocol = IPPROTO_TCP;
 		hints.ai_flags = AI_PASSIVE;
 
-		std::string portStr = std::to_string(config["service"]["command"].value("port", edll::DEFAULT_SERVICE_PORT));
+		using service = edll::DefaultConfig::Service;
+		json service_config = config.value(service::KEY,json());
+
+		std::string portStr = std::to_string(service_config.value(service::Port::KEY, service::Port::VALUE));
 		int iResult = getaddrinfo(NULL, portStr.c_str(), &hints, &result);
 		if (iResult != 0) {
 			loggerPtr->error("Socket getaddrinfo failed. EC:" + std::to_string(iResult));
@@ -231,7 +260,7 @@ private:
 			return;
 		}
 
-		int timeout = config["service"]["command"].value("timeout_s", edll::DEFAULT_TIMEOUT_S) * 1000; // milliseconds
+		int timeout = service_config.value(service::Timeout::KEY, service::Timeout::VALUE) * 1000; // milliseconds
 		iResult = setsockopt(listenSocket, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout, sizeof(timeout));
 		if (iResult == SOCKET_ERROR) {
 			loggerPtr->error("Socket setsockopt timeout failed. EC:" + std::to_string(WSAGetLastError()));
@@ -303,6 +332,76 @@ private:
 		}
 	}
 
+	// ----------------------------------------------------------------------
+	/** @brief Test all configuration parameters associated with the service
+	 * @param None
+	 * @return bool, True if configuration all parameters are valid, false otherwise
+	 * @throws NO EXCEPTION HANDLING
+	**/
+	bool validConfigParams() const {
+		json service_config = config.value(service::KEY, json());
+
+		bool test_result = true;
+
+		if (service_config.is_null()) {
+			loggerPtr->error("Missing 'service' configuration section.");
+			test_result = false;
+		}
+		int port = service_config.value(service::Port::KEY, -1);
+		if (port < 1 || port > 65535) {
+			loggerPtr->error("Invalid port number in configuration. Expected between 1 and 65535. Received: " + std::to_string(port));
+			test_result = false;
+		}
+		int BufferSize = service_config.value(service::BufferSize::KEY, -1);
+		if (BufferSize < 1 || BufferSize > service::BufferSize::MAX_VALUE) {
+			loggerPtr->error("Invalid buffer size in configuration. Expected between 1 and " + std::to_string(service::BufferSize::MAX_VALUE) + ". Received: " + std::to_string(BufferSize));
+			test_result = false;
+		}
+		int timeout = service_config.value(service::Timeout::KEY, -1);
+		if (timeout < 1) {
+			loggerPtr->error("Invalid timeout value in configuration. Expected greater than 0. Received: " + std::to_string(timeout));
+			test_result = false;
+		}
+		int sleepMs = service_config.value("sleep_ms", -1);
+		if (sleepMs < 1) {
+			loggerPtr->error("Invalid sleep_ms value in configuration. Expected greater than 0. Received: " + std::to_string(sleepMs));
+			test_result = false;
+		}
+		int pingPeriod = service_config.value("ping_period", -1);
+		if (pingPeriod < 0) {
+			loggerPtr->error("Invalid ping_period value in configuration. Expected 0 or greater. Received: " + std::to_string(pingPeriod));
+			test_result = false;
+		}
+		int bufferTTL = service_config.value("buffer_ttl_period", -1);
+		if (bufferTTL < 1) {
+			loggerPtr->error("Invalid buffer_ttl_period value in configuration. Expected greater than 0. Received: " + std::to_string(bufferTTL));
+			test_result = false;
+		}
+		json msgKeys = service_config.value("msg_keys", json());
+		if (msgKeys.is_null()) {
+			loggerPtr->error("Missing 'msg_keys' section in 'service' configuration.");
+			test_result = false;
+		}
+		std::vector<std::string> requiredKeys = { "end", "ack", "nack", "id", "ping" };
+		for (const auto& key : requiredKeys) {
+			if (!msgKeys.contains(key) || !msgKeys[key].is_string() || msgKeys[key].get<std::string>().empty()) {
+				loggerPtr->error("Invalid or missing '" + key + "' in 'msg_keys' configuration.");
+				test_result = false;
+			}
+		}
+
+		std::vector<std::string> requiredQueueKeys = { "id", "queue_id", "server_id", "client_ip", "commandCode", "commandName", "arguments" };
+		json queueKeys = service_config.value("queue", json());
+		for (const auto& key : requiredQueueKeys) {
+			if (!queueKeys.contains(key) || (key != "arguments" && !queueKeys[key].is_string() && !queueKeys[key].is_number()) || (key == "arguments" && !queueKeys[key].is_string())) {
+				loggerPtr->error("Invalid or missing '" + key + "' in 'queue' configuration.");
+				test_result = false;
+			}
+		}
+		
+		return test_result;
+	}
+
 public:
 	// ----------------------------------------------------------------------
 	/** @brief Establish a connection with a client
@@ -318,6 +417,10 @@ public:
 		: config(config),
 		interruptionCode(interruptionCode), logger(logger), clientIP("")
 	{
+		if (!validConfigParams()) {
+			interruptionCode = edll::Code::CLIENT_ERROR;
+			return;
+		};
 		establishConnection();
 	}
 
@@ -342,23 +445,12 @@ public:
 	*/
 	void clientRequestToDLL(MessageQueue& request)
 	{
-		std::string msgJsonStartStr = "{\"";
-		std::string msgJsonMidStr = "\":";
+		json msgKeys = config[edll::DefaultConfig::Service::KEY].get<json>()[service::Msg::KEY];
 
-		std::string msgEndStr = config["service"]["msg_keys"].value("end", edll::DEFAULT_END_MSG);
-		std::string ackStr = config["service"]["msg_keys"].value("ack", edll::DEFAULT_ACK_MSG);
-		std::string nackStr = config["service"]["msg_keys"].value("nack", edll::DEFAULT_NACK_MSG);
-
-		std::string idStr = config["service"]["msg_keys"].value("id", edll::MSG_KEY_CLIENT_ID);
-
-		ackStr = msgJsonStartStr + ackStr + msgJsonMidStr;
-		nackStr = msgJsonStartStr + nackStr + msgJsonMidStr;
-		std::string msgJsonEndStr = "}" + msgEndStr;
-
-		char buffer[edll::SOCKET_BUFFER_SIZE];
+		std::vector<char> buffer(config[service::BufferSize::KEY].get<int>() + 1);
 		std::string accumulatedData = "";
 
-		int bufferTTLInit = config["service"].value("buffer_ttl_period", edll::DEFAULT_BUFFER_TTL_PERIOD);
+		int bufferTTLInit = config[service::BufferTTL::KEY].get<int>();
 		int bufferTTL = bufferTTLInit;
 
 		int iResult = 0;
@@ -366,11 +458,11 @@ public:
 		while (interruptionCode == edll::Code::RUNNING) {
 
 			// read data from socket - blocking call
-			int bytesRead = recv(clientSocket, buffer, sizeof(buffer), 0);
+			int bytesRead = recv(clientSocket, buffer.data(), static_cast<int>(buffer.size() - 1), 0);
 
 			if (bytesRead > 0) {
 
-				accumulatedData.append(buffer, bytesRead);
+				accumulatedData.append(buffer.data(), bytesRead);
 
 				size_t pos = accumulatedData.find(msgEndStr);
 
@@ -383,16 +475,16 @@ public:
 					if (jsonObj != json::value_t::discarded) {
 
 						// add client id and queue id to object
-						jsonObj[edll::MSG_KEY_CLIENT_IP] = clientIP;
+						jsonObj[service::Queue::ClientIp::KEY] = clientIP;
 
 
 						if (jsonObj.contains(idStr)) {
-							jsonObj[edll::MSG_KEY_QUEUE_ID] = request.push(jsonObj);
+							jsonObj[service::Queue::QueueId::KEY] = request.push(jsonObj);
 						}
 						else
 						{
 							jsonObj[idStr] = request.push(jsonObj,true);
-							jsonObj[edll::MSG_KEY_QUEUE_ID] = jsonObj[idStr];
+							jsonObj[service::Queue::QueueId::KEY] = jsonObj[idStr];
 						}
 						
 						loggerPtr->debug("Received message ID: " + jsonObj.dump());
@@ -462,18 +554,7 @@ public:
 	*/
 	void DLLResponseToClient(MessageQueue& response)
 	{
-		std::string msgJsonStartStr = "{\"";
-		std::string msgJsonMidStr = "\":";
-
-		std::string msgEndStr = config["service"]["msg_keys"].value("end", edll::DEFAULT_END_MSG);
-		std::string pingStr = config["service"]["msg_keys"].value("ping", edll::DEFAULT_PING_MSG);
-		bool pingEnable = config["service"].value("ping_enable", edll::DEFAULT_PING_STATE);
-
-		pingStr = msgJsonStartStr + pingStr + msgJsonMidStr;
-
-		std::string msgJsonEndStr = "}" + msgEndStr;
-
-		int pingPeriodInit = config["service"].value("ping_period", edll::DEFAULT_PING_PERIOD);
+		int pingPeriodInit = config[service::PingPeriod::KEY].get<int>();
 		int pingPeriod = pingPeriodInit;
 
 		int iResult = 0;
@@ -512,7 +593,7 @@ public:
 				else {
 					pingPeriod--;
 				}
-				std::this_thread::sleep_for(std::chrono::milliseconds(config["service"].value("sleep_ms", edll::DEFAULT_SLEEP_MS)));
+				std::this_thread::sleep_for(std::chrono::milliseconds(config[service::Sleep::KEY].get<int>()));
 			}
 		}
 	}

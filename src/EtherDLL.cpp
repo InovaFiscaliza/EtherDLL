@@ -7,7 +7,7 @@
  * * @version 1.0
  *
  * * @note Designed for Windows OS using VSStudio and MSVC compiler for x86 architecture
- * * @note Requires C++11 or later
+ * * @note Requires C++17 or later
  * * @note Uses nlohmann/json library for JSON handling
  * * @note Uses spdlog library for logging
  *
@@ -211,7 +211,7 @@ static  std::string handleInputArguments(int argc, char* argv[]) {
 		}
 	}
 	// No arguments provided, use default configuration file name
-	return std::string(edll::DEFAULT_CONFIG_FILENAME);
+	return std::string(edll::DefaultConfig::DEFAULT_CONFIG_FILENAME);
 }
 
 
@@ -233,7 +233,8 @@ int main(int argc, char* argv[]) {
 
 	json config = readConfigFile(configFileName);
 
-	std::string log_name = config["log"].value("name", "EtherDLL");
+	//TODO: validate log parameteres and use get method
+	std::string log_name = config[edll::DefaultConfig::Log::KEY].value(edll::DefaultConfig::Log::Name::KEY, edll::DefaultConfig::Log::Name::VALUE);
 
 	auto logger_ptr = std::make_shared<spdlog::logger>(log_name);
 	loggerPtr = logger_ptr.get();
@@ -246,7 +247,7 @@ int main(int argc, char* argv[]) {
 	DLLConnectionData DLLConnID = DEFAULT_DLL_CONNECTION_DATA;
 	if (!connectAPI(DLLConnID, config, *logger_ptr)) {
 		interruptionCode = edll::Code::STATION_ERROR;
-		logger_ptr->error("Failed to connect to station. Exiting.");
+		logger_ptr->error("Exiting since no station was available.");
 		return static_cast<int>(interruptionCode);
 	}
 

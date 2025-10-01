@@ -42,6 +42,7 @@
 
 // For convenience
 using json = nlohmann::json;
+using QueueObj = edll::DefaultConfig::Service::Queue;
 
 // Global variables
 extern spdlog::logger* loggerPtr;
@@ -360,12 +361,12 @@ SOccDFReqData* jsonToSOccDFReqData(nlohmann::json jsonObj) {
 * @throws NO EXCEPTION HANDLING
 */
 SAVDReqData* jsonToSAVDReqData(nlohmann::json jsonObj) {
-	SAVDReqData structSO;
+	SAVDReqData structSO{};
 	
 	structSO.ant = jsonObj["ant"].is_null() == true ? (SEquipCtrlMsg::EAnt)NULL : jsonObj["ant"].get<SEquipCtrlMsg::EAnt>();
 	structSO.avdThreshold = jsonObj["avdThreshold"].is_null() == true ? NULL : jsonObj["avdThreshold"].get<unsigned char>();
 
-	SSmsMsg::SBandV4 band;
+	SSmsMsg::SBandV4 band{};
 
 	if (jsonObj["band"]["channelBandwidth"].is_null() == false) {
 		band.channelBandwidth = Units::Frequency(jsonObj["band"]["channelBandwidth"].get<unsigned long>()).GetRaw();
@@ -473,10 +474,10 @@ void DLLFunctionCall(DLLConnectionData DLLConnID, json request, spdlog::logger& 
 {
 	ERetCode errCode = ERetCode::API_SUCCESS;
 	
-	unsigned long requestID = request[edll::MSG_KEY_QUEUE_ID].get<unsigned long>();
+	unsigned long requestID = request.value(QueueObj::QueueId::KEY, QueueObj::QueueId::VALUE);
 
-	unsigned long cmd = request["commandCode"].get<unsigned long>();
-	json reqArguments = request["arguments"].get<json>();
+	unsigned long cmd = request.value(QueueObj::CommandCode::KEY, QueueObj::CommandCode::VALUE);
+	json reqArguments = request.value(QueueObj::Arguments::KEY, json::object());
 
 	validateRequest(request, (ECSMSDllMsgType)cmd, logger);
 
@@ -540,7 +541,7 @@ void DLLFunctionCall(DLLConnectionData DLLConnID, json request, spdlog::logger& 
 			SAudioParams audioParams = jsonToSAudioParams(reqArguments["audioParams"]);
 			errCode = SetAudio(DLLConnID, audioParams, &requestID);
 
-			/* Todo: Start audio streaming to client
+			/* Todo: Start audio streaming service and send link to client
 			if (errCode == ERetCode::API_SUCCESS) {
 				DWORD processId = wcstoul(L"123", nullptr, 0);
 				HRESULT hr = loopbackCapture.StartCaptureAsync(processId, false, L"audio");
@@ -581,7 +582,7 @@ void DLLFunctionCall(DLLConnectionData DLLConnID, json request, spdlog::logger& 
 		}
 	}
 
-	std::string reqName = request["name"].get<std::string>();
+	std::string reqName = request.value(QueueObj::CommandName::KEY, QueueObj::CommandName::VALUE);
 	if (errCode != ERetCode::API_SUCCESS)
 	{
 		loggerPtr->error("[" + reqName + "] ERROR. " + ERetCodeToString(errCode));

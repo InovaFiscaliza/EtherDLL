@@ -9,7 +9,7 @@
 * * @date 2025-09-17
 * * @version 1.0
 *
-* * @note Requires C++11 or later
+* * @note Requires C++17 or later
 * * @note Uses nlohmann/json library for JSON handling
 *
 * * * Dependencies:
@@ -59,6 +59,9 @@ extern spdlog::logger* loggerPtr;
 // ----------------------------------------------------------------------
 /** @brief Convert GPS response structure into JSON
  *
+ * @param gpsResponse Pointer to the GPS response structure
+ * @return json JSON object representing the GPS data
+ * @throws NO EXCEPTION HANDLING
 **/
 json ProcessGpsData(SEquipCtrlMsg::SGpsResponse* gpsResponse)
 {
@@ -92,12 +95,14 @@ json ProcessGpsData(SEquipCtrlMsg::SGpsResponse* gpsResponse)
 // ----------------------------------------------------------------------
 /** @brief Convert response of BIT command in JSON
  *
+ * @param respType Type of the response message
+ * @param respdata Pointer to the response data
+ * @return json JSON object representing the BIT response
+ * @throws NO EXCEPTION HANDLING
 **/
 json processBITEResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody* respdata)
 {
     json jsonObj;
-
-    jsonObj["respType"] = int(respType);
 
     switch (respType)
     {
@@ -106,13 +111,11 @@ json processBITEResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBod
     case ECSMSDllMsgType::GET_DIAGNOSTICS:
     {
         SEquipCtrlMsg::SGetBistResp* BITEResponse = (SEquipCtrlMsg::SGetBistResp*)respdata;
-        std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
 
         jsonObj["BIST"]["last"] = bool(BITEResponse->last);
         jsonObj["BIST"]["result"] = BISTResultToString(BITEResponse->result);
-        std::string text = converter.to_bytes(BITEResponse->text, BITEResponse->text + BITEResponse->textLen);
+        std::string text = wchartToUtf8String(BITEResponse->text, BITEResponse->textLen);
         jsonObj["BIST"]["text"] = text;
-        // jsonObj["BIST"]["textLen"] = BITEResponse->textLen; // Not necessary to include textLen in the JSON
     }
     break;
 
@@ -127,13 +130,15 @@ json processBITEResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBod
 // ----------------------------------------------------------------------
 /** @brief Convert response of type GET_ANT_LIST_INFO in JSON
  *
+ * @param respType Type of the response message
+ * @param data Pointer to the response data
+ * @return json JSON object representing the antenna list
+ * @throws NO EXCEPTION HANDLING
 **/
 json ProcessAntListResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody* data)
 {
     SEquipCtrlMsg::SAntInfoListResp* antListResponse = (SEquipCtrlMsg::SAntInfoListResp*)data;
     json jsonObj;
-
-    jsonObj["Type"] = static_cast<int>(respType);
 
     jsonObj["Equipment"]["antenna"]["numAntennas"] = antListResponse->numAnt;
     for (size_t i = 0; i < antListResponse->numAnt; ++i) {
@@ -159,13 +164,15 @@ json ProcessAntListResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::U
 // ----------------------------------------------------------------------
 /** @brief Convert response of types AVD_FREQ_VS_CHANNEL, AVD_OCC_CHANNEL_RESULT, AVD_FREQ_MEAS, AVD_BW_MEAS, AVD_SOLICIT_STATE_RESPONSE, AVD_STATE_RESPONSE and AVD_STATUS  in JSON
  *
+ * @param respType Type of the response message
+ * @param data Pointer to the response data
+ * @return json JSON object representing the AVD response
+ * @throws NO EXCEPTION HANDLING
 **/
 json processAutoViolateResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody* data)
 {
     SEquipCtrlMsg::SOccupancyHeader* pOccHdr = nullptr;
     json jsonObj;
-
-    jsonObj["respType"] = static_cast<int>(respType);
 
     switch (respType)
     {
@@ -344,12 +351,15 @@ json processAutoViolateResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMs
 // ----------------------------------------------------------------------
 /** @brief Convert response of types GET_MEAS and VALIDATE_MEAS in JSON
  *
+ * @param respType Type of the response message
+ * @param sourceAddr Source address of the message
+ * @param data Pointer to the response data
+ * @return json JSON object representing the measurement response
+ * @throws NO EXCEPTION HANDLING
 **/
 json processMeasResponse(_In_ ECSMSDllMsgType respType, _In_ unsigned long sourceAddr, _In_ SEquipCtrlMsg::UBody* data)
 {
     json jsonObj;
-
-    jsonObj["respType"] = static_cast<int>(respType);
 
     switch (respType)
     {
@@ -400,12 +410,14 @@ json processMeasResponse(_In_ ECSMSDllMsgType respType, _In_ unsigned long sourc
 // ----------------------------------------------------------------------
 /** @brief Convert response of types SET_PAN_PARAMS, SET_AUDIO_PARAMS and FREE_AUDIO_CHANNEL in JSON
  *
+ * @param respType Type of the response message
+ * @param data Pointer to the response data
+ * @return json JSON object representing the demodulator control response
+ * @throws NO EXCEPTION HANDLING
 **/
 json processDemodCtrlResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody* data)
 {
     json jsonObj;
-
-    jsonObj["respType"] = static_cast<int>(respType);
 
     switch (respType)
     {
@@ -450,12 +462,14 @@ json processDemodCtrlResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg:
 // ----------------------------------------------------------------------
 /** @brief Convert response of type GET_PAN in JSON
  *
+ * @param respType Type of the response message
+ * @param data Pointer to the response data
+ * @return json JSON object representing the panadapter response
+ * @throws NO EXCEPTION HANDLING
 **/
 json processPanResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody* data)
 {
     json jsonObj;
-
-    jsonObj["respType"] = static_cast<int>(respType);
 
     SEquipCtrlMsg::SGetPanResp* PanResponse = (SEquipCtrlMsg::SGetPanResp*)data;
 
@@ -486,18 +500,19 @@ json processPanResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody
     }
 
     return jsonObj;
-
 }
 
 // ----------------------------------------------------------------------
 /** @brief Convert response of types OCC_MSGLEN_DIST_RESPONSE, OCC_FREQ_VS_CHANNEL, OCC_CHANNEL_RESULT, OCC_STATUS, OCC_STATE_RESPONSE, OCC_SOLICIT_STATE_RESPONSE, OCC_SPECTRUM_RESPONSE, OCC_TIMEOFDAY_RESULT, OCC_EFLD_CHANNEL_RESULT, OCC_MSGLEN_CHANNEL_RESULT, OCC_EFLD_TIMEOFDAY_RESULT in JSON
- *
+ * 
+ * @param respType Type of the response message
+ * @param data Pointer to the response data
+ * @return json JSON object representing the occupancy response
+ * @throws NO EXCEPTION HANDLING
 **/
 json processOccupancyResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody* data)
 {
     json jsonObj;
-
-    jsonObj["respType"] = static_cast<int>(respType);
 
     switch (respType)
     {
@@ -688,12 +703,14 @@ json processOccupancyResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg:
 // ----------------------------------------------------------------------
 /** @brief Convert response of types OCCDF_FREQ_VS_CHANNEL, OCCDF_SCANDF_VS_CHANNEL, OCCDF_STATUS, OCCDF_STATE_RESPONSE and OCCDF_SOLICIT_STATE_RESPONSE in JSON
  *
+ * @param respType Type of the response message
+ * @param data Pointer to the response data
+ * @return json JSON object representing the occupancy DF response
+ * @throws NO EXCEPTION HANDLING
 **/
 json processOccupancyDFResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody* data)
 {
     json jsonObj;
-
-    jsonObj["respType"] = static_cast<int>(respType);
 
     switch (respType)
     {
@@ -801,12 +818,14 @@ json processOccupancyDFResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMs
 // ----------------------------------------------------------------------
 /** @brief Convert response returned by callback OnRealTimeDataFunc in JSON
  *
+ * @param respType Type of the response message
+ * @param data Pointer to the response data
+ * @return json JSON object representing the real-time data response
+ * @throws NO EXCEPTION HANDLING
 **/
 json ProcessRealTimeData(_In_ ECSMSDllMsgType respType, _In_ SSmsRealtimeMsg::UBody* data)
 {
     json jsonObj;
-
-    jsonObj["respType"] = static_cast<int>(respType);
 
     switch (respType)
     {
@@ -1004,6 +1023,13 @@ json ProcessRealTimeData(_In_ ECSMSDllMsgType respType, _In_ SSmsRealtimeMsg::UB
 // ----------------------------------------------------------------------
 /** @brief Data callback for Scorpio API
  *
+ * @param serverId ID of the server instance
+ * @param respType Type of the response message
+ * @param sourceAddr Source address of the message
+ * @param requestID Request ID associated with the message
+ * @param data Pointer to the response data
+ * @return void
+ * @throws NO EXCEPTION HANDLING
 **/
 void OnDataFunc(_In_  unsigned long serverId, _In_ ECSMSDllMsgType respType, _In_ unsigned long sourceAddr, _In_ unsigned long requestID, _In_ SEquipCtrlMsg::UBody* data)
 {
@@ -1068,6 +1094,9 @@ void OnDataFunc(_In_  unsigned long serverId, _In_ ECSMSDllMsgType respType, _In
         break;
     }
 
+    responseJson[edll::DefaultConfig::Service::Queue::CommandCode::KEY] = int(respType);
+	responseJson[edll::DefaultConfig::Service::Queue::DLLId::KEY] = serverId;
+
     response.push(responseJson);
 
 
@@ -1078,14 +1107,20 @@ void OnDataFunc(_In_  unsigned long serverId, _In_ ECSMSDllMsgType respType, _In
 // ----------------------------------------------------------------------
 /** @brief Error callback for Scorpio API
  *
+ * @param serverId ID of the server instance
+ * @param errorMsg Error message string
+ * @return void
+ * @throws NO EXCEPTION HANDLING
 **/
 void OnErrorFunc(_In_  unsigned long serverId, _In_ const std::wstring& errorMsg)
 {
     json errorJson = {};
 
-    errorJson["serverId"] = serverId;
     std::string errorMsgStr(errorMsg.begin(), errorMsg.end());
     errorJson["errorMsg"] = errorMsgStr;
+
+	errorJson[edll::DefaultConfig::Service::Queue::CommandCode::KEY] = edll::DefaultConfig::Service::Queue::CommandCode::VALUE;
+    errorJson[edll::DefaultConfig::Service::Queue::DLLId::KEY] = serverId;
 
     response.push(errorJson);
 
@@ -1095,12 +1130,20 @@ void OnErrorFunc(_In_  unsigned long serverId, _In_ const std::wstring& errorMsg
 // ----------------------------------------------------------------------
 /** @brief Realtime callback for Scorpio API
  *
+ * @param serverId ID of the server instance
+ * @param respType Type of the response message
+ * @param data Pointer to the response data
+ * @return void
+ * @throws NO EXCEPTION HANDLING
 **/
 void OnRealTimeDataFunc(_In_  unsigned long serverId, _In_ ECSMSDllMsgType respType, _In_ SSmsRealtimeMsg::UBody* data)
 {
     json responseJson = {};
 
     responseJson = ProcessRealTimeData(respType, data);
+
+    responseJson[edll::DefaultConfig::Service::Queue::CommandCode::KEY] = int(respType);
+    responseJson[edll::DefaultConfig::Service::Queue::DLLId::KEY] = serverId;
 
     response.push(responseJson);
 

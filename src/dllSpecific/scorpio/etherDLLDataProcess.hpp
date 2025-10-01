@@ -11,7 +11,7 @@
  * * @date 2025-09-16
  * * @version 1.0
  *
- * * @note Requires C++11 or later
+ * * @note Requires C++17 or later
  * * @note Uses nlohmann/json library for JSON handling
  *
  * * * Dependencies:

@@ -44,3 +44,4 @@ bool stringToBool(std::string str);
 std::string COleTimeToIsoStr(double oleTime);
 std::string base64_encode(BYTE const* buf, unsigned int bufLen);
 std::vector<BYTE> base64_decode(std::string const&);
+std::string wchartToUtf8String(const wchar_t* wstr, size_t len);

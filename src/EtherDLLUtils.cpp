@@ -30,6 +30,10 @@
 #include <cmath>
 #include <iostream>
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 // For convenience
 using json = nlohmann::json;
 
@@ -186,4 +190,31 @@ std::string base64_encode(BYTE const* buf, unsigned int bufLen) {
     }
 
     return ret;
+}
+
+// ----------------------------------------------------------------------
+/** @brief convert wchar_t* to UTF-8 std::string
+ *
+ * Convert wide character string (wchar_t*) to UTF-8 encoded std::string
+ * Uses Windows API WideCharToMultiByte for conversion
+ * Necessary for proper handling of Unicode characters in Windows environment
+ * when using C++17 standard
+ *
+ * @param wstr: Pointer to the input wide character string
+ * @param len: Length of the input wide character string
+ * @return std::string: Converted UTF-8 encoded string
+ * @throws NO EXCEPTION HANDLING
+**/
+std::string wchartToUtf8String(const wchar_t* wstr, size_t len)
+{
+    if (!wstr || len == 0) return std::string();
+
+    int size_needed = WideCharToMultiByte(CP_UTF8, 0, wstr, static_cast<int>(len), nullptr, 0, nullptr, nullptr);
+    if (size_needed <= 0) return std::string();
+
+    std::string outStr(size_needed, 0);
+
+    WideCharToMultiByte(CP_UTF8, 0, wstr, static_cast<int>(len), &outStr[0], size_needed, nullptr, nullptr);
+
+    return outStr;
 }

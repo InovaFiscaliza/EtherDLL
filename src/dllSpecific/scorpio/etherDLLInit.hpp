@@ -11,7 +11,7 @@
 * * @date 2025-09-10
 * * @version 1.0
 *
-* * @note Requires C++11 or later
+* * @note Requires C++17 or later
 * * @note Uses nlohmann/json library for JSON handling
 *
 **/
@@ -48,12 +48,15 @@
 // Include core EtherDLL libraries
 #include "EtherDLLUtils.hpp"
 #include "EtherDLLLog.hpp"
+#include "EtherDLLConstants.hpp"
+#include "EtherDLLCodes.hpp"
 
 // Include project libraries
 #include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
 
 // Include general C++ libraries
+#include <filesystem>
 #include <string>
 #include <fstream>
 #include <stdexcept>
@@ -93,30 +96,118 @@ const DLLConnectionData DEFAULT_DLL_CONNECTION_DATA = 0;
  **/
 void newDefaultConfigFile(const std::string& filename)
 {
-	// use include to keep the code clean
-	std::string default_config =
-#include "etherDLLConfig.json.inc"
-		;
+
+	json default_config = buildCoreDefaultConfigJson();
+	default_config = buildDLLDefaultParamJson(default_config);
+
+	std::filesystem::path currentPath = std::filesystem::current_path();
+	std::filesystem::path fullPath = currentPath / filename;
+
+	std::ofstream file(fullPath);
+
 	try {
 		std::ofstream file(filename);
 
-		// Verifica��o se arquivo est� ser aberto
+		// Test if file is open
 		if (!file.is_open()) {
-			throw std::runtime_error("N�o foi poss�vel abrir/criar o arquivo: " + filename);
+			throw std::runtime_error("Failed to open/create file: " + fullPath.generic_string());
 		}
 
-		// Habilitar exce��es para opera��es futuras ofstream
+		// Set exceptions to be thrown on failure
 		file.exceptions(std::ios::failbit | std::ios::badbit);
 
-		file << default_config;
+		file << default_config.dump(4);
 		file.close();
 	}
 	catch (const std::ios_base::failure& e) {
-		throw std::runtime_error("Erro de I/O no arquivo: " + filename + " - " + e.what());
+		throw std::runtime_error("I/O error when attempting to use file: " + fullPath.generic_string() + " - " + std::string(e.what()));
 	}
 	catch (const std::exception& e) {
-		throw std::runtime_error("Falha ao criar arquivo de configura��o: " + std::string(e.what()));
+		throw std::runtime_error("Failed to create configuration file: " + fullPath.generic_string() + " - " + std::string(e.what()));
 	}
+}
+
+// ----------------------------------------------------------------------
+/** @brief Test DLL configuration parameters
+ * 
+ * @param config: JSON object containing the configuration parameters
+ * @return bool: True if configuration is valid, false otherwise
+ * @throws NO EXCEPTION HANDLING
+**/
+bool validDLLConfigParams(const nlohmann::json& config)
+{
+	bool validConfig = true;
+	using station_conf = DefaultDLLParam::Station;
+
+	if (config.contains(DefaultDLLParam::KEY) == false
+		|| config[DefaultDLLParam::KEY].is_object() == false) {
+		loggerPtr->error("No DLL configuration section found");
+		return false;
+	}
+
+	if (config[DefaultDLLParam::KEY].contains(station_conf::KEY) == false
+		|| config[DefaultDLLParam::KEY][station_conf::KEY].is_object() == false) {
+		loggerPtr->error("No station configuration section found");
+		return false;
+	}
+
+	json station_config = config[DefaultDLLParam::KEY][station_conf::KEY].get<json>();
+
+	// Check station configuration parameters
+	if (station_config.contains(station_conf::Address::KEY)) {
+		if (station_config[station_conf::Address::KEY].is_string()) {
+			if (station_config[station_conf::Address::KEY].get<std::string>().empty()) {
+				loggerPtr->error("Station address in configuration is empty");
+				validConfig = false;
+			}
+		}
+		else {
+			loggerPtr->error("Invalid type for station address in configuration");
+			validConfig = false;
+		}
+	}
+	else {
+		loggerPtr->error("No station address found in configuration");
+		validConfig = false;
+	}
+
+	if (station_config.contains(station_conf::Port::KEY)) {
+		if (station_config[station_conf::Port::KEY].is_number_integer()) {
+			int port = station_config[station_conf::Port::KEY].get<int>();
+			if (port < 1 || port > 65535) {
+				loggerPtr->error("Station port in configuration is out of valid range (1-65535)");
+				validConfig = false;
+			}
+		}
+		else {
+			loggerPtr->error("Invalid type for station port in configuration");
+			validConfig = false;
+		}
+	}
+	else {
+		loggerPtr->error("No station port found in configuration");
+		validConfig = false;
+	}
+
+	if (station_config.contains(station_conf::Timeout::KEY)) {
+		if (station_config[station_conf::Timeout::KEY].is_number_integer()) {
+			int timeout = station_config[station_conf::Timeout::KEY].get<int>();
+			if (timeout < 1) {
+				loggerPtr->error("Station timeout in configuration must be a positive integer");
+				validConfig = false;
+			}
+		}
+		else {
+			loggerPtr->error("Invalid type for station timeout in configuration");
+			validConfig = false;
+		}
+	}
+	else {
+		loggerPtr->error("No station timeout found in configuration");
+		validConfig = false;
+	}
+
+	return validConfig;
 }
 
 // ----------------------------------------------------------------------
@@ -137,14 +228,22 @@ bool connectAPI(DLLConnectionData& stationConnID, const nlohmann::json& config, 
 	std::string message;
 	SScorpioAPIClient station;
 
+	if (!validDLLConfigParams(config)) {
+		return false;
+	}
+
+	using station_conf = DefaultDLLParam::Station;
+	json station_config = config[DefaultDLLParam::KEY][station_conf::KEY].get<json>();
+	
+
 	// Prepare station data structure from the config data
-	std::string hostNameStr = config["station"]["address"].get<std::string>();
+	std::string hostNameStr = station_config[station_conf::Address::KEY].get<std::string>();
 	station.hostName = stringToWString(hostNameStr);
 
-	std::string portStr = std::to_string(config["station"]["port"].get<int>());
+	std::string portStr = std::to_string(station_config[station_conf::Port::KEY].get<int>());
 	station.port = stringToWString(portStr);
 
-	station.sendTimeout = (unsigned long)(config["station"]["timeout_s"].get<int>()) * 1000;
+	station.sendTimeout = (unsigned long)(station_config[station_conf::Timeout::KEY].get<int>() * 1000);
 
 	ERetCode errCode;
 
