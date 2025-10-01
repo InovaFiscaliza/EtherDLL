@@ -1,24 +1,24 @@
 {
-  "commandCode": 15,
-  "name": "cmdRequestAVD",
-  "arguments": {
-    "ant": 1,
-    "numBands": 1,
-    "avdThreshold": 1,
-    "storageTime": 15,
-    "measurementTime": 300,
-    "measurementRate": 200,
-    "band": {
-      "channelBandwidth": 200000,
-      "exclude": false,
-      "highFrequency": 108000000,
-      "lowFrequency": 88000000,
-      "sType": {
-        "signalType": {
-          "horizPol": 10,
-          "narrow": 100
+    "commandCode": 15,
+    "commandName": "cmdRequestAVD",
+    "arguments": {
+        "ant": 1,
+        "numBands": 1,
+        "avdThreshold": 1,
+        "storageTime": 15,
+        "measurementTime": 300,
+        "measurementRate": 200,
+        "band": {
+            "channelBandwidth": 200000,
+            "exclude": false,
+            "highFrequency": 108000000,
+            "lowFrequency": 88000000,
+            "sType": {
+                "signalType": {
+                    "horizPol": 10,
+                    "narrow": 100
+                }
+            }
         }
-      }
     }
-  }
 }

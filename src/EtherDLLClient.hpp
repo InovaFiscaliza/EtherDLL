@@ -182,35 +182,34 @@ public:
  **/
 class ClientConn {
 private:
-	using service = edll::DefaultConfig::Service;
 
+	// Configuration parameters
 	json config;
 	edll::INT_CODE& interruptionCode;
 	spdlog::logger& logger;
 
+	// Client socket and info
 	SOCKET clientSocket = INVALID_SOCKET;
 	std::string clientIP;
+
+	// Message queue for incoming messages
+	using service = edll::DefaultConfig::Service;
 
 	std::string msgJsonStartStr = std::string(edll::JSON_START);
 	std::string msgJsonMidStr = std::string(edll::JSON_MID);
 
-	json msgKeys = config[edll::DefaultConfig::Service::KEY].get<json>()[service::Msg::KEY];
+	json msgKeys = config[service::KEY].get<json>()[service::Msg::KEY];
 
-	std::string msgEndStr = config[service::Msg::End::KEY].get<std::string>();
+	std::string msgEndStr = msgKeys[service::Msg::End::KEY].get<std::string>();
 	std::string msgJsonEndStr = std::string(edll::JSON_END) + msgEndStr;
+	std::string ackStr = msgJsonStartStr + msgKeys[service::Msg::Ack::KEY].get<std::string>() + msgJsonMidStr;
+	std::string nackStr = msgJsonStartStr + msgKeys[service::Msg::Nack::KEY].get<std::string>() + msgJsonMidStr;
 
-	std::string idStr = config[service::Queue::ClientId::KEY].get<std::string>();
+	json QueueKeys = config[service::KEY].get<json>()[service::Queue::KEY];
+	std::string idStr = QueueKeys[service::Queue::ClientId::KEY].get<std::string>();
 
-	std::string ackStr = msgJsonStartStr + config[service::Msg::Ack::KEY].get<std::string>() + msgJsonMidStr;
-	std::string nackStr = msgJsonStartStr + config[service::Msg::Nack::KEY].get<std::string>() + msgJsonMidStr;
-
-	std::string pingStr = msgJsonStartStr + config[service::Msg::Ping::KEY].get<std::string>() + msgJsonMidStr;
 	bool pingEnable = config[service::PingEnable::KEY].get<bool>();
-
-
-
-
-
+	std::string pingStr = msgJsonStartStr + msgKeys[service::Msg::Ping::KEY].get<std::string>() + msgJsonMidStr;
 
 	// ----------------------------------------------------------------------
 	/** @brief Wait and establish connection to a single client.
@@ -330,76 +329,6 @@ private:
 				return;
 			}
 		}
-	}
-
-	// ----------------------------------------------------------------------
-	/** @brief Test all configuration parameters associated with the service
-	 * @param None
-	 * @return bool, True if configuration all parameters are valid, false otherwise
-	 * @throws NO EXCEPTION HANDLING
-	**/
-	bool validConfigParams() const {
-		json service_config = config.value(service::KEY, json());
-
-		bool test_result = true;
-
-		if (service_config.is_null()) {
-			loggerPtr->error("Missing 'service' configuration section.");
-			test_result = false;
-		}
-		int port = service_config.value(service::Port::KEY, -1);
-		if (port < 1 || port > 65535) {
-			loggerPtr->error("Invalid port number in configuration. Expected between 1 and 65535. Received: " + std::to_string(port));
-			test_result = false;
-		}
-		int BufferSize = service_config.value(service::BufferSize::KEY, -1);
-		if (BufferSize < 1 || BufferSize > service::BufferSize::MAX_VALUE) {
-			loggerPtr->error("Invalid buffer size in configuration. Expected between 1 and " + std::to_string(service::BufferSize::MAX_VALUE) + ". Received: " + std::to_string(BufferSize));
-			test_result = false;
-		}
-		int timeout = service_config.value(service::Timeout::KEY, -1);
-		if (timeout < 1) {
-			loggerPtr->error("Invalid timeout value in configuration. Expected greater than 0. Received: " + std::to_string(timeout));
-			test_result = false;
-		}
-		int sleepMs = service_config.value("sleep_ms", -1);
-		if (sleepMs < 1) {
-			loggerPtr->error("Invalid sleep_ms value in configuration. Expected greater than 0. Received: " + std::to_string(sleepMs));
-			test_result = false;
-		}
-		int pingPeriod = service_config.value("ping_period", -1);
-		if (pingPeriod < 0) {
-			loggerPtr->error("Invalid ping_period value in configuration. Expected 0 or greater. Received: " + std::to_string(pingPeriod));
-			test_result = false;
-		}
-		int bufferTTL = service_config.value("buffer_ttl_period", -1);
-		if (bufferTTL < 1) {
-			loggerPtr->error("Invalid buffer_ttl_period value in configuration. Expected greater than 0. Received: " + std::to_string(bufferTTL));
-			test_result = false;
-		}
-		json msgKeys = service_config.value("msg_keys", json());
-		if (msgKeys.is_null()) {
-			loggerPtr->error("Missing 'msg_keys' section in 'service' configuration.");
-			test_result = false;
-		}
-		std::vector<std::string> requiredKeys = { "end", "ack", "nack", "id", "ping" };
-		for (const auto& key : requiredKeys) {
-			if (!msgKeys.contains(key) || !msgKeys[key].is_string() || msgKeys[key].get<std::string>().empty()) {
-				loggerPtr->error("Invalid or missing '" + key + "' in 'msg_keys' configuration.");
-				test_result = false;
-			}
-		}
-
-		std::vector<std::string> requiredQueueKeys = { "id", "queue_id", "server_id", "client_ip", "commandCode", "commandName", "arguments" };
-		json queueKeys = service_config.value("queue", json());
-		for (const auto& key : requiredQueueKeys) {
-			if (!queueKeys.contains(key) || (key != "arguments" && !queueKeys[key].is_string() && !queueKeys[key].is_number()) || (key == "arguments" && !queueKeys[key].is_string())) {
-				loggerPtr->error("Invalid or missing '" + key + "' in 'queue' configuration.");
-				test_result = false;
-			}
-		}
-		
-		return test_result;
 	}
 
 public:

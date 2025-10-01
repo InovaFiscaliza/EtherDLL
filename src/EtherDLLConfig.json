@@ -37,13 +37,17 @@
         "name": "EtherDLL"
     },
     "service": {
-        "arguments": {},
+        "Queue": {
+            "arguments": {},
+            "client_ip": "Not Retrieved",
+            "commandCode": -1,
+            "commandName": "Error",
+            "id": 0,
+            "queue_id": 0,
+            "server_id": 0
+        },
         "buffer": 4096,
         "buffer_ttl_period": 5,
-        "client_ip": "172.24.3.15",
-        "commandCode": -1,
-        "commandName": "Error",
-        "id": 0,
         "msg_keys": {
             "ack": "ACK",
             "end": "\r\n",
@@ -53,8 +57,6 @@
         "ping_enable": true,
         "ping_period": 10,
         "port": 5555,
-        "queue_id": 0,
-        "server_id": 0,
         "sleep_ms": 100,
         "timeout_s": 10
     }

@@ -81,6 +81,139 @@ using DLLConnectionData = unsigned long;
 
 const DLLConnectionData DEFAULT_DLL_CONNECTION_DATA = 0;
 
+
+// ----------------------------------------------------------------------
+/** @brief Define structure for default configuration parameters reated to Scorpio API
+ *
+ * Json like structure to centralize string parameters used to configure default parameters when using Scorpio API.
+ * This avoid the need of users sending all parameters every time a command is issued.
+**/
+struct DefaultDLLParam {
+	static constexpr const char* KEY = "dll_default";
+
+	struct Station {
+		static constexpr const char* KEY = "station";
+
+		struct Address {
+			static constexpr const char* KEY = "address";
+			static constexpr const char* VALUE = "172.24.3.15";
+		};
+		struct Port {
+			static constexpr const char* KEY = "port";
+			static constexpr int VALUE = 3303;
+		};
+		struct Timeout {
+			static constexpr const char* KEY = "timeout_s";
+			static constexpr int VALUE = 10;
+		};
+	};
+
+	struct OCCRequest {
+		static constexpr const char* KEY = "OCCRequest";
+
+		struct durationMethod {
+			static constexpr const char* KEY = "durationMethod";
+			static constexpr const char* VALUE = "Fixed";
+		};
+		struct thresholdMethod {
+			static constexpr const char* KEY = "thresholdMethod";
+			static constexpr const char* VALUE = "Noise Riding";
+		};
+		struct storageTime {
+			static constexpr const char* KEY = "storageTime";
+			static constexpr unsigned long VALUE = 1; // hours
+		};
+		struct measurementTime {
+			static constexpr const char* KEY = "measurementTime";
+			static constexpr unsigned long VALUE = 1; // seconds
+		};
+		struct confidenceLevel {
+			static constexpr const char* KEY = "confidenceLevel";
+			static constexpr unsigned char VALUE = 90; // percent
+		};
+		struct desiredAccuracy {
+			static constexpr const char* KEY = "desiredAccuracy";
+			static constexpr unsigned char VALUE = 90; // percent
+		};
+		struct occPrimaryThreshold {
+			static constexpr const char* KEY = "occPrimaryThreshold";
+			static constexpr short VALUE = 10; // dBuV/m
+		};
+		struct occupancyMinGap {
+			static constexpr const char* KEY = "occupancyMinGap";
+			static constexpr unsigned long VALUE = 1; // seconds
+		};
+		struct ant {
+			static constexpr const char* KEY = "ant";
+			static constexpr unsigned long VALUE = 1; // Antenna 1
+		};
+		struct occflags {
+			static constexpr const char* KEY = "occflags";
+
+			struct occupancyVsChannel {
+				static constexpr const char* KEY = "occupancyVsChannel";
+				static constexpr bool VALUE = true;
+			};
+			struct eFieldVsChannel {
+				static constexpr const char* KEY = "eFieldVsChannel";
+				static constexpr bool VALUE = false;
+			};
+			struct occupancyVsTimeOfDay {
+				static constexpr const char* KEY = "occupancyVsTimeOfDay";
+				static constexpr bool VALUE = false;
+			};
+			struct msglengthVsChannel {
+				static constexpr const char* KEY = "msglengthVsChannel";
+				static constexpr bool VALUE = false;
+			};
+			struct msglengthDistribution {
+				static constexpr const char* KEY = "msglengthDistribution";
+				static constexpr bool VALUE = false;
+			};
+			struct spectrogram {
+				static constexpr const char* KEY = "spectrogram";
+				static constexpr bool VALUE = false;
+			};
+			struct timegram {
+				static constexpr const char* KEY = "timegram";
+				static constexpr bool VALUE = false;
+			};
+		};
+	};
+};
+
+// ----------------------------------------------------------------------
+/** @brief Build a default dll parameters JSON object from the DefaultDLLParam struct
+ *
+ * @param  nlohmann::json: JSON object to be populated with default parameters, default is empty object
+ * @return nlohmann::json: JSON object containing the default parameters
+ * @throws NO EXCEPTION HANDLING
+**/
+json buildDLLDefaultParamJson(json default_param = json::object()) {
+
+	default_param[DefaultDLLParam::KEY][DefaultDLLParam::Station::KEY][DefaultDLLParam::Station::Address::KEY] = DefaultDLLParam::Station::Address::VALUE;
+	default_param[DefaultDLLParam::KEY][DefaultDLLParam::Station::KEY][DefaultDLLParam::Station::Port::KEY] = DefaultDLLParam::Station::Port::VALUE;
+	default_param[DefaultDLLParam::KEY][DefaultDLLParam::Station::KEY][DefaultDLLParam::Station::Timeout::KEY] = DefaultDLLParam::Station::Timeout::VALUE;
+	default_param[DefaultDLLParam::KEY][DefaultDLLParam::OCCRequest::KEY][DefaultDLLParam::OCCRequest::durationMethod::KEY] = DefaultDLLParam::OCCRequest::durationMethod::VALUE;
+	default_param[DefaultDLLParam::KEY][DefaultDLLParam::OCCRequest::KEY][DefaultDLLParam::OCCRequest::thresholdMethod::KEY] = DefaultDLLParam::OCCRequest::thresholdMethod::VALUE;
+	default_param[DefaultDLLParam::KEY][DefaultDLLParam::OCCRequest::KEY][DefaultDLLParam::OCCRequest::storageTime::KEY] = DefaultDLLParam::OCCRequest::storageTime::VALUE;
+	default_param[DefaultDLLParam::KEY][DefaultDLLParam::OCCRequest::KEY][DefaultDLLParam::OCCRequest::measurementTime::KEY] = DefaultDLLParam::OCCRequest::measurementTime::VALUE;
+	default_param[DefaultDLLParam::KEY][DefaultDLLParam::OCCRequest::KEY][DefaultDLLParam::OCCRequest::confidenceLevel::KEY] = DefaultDLLParam::OCCRequest::confidenceLevel::VALUE;
+	default_param[DefaultDLLParam::KEY][DefaultDLLParam::OCCRequest::KEY][DefaultDLLParam::OCCRequest::desiredAccuracy::KEY] = DefaultDLLParam::OCCRequest::desiredAccuracy::VALUE;
+	default_param[DefaultDLLParam::KEY][DefaultDLLParam::OCCRequest::KEY][DefaultDLLParam::OCCRequest::occPrimaryThreshold::KEY] = DefaultDLLParam::OCCRequest::occPrimaryThreshold::VALUE;
+	default_param[DefaultDLLParam::KEY][DefaultDLLParam::OCCRequest::KEY][DefaultDLLParam::OCCRequest::occupancyMinGap::KEY] = DefaultDLLParam::OCCRequest::occupancyMinGap::VALUE;
+	default_param[DefaultDLLParam::KEY][DefaultDLLParam::OCCRequest::KEY][DefaultDLLParam::OCCRequest::ant::KEY] = DefaultDLLParam::OCCRequest::ant::VALUE;
+	default_param[DefaultDLLParam::KEY][DefaultDLLParam::OCCRequest::KEY][DefaultDLLParam::OCCRequest::occflags::KEY][DefaultDLLParam::OCCRequest::occflags::occupancyVsChannel::KEY] = DefaultDLLParam::OCCRequest::occflags::occupancyVsChannel::VALUE;
+	default_param[DefaultDLLParam::KEY][DefaultDLLParam::OCCRequest::KEY][DefaultDLLParam::OCCRequest::occflags::KEY][DefaultDLLParam::OCCRequest::occflags::eFieldVsChannel::KEY] = DefaultDLLParam::OCCRequest::occflags::eFieldVsChannel::VALUE;
+	default_param[DefaultDLLParam::KEY][DefaultDLLParam::OCCRequest::KEY][DefaultDLLParam::OCCRequest::occflags::KEY][DefaultDLLParam::OCCRequest::occflags::occupancyVsTimeOfDay::KEY] = DefaultDLLParam::OCCRequest::occflags::occupancyVsTimeOfDay::VALUE;
+	default_param[DefaultDLLParam::KEY][DefaultDLLParam::OCCRequest::KEY][DefaultDLLParam::OCCRequest::occflags::KEY][DefaultDLLParam::OCCRequest::occflags::msglengthVsChannel::KEY] = DefaultDLLParam::OCCRequest::occflags::msglengthVsChannel::VALUE;
+	default_param[DefaultDLLParam::KEY][DefaultDLLParam::OCCRequest::KEY][DefaultDLLParam::OCCRequest::occflags::KEY][DefaultDLLParam::OCCRequest::occflags::msglengthDistribution::KEY] = DefaultDLLParam::OCCRequest::occflags::msglengthDistribution::VALUE;
+	default_param[DefaultDLLParam::KEY][DefaultDLLParam::OCCRequest::KEY][DefaultDLLParam::OCCRequest::occflags::KEY][DefaultDLLParam::OCCRequest::occflags::spectrogram::KEY] = DefaultDLLParam::OCCRequest::occflags::spectrogram::VALUE;
+	default_param[DefaultDLLParam::KEY][DefaultDLLParam::OCCRequest::KEY][DefaultDLLParam::OCCRequest::occflags::KEY][DefaultDLLParam::OCCRequest::occflags::timegram::KEY] = DefaultDLLParam::OCCRequest::occflags::timegram::VALUE;
+
+	return default_param;
+}
+
 // ----------------------------------------------------------------------
 /**
  * @brief Save default configuration file
@@ -227,10 +360,6 @@ bool connectAPI(DLLConnectionData& stationConnID, const nlohmann::json& config, 
 {
 	std::string message;
 	SScorpioAPIClient station;
-
-	if (!validDLLConfigParams(config)) {
-		return false;
-	}
 
 	using station_conf = DefaultDLLParam::Station;
 	json station_config = config[DefaultDLLParam::KEY][station_conf::KEY].get<json>();

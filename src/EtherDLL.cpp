@@ -243,6 +243,18 @@ int main(int argc, char* argv[]) {
 
 	registerSignalHandlers();
 
+	if (!validDLLConfigParams(config)) {
+		interruptionCode = edll::Code::SERVICE_ERROR;
+		logger_ptr->error("Exiting due to invalid DLL specific configuration parameters.");
+		return static_cast<int>(interruptionCode);
+	}
+	if (!validConfigParams(config)) {
+		interruptionCode = edll::Code::SERVICE_ERROR;
+		logger_ptr->error("Exiting due to invalid core configuration parameters.");
+		return static_cast<int>(interruptionCode);
+	}
+
+
 	// Initialize DLL connection
 	DLLConnectionData DLLConnID = DEFAULT_DLL_CONNECTION_DATA;
 	if (!connectAPI(DLLConnID, config, *logger_ptr)) {

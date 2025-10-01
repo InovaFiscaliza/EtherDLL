@@ -159,6 +159,8 @@ namespace edll {
 				};
 			};
 			struct Queue {
+				static constexpr const char* KEY = "Queue";
+
 				struct ClientId {
 					static constexpr const char* KEY = "id";
 					static constexpr int VALUE = 0;
@@ -173,7 +175,7 @@ namespace edll {
 				};
 				struct ClientIp {
 					static constexpr const char* KEY = "client_ip";
-					static constexpr const char* VALUE = "172.24.3.15";
+					static constexpr const char* VALUE = "Not Retrieved";
 				};
 				struct CommandCode {
 					static constexpr const char* KEY = "commandCode";
@@ -216,13 +218,114 @@ json buildCoreDefaultConfigJson(json default_config = json::object()) {
 	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::Msg::KEY][edll::DefaultConfig::Service::Msg::Ping::KEY] = edll::DefaultConfig::Service::Msg::Ping::VALUE;
 	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::Msg::KEY][edll::DefaultConfig::Service::Msg::Ack::KEY] = edll::DefaultConfig::Service::Msg::Ack::VALUE;
 	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::Msg::KEY][edll::DefaultConfig::Service::Msg::Nack::KEY] = edll::DefaultConfig::Service::Msg::Nack::VALUE;
-	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::Queue::ClientId::KEY] = edll::DefaultConfig::Service::Queue::ClientId::VALUE;
-	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::Queue::QueueId::KEY] = edll::DefaultConfig::Service::Queue::QueueId::VALUE;
-	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::Queue::DLLId::KEY] = edll::DefaultConfig::Service::Queue::DLLId::VALUE;
-	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::Queue::ClientIp::KEY] = edll::DefaultConfig::Service::Queue::ClientIp::VALUE;
-	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::Queue::CommandCode::KEY] = edll::DefaultConfig::Service::Queue::CommandCode::VALUE;
-	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::Queue::CommandName::KEY] = edll::DefaultConfig::Service::Queue::CommandName::VALUE;
-	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::Queue::Arguments::KEY] = edll::DefaultConfig::Service::Queue::Arguments::VALUE;
+	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::Queue::KEY][edll::DefaultConfig::Service::Queue::ClientId::KEY] = edll::DefaultConfig::Service::Queue::ClientId::VALUE;
+	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::Queue::KEY][edll::DefaultConfig::Service::Queue::QueueId::KEY] = edll::DefaultConfig::Service::Queue::QueueId::VALUE;
+	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::Queue::KEY][edll::DefaultConfig::Service::Queue::DLLId::KEY] = edll::DefaultConfig::Service::Queue::DLLId::VALUE;
+	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::Queue::KEY][edll::DefaultConfig::Service::Queue::ClientIp::KEY] = edll::DefaultConfig::Service::Queue::ClientIp::VALUE;
+	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::Queue::KEY][edll::DefaultConfig::Service::Queue::CommandCode::KEY] = edll::DefaultConfig::Service::Queue::CommandCode::VALUE;
+	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::Queue::KEY][edll::DefaultConfig::Service::Queue::CommandName::KEY] = edll::DefaultConfig::Service::Queue::CommandName::VALUE;
+	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::Queue::KEY][edll::DefaultConfig::Service::Queue::Arguments::KEY] = edll::DefaultConfig::Service::Queue::Arguments::VALUE;
 
 	return default_config;
+}
+
+// ----------------------------------------------------------------------
+/** @brief Test all configuration parameters associated with the service
+ * @param None
+ * @return bool, True if configuration all parameters are valid, false otherwise
+ * @throws NO EXCEPTION HANDLING
+**/
+bool validConfigParams(json config) {
+
+	using service = edll::DefaultConfig::Service;
+
+	json service_config = config.value(service::KEY, json());
+
+	bool test_result = true;
+
+	if (service_config.is_null()) {
+		loggerPtr->error("Missing 'service' configuration section.");
+		test_result = false;
+	}
+	int port = service_config.value(service::Port::KEY, -1);
+	if (port < 1 || port > 65535) {
+		loggerPtr->error("Invalid port number in configuration. Expected between 1 and 65535. Received: " + std::to_string(port));
+		test_result = false;
+	}
+	int BufferSize = service_config.value(service::BufferSize::KEY, -1);
+	if (BufferSize < 1 || BufferSize > service::BufferSize::MAX_VALUE) {
+		loggerPtr->error("Invalid buffer size in configuration. Expected between 1 and " + std::to_string(service::BufferSize::MAX_VALUE) + ". Received: " + std::to_string(BufferSize));
+		test_result = false;
+	}
+	int timeout = service_config.value(service::Timeout::KEY, -1);
+	if (timeout < 1) {
+		loggerPtr->error("Invalid timeout value in configuration. Expected greater than 0. Received: " + std::to_string(timeout));
+		test_result = false;
+	}
+	int sleepMs = service_config.value(service::Sleep::KEY, -1);
+	if (sleepMs < 1) {
+		loggerPtr->error("Invalid sleep_ms value in configuration. Expected greater than 0. Received: " + std::to_string(sleepMs));
+		test_result = false;
+	}
+	int bufferTTL = service_config.value(service::BufferTTL::KEY, -1);
+	if (bufferTTL < 1) {
+		loggerPtr->error("Invalid buffer_ttl_period value in configuration. Expected greater than 0. Received: " + std::to_string(bufferTTL));
+		test_result = false;
+	}
+	int pingPeriod = service_config.value(service::PingPeriod::KEY, -1);
+	if (pingPeriod < 0) {
+		loggerPtr->error("Invalid ping_period value in configuration. Expected 0 or greater. Received: " + std::to_string(pingPeriod));
+		test_result = false;
+	}
+	if (service_config.contains(service::PingEnable::KEY)) {
+		if (!service_config[service::PingEnable::KEY].is_boolean()) {
+			loggerPtr->error("Invalid ping_enable value in configuration. Expected boolean type. Received: " +
+				service_config[service::PingEnable::KEY].dump());
+			test_result = false;
+		}
+	}
+
+	json msgKeys = service_config.value(service::Msg::KEY, json());
+	if (msgKeys.is_null()) {
+		loggerPtr->error("Missing 'msg_keys' section in 'service' configuration.");
+		test_result = false;
+	}
+	std::vector<std::string> requiredKeys = { service::Msg::End::KEY,
+												service::Msg::Ping::KEY,
+												service::Msg::Ack::KEY,
+												service::Msg::Nack::KEY };
+	for (const auto& key : requiredKeys) {
+		if (!msgKeys.contains(key) || !msgKeys[key].is_string() || msgKeys[key].get<std::string>().empty()) {
+			loggerPtr->error("Invalid or missing '" + key + "' in 'msg_keys' configuration.");
+			test_result = false;
+		}
+	}
+
+	json queueKeys = service_config.value(service::Queue::KEY, json());
+	if (msgKeys.is_null()) {
+		loggerPtr->error("Missing 'queue' section in 'service' configuration.");
+		test_result = false;
+	}
+	std::vector<std::string> requiredQueueKeys = { service::Queue::ClientId::KEY,
+													service::Queue::QueueId::KEY,
+													service::Queue::DLLId::KEY,
+													service::Queue::ClientIp::KEY,
+													service::Queue::CommandCode::KEY,
+													service::Queue::CommandName::KEY };
+	for (const auto& key : requiredQueueKeys) {
+		if (!queueKeys.contains(key) || (key != "arguments" && !queueKeys[key].is_string() && !queueKeys[key].is_number()) || (key == "arguments" && !queueKeys[key].is_string())) {
+			loggerPtr->error("Invalid or missing '" + key + "' in 'queue' configuration.");
+			test_result = false;
+		}
+	}
+
+	// test if service::Queue::Arguments::KEY is a json object if it exists
+	if (queueKeys.contains(service::Queue::Arguments::KEY)) {
+		if (!queueKeys[service::Queue::Arguments::KEY].is_object()) {
+			loggerPtr->error("Invalid '" + std::string(service::Queue::Arguments::KEY) + "' in 'queue' configuration. Expected JSON object.");
+			test_result = false;
+		}
+	}
+
+	return test_result;
 }

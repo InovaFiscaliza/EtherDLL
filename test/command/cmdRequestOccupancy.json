@@ -1,21 +1,21 @@
 {
-  "commandCode": 12,
-  "name": "cmdRequestOccupancy",
-  "arguments": {
-    "ant": 1,
-    "numBands": 1,
-    "storageTime": 15,
-    "measurementTime": 300,
-    "numAzimuths": 360,
-    "confidence": 75,
-    "recordHoldoff": 5,
-    "scanDfThreshold": 10,
-    "recordAudioDf": false,
-    "band": {
-      "channelBandwidth": 25000,
-      "exclude": false,
-      "highFrequency": 108000000,
-      "lowFrequency": 88000000
+    "commandCode": 12,
+    "commandName": "cmdRequestOccupancy",
+    "arguments": {
+        "ant": 1,
+        "numBands": 1,
+        "storageTime": 15,
+        "measurementTime": 300,
+        "numAzimuths": 360,
+        "confidence": 75,
+        "recordHoldoff": 5,
+        "scanDfThreshold": 10,
+        "recordAudioDf": false,
+        "band": {
+            "channelBandwidth": 25000,
+            "exclude": false,
+            "highFrequency": 108000000,
+            "lowFrequency": 88000000
+        }
     }
-  }
 }
