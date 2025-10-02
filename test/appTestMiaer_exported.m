@@ -433,7 +433,7 @@ classdef appTestMiaer_v0_2 < matlab.apps.AppBase
         function ConnectButtonValueChanged(app, event)
             app.ConnectButton.Enable = false;
             if app.ConnectButton.Value
-                connected = app.connect();
+                connected = connection = tcpclient(conf.proxy.address, conf.service.command.port, 'Timeout', conf.service.command.timeout_s, 'ConnectTimeout', conf.service.command.timeout_s, 'Tag', service_tag);
                 if connected                    
                     app.ConnectButton.Text = 'Disconnect';
                     app.ConnectButton.Enable = true;
