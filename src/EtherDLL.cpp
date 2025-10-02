@@ -126,10 +126,12 @@ static json readConfigFile(std::string fileName) {
 		configFile.close();
 	}
 	catch (const json::parse_error& e) {
-		throw std::invalid_argument("JSON parsing error: " + std::string(e.what()));
+		std::cout << "JSON parsing error: " + std::string(e.what());
+		throw std::invalid_argument("Invalid JSON format in configuration file: " + fileName);
 	}
 	catch (const std::exception& e) {
-		throw std::invalid_argument("Error reading configuration file: " + std::string(e.what()));
+		std::cout << "Error reading configuration file: " + std::string(e.what());
+		throw std::invalid_argument("Error reading configuration file: " + fileName);
 	}
 
 	return config;
@@ -189,6 +191,7 @@ static  std::string handleInputArguments(int argc, char* argv[]) {
 			case 'H': {
 				print_help();
 				if (argc != 2) {
+					std::cout << "Too many arguments provided. (Provided " + std::to_string(argc) + " arguments, expected 1)" << std::endl;
 					throw std::invalid_argument("Too many arguments provided. (Provided " + std::to_string(argc) + " arguments, expected 1)");
 				}
 				exit(0);
@@ -198,6 +201,7 @@ static  std::string handleInputArguments(int argc, char* argv[]) {
 			case 'F': {
 				if (argc != 3) {
 					print_help();
+					std::cout << "Too many arguments provided. (Provided " + std::to_string(argc) + " arguments, expected 2)" << std::endl;
 					throw std::invalid_argument("Too many arguments provided. (Provided " + std::to_string(argc) + " arguments, expected 2)");
 				}
 	
@@ -206,6 +210,7 @@ static  std::string handleInputArguments(int argc, char* argv[]) {
 			}
 			default: {
 				print_help();
+				std::cout << "Unknown argument: " + arg1 << std::endl;
 				throw std::invalid_argument("Unknown argument: " + arg1);
 			}
 		}
@@ -233,34 +238,39 @@ int main(int argc, char* argv[]) {
 
 	json config = readConfigFile(configFileName);
 
-	//TODO: validate log parameteres and use get method
-	std::string log_name = config[edll::DefaultConfig::Log::KEY].value(edll::DefaultConfig::Log::Name::KEY, edll::DefaultConfig::Log::Name::VALUE);
+	testLogConfig(config);
 
+	std::string log_name = config[edll::DefaultConfig::Log::KEY].value(edll::DefaultConfig::Log::Name::KEY, edll::DefaultConfig::Log::Name::VALUE);
 	auto logger_ptr = std::make_shared<spdlog::logger>(log_name);
 	loggerPtr = logger_ptr.get();
 
 	initializeLog(config, *logger_ptr);
 
+	// test all levels of logging
+	loggerPtr->trace("This is a trace log using loggerPtr in main.");
+	loggerPtr->debug("This is a debug log using loggerPtr in main.");
+	loggerPtr->info("This is an info log using loggerPtr in main.");
+	loggerPtr->warn("This is a warning log using loggerPtr in main.");
+	loggerPtr->error("This is an error log using loggerPtr in main.");
+	loggerPtr->critical("This is a critical log using loggerPtr in main.");
+	loggerPtr->flush();
+
 	registerSignalHandlers();
 
 	if (!validDLLConfigParams(config)) {
-		interruptionCode = edll::Code::SERVICE_ERROR;
 		logger_ptr->error("Exiting due to invalid DLL specific configuration parameters.");
-		return static_cast<int>(interruptionCode);
+		return static_cast<int>(edll::Code::SERVICE_ERROR);
 	}
-	if (!validConfigParams(config)) {
-		interruptionCode = edll::Code::SERVICE_ERROR;
-		logger_ptr->error("Exiting due to invalid core configuration parameters.");
-		return static_cast<int>(interruptionCode);
+	if (!validServiceParams(config)) {
+		logger_ptr->error("Exiting due to invalid Service configuration parameters.");
+		return static_cast<int>(edll::Code::SERVICE_ERROR);
 	}
-
 
 	// Initialize DLL connection
 	DLLConnectionData DLLConnID = DEFAULT_DLL_CONNECTION_DATA;
 	if (!connectAPI(DLLConnID, config, *logger_ptr)) {
-		interruptionCode = edll::Code::STATION_ERROR;
 		logger_ptr->error("Exiting since no station was available.");
-		return static_cast<int>(interruptionCode);
+		return static_cast<int>(edll::Code::STATION_ERROR);
 	}
 
 	// Add these at the top with other global variables:
@@ -272,6 +282,17 @@ int main(int argc, char* argv[]) {
 	{
 		// Inicialise ClientConn object to wait for a client connection
 		ClientConn clientConn(config, interruptionCode, *logger_ptr);
+
+		if (!clientConn.isConnected()) {
+			if (interruptionCode == edll::Code::RUNNING) {
+				logger_ptr->error("Error establishing client connection. Retrying in 5 seconds");
+				std::this_thread::sleep_for(std::chrono::seconds(5));
+				continue; 
+			}
+			else {
+				break;
+			}
+		}
 
 		// Reset completion flag
 		anyThreadCompleted = false;
@@ -321,10 +342,11 @@ int main(int argc, char* argv[]) {
 		clientConn.closeConnection();
 	}
 
-	// Close the connection
+	/* Close the connection
 	if (!disconnectAPI(DLLConnID, *logger_ptr)) {
 		logger_ptr->error("Failed to disconnect from station.");
 	}
+	*/
 	logger_ptr->info("Service stopped.");
 	logger_ptr->flush();
 

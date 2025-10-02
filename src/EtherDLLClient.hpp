@@ -82,7 +82,7 @@ public:
 		using msg = edll::DefaultConfig::Service::Queue;
 
 		std::lock_guard<std::mutex> lock(mtx);
-		item[msg::QueueId::KEY] = messageCount;
+		item[msg::QueueId::VALUE] = messageCount;
 		if (setClientKey) {
 			item[msg::ClientId::KEY] = messageCount;
 		}
@@ -198,18 +198,36 @@ private:
 	std::string msgJsonStartStr = std::string(edll::JSON_START);
 	std::string msgJsonMidStr = std::string(edll::JSON_MID);
 
-	json msgKeys = config[service::KEY].get<json>()[service::Msg::KEY];
+
+	json msgKeys = config[service::KEY][service::Msg::KEY].get<json>();
 
 	std::string msgEndStr = msgKeys[service::Msg::End::KEY].get<std::string>();
 	std::string msgJsonEndStr = std::string(edll::JSON_END) + msgEndStr;
 	std::string ackStr = msgJsonStartStr + msgKeys[service::Msg::Ack::KEY].get<std::string>() + msgJsonMidStr;
 	std::string nackStr = msgJsonStartStr + msgKeys[service::Msg::Nack::KEY].get<std::string>() + msgJsonMidStr;
-
-	json QueueKeys = config[service::KEY].get<json>()[service::Queue::KEY];
-	std::string idStr = QueueKeys[service::Queue::ClientId::KEY].get<std::string>();
-
-	bool pingEnable = config[service::PingEnable::KEY].get<bool>();
 	std::string pingStr = msgJsonStartStr + msgKeys[service::Msg::Ping::KEY].get<std::string>() + msgJsonMidStr;
+
+	bool pingEnable = config[service::KEY][service::PingEnable::KEY].get<bool>();
+
+	std::string idStr = config[service::KEY][service::Queue::KEY][service::Queue::ClientId::KEY].get<std::string>();
+
+public:
+	// ----------------------------------------------------------------------
+	/** @brief Establish a connection with a client
+	 *
+	 * This function will block the thread until a client connects or an interruption signal is received.
+	 * It will create a socket, bind it to the specified port and listen for incoming connections.
+	 * Once a client connects, it will store the client socket and IP address.
+	 *
+	 * @throws NO EXCEPTION HANDLING
+	**/
+	ClientConn(json config,
+		edll::INT_CODE& interruptionCode, spdlog::logger& logger)
+		: config(config),
+		interruptionCode(interruptionCode), logger(logger), clientIP("")
+	{
+		establishConnection();
+	}
 
 	// ----------------------------------------------------------------------
 	/** @brief Wait and establish connection to a single client.
@@ -239,9 +257,9 @@ private:
 		hints.ai_flags = AI_PASSIVE;
 
 		using service = edll::DefaultConfig::Service;
-		json service_config = config.value(service::KEY,json());
+		json service_config = config[service::KEY].get<json>();
 
-		std::string portStr = std::to_string(service_config.value(service::Port::KEY, service::Port::VALUE));
+		std::string portStr = std::to_string(service_config[service::Port::KEY].get<int>());
 		int iResult = getaddrinfo(NULL, portStr.c_str(), &hints, &result);
 		if (iResult != 0) {
 			loggerPtr->error("Socket getaddrinfo failed. EC:" + std::to_string(iResult));
@@ -259,7 +277,7 @@ private:
 			return;
 		}
 
-		int timeout = service_config.value(service::Timeout::KEY, service::Timeout::VALUE) * 1000; // milliseconds
+		int timeout = service_config[service::Timeout::KEY].get<int>() * 1000; // milliseconds
 		iResult = setsockopt(listenSocket, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout, sizeof(timeout));
 		if (iResult == SOCKET_ERROR) {
 			loggerPtr->error("Socket setsockopt timeout failed. EC:" + std::to_string(WSAGetLastError()));
@@ -294,65 +312,36 @@ private:
 		// create variable to store the client address
 		struct sockaddr_in clientAddr {};
 
-		while (interruptionCode == edll::Code::RUNNING) {
-			// call the connection handler 
-			loggerPtr->info("Waiting for client connections on port " + portStr);
+		// call the connection handler 
+		loggerPtr->info("Waiting for client connections on port " + portStr);
 
-			clientSocket = accept(listenSocket, (struct sockaddr*)&clientAddr, NULL);
+		// hold the excecution until a client connects
+		clientSocket = accept(listenSocket, (struct sockaddr*)&clientAddr, NULL);
 
-			// configure socket for non-blocking operations
-			u_long mode = 1;
-			ioctlsocket(clientSocket, FIONBIO, &mode);
+		// configure socket for non-blocking operations
+		// u_long mode = 1;
+		// ioctlsocket(clientSocket, FIONBIO, &mode);
 
-			{
-				struct sockaddr_in clientAddr {};
-				int addrLen = sizeof(clientAddr);
-				if (getpeername(clientSocket, (struct sockaddr*)&clientAddr, &addrLen) == 0) {
-					clientIP = std::string(inet_ntoa(clientAddr.sin_addr));
-					if (!clientIP.empty()) {
-						loggerPtr->debug("Processing message from client IP: " + clientIP);
-					}
-
-				}
-			}
-
-			if (clientSocket == INVALID_SOCKET) {
-				loggerPtr->warn("Failed in accept operation with " + clientIP + ".EC:" + std::to_string(WSAGetLastError()));
+		int addrLen = sizeof(clientAddr);
+		if (getpeername(clientSocket, (struct sockaddr*)&clientAddr, &addrLen) == 0) {
+			clientIP = std::string(inet_ntoa(clientAddr.sin_addr));
+			if (!clientIP.empty()) {
+				loggerPtr->debug("Waiting message from client IP: " + clientIP);
 			}
 			else {
-				loggerPtr->info("Accepted connection from " + clientIP);
-
-				closesocket(listenSocket);
-				WSACleanup();
-				loggerPtr->info("Stopped waiting for new connections on port " + portStr);
-
-				return;
+				clientIP = edll::DefaultConfig::Service::Queue::ClientIp::INIT_VALUE;
+				loggerPtr->debug("IP address from connected client could not be determined.");
 			}
+
+		}
+
+		if (clientSocket == INVALID_SOCKET) {
+			loggerPtr->warn("Failed in accept operation with " + clientIP + ".EC:" + std::to_string(WSAGetLastError()));
+		}
+		else {
+			loggerPtr->info("Accepted connection from " + clientIP);
 		}
 	}
-
-public:
-	// ----------------------------------------------------------------------
-	/** @brief Establish a connection with a client
-	 *
-	 * This function will block the thread until a client connects or an interruption signal is received.
-	 * It will create a socket, bind it to the specified port and listen for incoming connections.
-	 * Once a client connects, it will store the client socket and IP address.
-	 *
-	 * @throws NO EXCEPTION HANDLING
-	**/
-	ClientConn(json config,
-		edll::INT_CODE& interruptionCode, spdlog::logger& logger)
-		: config(config),
-		interruptionCode(interruptionCode), logger(logger), clientIP("")
-	{
-		if (!validConfigParams()) {
-			interruptionCode = edll::Code::CLIENT_ERROR;
-			return;
-		};
-		establishConnection();
-	}
-
 
 	// ----------------------------------------------------------------------
 	/** @brief Send messages from client to the DLL, whenever there are messages available
@@ -374,85 +363,79 @@ public:
 	*/
 	void clientRequestToDLL(MessageQueue& request)
 	{
-		json msgKeys = config[edll::DefaultConfig::Service::KEY].get<json>()[service::Msg::KEY];
+		json serviceKeys = config[edll::DefaultConfig::Service::KEY].get<json>();
 
-		std::vector<char> buffer(config[service::BufferSize::KEY].get<int>() + 1);
+		int bufferSize = serviceKeys[service::BufferSize::KEY].get<int>();
+		std::string buffer;
+		buffer.resize(bufferSize + 1);
 		std::string accumulatedData = "";
 
-		int bufferTTLInit = config[service::BufferTTL::KEY].get<int>();
+		int bufferTTLInit = serviceKeys[service::BufferTTL::KEY].get<int>();
 		int bufferTTL = bufferTTLInit;
 
 		int iResult = 0;
 
+		loggerPtr->debug("Started thread to wait for messages from " + clientIP);
+
 		while (interruptionCode == edll::Code::RUNNING) {
 
 			// read data from socket - blocking call
-			int bytesRead = recv(clientSocket, buffer.data(), static_cast<int>(buffer.size() - 1), 0);
+			int bytesRead = recv(clientSocket, buffer.data(), static_cast<int>(bufferSize), 0);
 
 			if (bytesRead > 0) {
 
-				accumulatedData.append(buffer.data(), bytesRead);
+				bool dataToProcess = true;
 
-				size_t pos = accumulatedData.find(msgEndStr);
+				json jsonObj = json::parse(buffer, nullptr, false);
 
-				if (pos != std::string::npos) { // Found the end of a message
+				
+				if (jsonObj == json::value_t::discarded) {
+					accumulatedData.append(buffer.data(), bytesRead);
 
-					std::string completeMessage = accumulatedData.substr(0, pos);
+					jsonObj = json::parse(accumulatedData, nullptr, false);
 
-					json jsonObj = json::parse(completeMessage, nullptr, false);
+					if (jsonObj == json::value_t::discarded) {
+						loggerPtr->debug("Accumulated data so far: " + accumulatedData);
+						bufferTTL--;
+						dataToProcess = false;
 
-					if (jsonObj != json::value_t::discarded) {
-
-						// add client id and queue id to object
-						jsonObj[service::Queue::ClientIp::KEY] = clientIP;
-
-
-						if (jsonObj.contains(idStr)) {
-							jsonObj[service::Queue::QueueId::KEY] = request.push(jsonObj);
-						}
-						else
-						{
-							jsonObj[idStr] = request.push(jsonObj,true);
-							jsonObj[service::Queue::QueueId::KEY] = jsonObj[idStr];
-						}
-						
-						loggerPtr->debug("Received message ID: " + jsonObj.dump());
-
-						std::string ack = ackStr + jsonObj[idStr].dump() + msgEndStr;
-						iResult = send(clientSocket, ack.c_str(), ack.length(), 0);
-					}
-					else {
-						loggerPtr->warn("Received invalid JSON message: " + completeMessage);
-						std::string nack = nackStr + std::to_string(completeMessage.length()) + msgEndStr;
+						std::string nack = nackStr + std::to_string(accumulatedData.length()) + msgJsonEndStr;
 						iResult = send(clientSocket, nack.c_str(), nack.length(), 0);
 					}
+				}
 
-					// keep any extra data after the end of the message for the next iteration
-					if (pos != accumulatedData.length() - msgEndStr.length()) {
-						accumulatedData = accumulatedData.substr(pos + msgEndStr.length(), std::string::npos);
-						loggerPtr->debug("Keeping data for next iteration: " + accumulatedData);
-						bufferTTL--;
-					}
-					else {
-						accumulatedData.clear();
-						bufferTTL = bufferTTLInit;
-					}
+				if (dataToProcess) {
+					bufferTTL = bufferTTLInit;
+					accumulatedData.clear();
 
-					if (iResult == SOCKET_ERROR) {
-						loggerPtr->warn("Failed sending ACK/NACK message. EC:" + std::to_string(WSAGetLastError()));
-						loggerPtr->info("Connection with address" + std::to_string(clientSocket) + " lost.");
-						return;
+					// add client id and queue id to object
+					jsonObj[service::Queue::ClientIp::VALUE] = clientIP;
+
+					if (jsonObj.contains(idStr)) {
+						jsonObj[service::Queue::QueueId::VALUE] = request.push(jsonObj, false);
 					}
+					else
+					{
+						jsonObj[idStr] = request.push(jsonObj,true);
+
+						// add the queue id to the message for debug/tracking purposes
+						jsonObj[service::Queue::QueueId::VALUE] = jsonObj[idStr];
+					}
+						
+					loggerPtr->debug("Received message ID: " + jsonObj.dump());
+
+					std::string ack = ackStr + jsonObj[idStr].dump() + msgJsonEndStr;
+					iResult = send(clientSocket, ack.c_str(), ack.length(), 0);
+				}
+
+				if (iResult == SOCKET_ERROR) {
+					loggerPtr->warn("Failed sending ACK/NACK message. EC:" + std::to_string(WSAGetLastError()));
+					loggerPtr->info("Connection with address" + std::to_string(clientSocket) + " lost.");
+					return;
 				}
 			}
 			else {
 				int error = WSAGetLastError();
-
-				if (error != WSAEWOULDBLOCK) {
-					// Unkwonn connection error
-					loggerPtr->error("Client connection error: " + std::to_string(error));
-					return;
-				}
 
 				if (bufferTTL == 0) {
 					if (accumulatedData.length() > 0) {
@@ -461,6 +444,17 @@ public:
 					}
 					bufferTTL = bufferTTLInit;
 				}
+
+				if (error == WSAETIMEDOUT) {
+					continue;
+				}
+				
+				if (error != WSAEWOULDBLOCK) {
+					// Unkwonn connection error
+					loggerPtr->error("Client connection error: " + std::to_string(error));
+					return;
+				}
+
 			}
 		}
 	}

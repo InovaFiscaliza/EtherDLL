@@ -20,12 +20,17 @@
 
 // Include project libraries
 #include <nlohmann/json.hpp>
+#include <spdlog/spdlog.h>
 
 // Include general C++ libraries
 #include <string>
+#include <iostream>
 
 // For convenience
 using json = nlohmann::json;
+
+// Global variables
+extern spdlog::logger* loggerPtr;
 
 // ----------------------------------------------------------------------
 namespace edll {
@@ -162,32 +167,39 @@ namespace edll {
 				static constexpr const char* KEY = "Queue";
 
 				struct ClientId {
-					static constexpr const char* KEY = "id";
-					static constexpr int VALUE = 0;
+					static constexpr const char* KEY = "ClientId";
+					static constexpr const char* VALUE = "ID";
+					static constexpr int INIT_VALUE = 0;
 				};
 				struct QueueId {
 					static constexpr const char* KEY = "queue_id";
-					static constexpr int VALUE = 0;
+					static constexpr const char* VALUE = "QID";
+					static constexpr int INIT_VALUE = 0;
 				};
 				struct DLLId {
 					static constexpr const char* KEY = "server_id";
-					static constexpr int VALUE = 0;
+					static constexpr const char* VALUE = "SID";
+					static constexpr int INIT_VALUE = 0;
 				};
 				struct ClientIp {
 					static constexpr const char* KEY = "client_ip";
-					static constexpr const char* VALUE = "Not Retrieved";
+					static constexpr const char* VALUE = "REQUEST_SOURCE";
+					static constexpr const char* INIT_VALUE = "Not Retrieved";
 				};
 				struct CommandCode {
 					static constexpr const char* KEY = "commandCode";
-					static constexpr int VALUE = -1;
+					static constexpr const char* VALUE = "CODE";
+					static constexpr int INIT_VALUE = -1;
 				};
 				struct CommandName {
 					static constexpr const char* KEY = "commandName";
-					static constexpr const char* VALUE = "Error";
+					static constexpr const char* VALUE = "COMMAND";
+					static constexpr const char* INIT_VALUE = "Error";
 				};
 				struct Arguments {
 					static constexpr const char* KEY = "arguments";
-					static inline const json VALUE = json::object();
+					static constexpr const char* VALUE = "ARGS";
+					static inline const json INIT_VALUE = json::object();
 				};
 			};
 		};
@@ -230,12 +242,62 @@ json buildCoreDefaultConfigJson(json default_config = json::object()) {
 }
 
 // ----------------------------------------------------------------------
-/** @brief Test all configuration parameters associated with the service
+/** @brief Test all log configuration parameters are correctly defined
+ * @param None
+ * @return bool, True if configuration all parameters are valid, false otherwise
+ * @throws std::runtime_error if configuration is invalid
+**/
+bool testLogConfig(json config) {
+	using log = edll::DefaultConfig::Log;
+	json log_config = config.value(log::KEY, json());
+	std::string test_result = "";
+
+	if (log_config.is_null()) {
+		test_result.append("Missing 'log' configuration section. ");
+	}
+	std::string loggerName = log_config.value(log::Name::KEY, "");
+	if (loggerName.empty()) {
+		test_result.append("Invalid or missing logger name in configuration. ");
+	}
+	
+	bool missing_sink = true;
+	if (log_config.contains(log::Console::KEY)) {
+		json console_config = log_config[log::Console::KEY];
+		std::string console_level = console_config.value(log::Console::Level::KEY, "");
+		if (console_level.empty()) {
+			test_result.append("Invalid or missing console log level in configuration. ");
+		}
+		missing_sink = false;
+	}
+	if (log_config.contains(log::File::KEY)) {
+		json file_config = log_config[log::File::KEY];
+		std::string file_level = file_config.value(log::File::Level::KEY, "");
+		if (file_level.empty()) {
+			test_result.append("Invalid or missing file log level in configuration. ");
+		}
+		std::string filename = file_config.value(log::File::Filename::KEY, "");
+		if (filename.empty()) {
+			test_result.append("Invalid or missing log filename in configuration. ");
+		}
+		missing_sink = false;
+	}
+	if (missing_sink) {
+		test_result.append("At least one logging method (console or file) must be defined in configuration. ");
+	}
+
+	if (!test_result.empty()) {
+		std::cout << "Log configuration validation errors: " << test_result << std::endl;
+		throw std::runtime_error("Log configuration validation failed. See previous errors.");
+	}
+}
+
+// ----------------------------------------------------------------------
+/** @brief Test all service configuration parameters are correctly defined
  * @param None
  * @return bool, True if configuration all parameters are valid, false otherwise
  * @throws NO EXCEPTION HANDLING
 **/
-bool validConfigParams(json config) {
+bool validServiceParams(json config) {
 
 	using service = edll::DefaultConfig::Service;
 
@@ -311,21 +373,13 @@ bool validConfigParams(json config) {
 													service::Queue::DLLId::KEY,
 													service::Queue::ClientIp::KEY,
 													service::Queue::CommandCode::KEY,
-													service::Queue::CommandName::KEY };
+													service::Queue::CommandName::KEY,
+													service::Queue::Arguments::KEY };
 	for (const auto& key : requiredQueueKeys) {
-		if (!queueKeys.contains(key) || (key != "arguments" && !queueKeys[key].is_string() && !queueKeys[key].is_number()) || (key == "arguments" && !queueKeys[key].is_string())) {
+		if (!queueKeys.contains(key) || !queueKeys[key].is_string() || queueKeys[key].get<std::string>().empty()) {
 			loggerPtr->error("Invalid or missing '" + key + "' in 'queue' configuration.");
 			test_result = false;
 		}
 	}
-
-	// test if service::Queue::Arguments::KEY is a json object if it exists
-	if (queueKeys.contains(service::Queue::Arguments::KEY)) {
-		if (!queueKeys[service::Queue::Arguments::KEY].is_object()) {
-			loggerPtr->error("Invalid '" + std::string(service::Queue::Arguments::KEY) + "' in 'queue' configuration. Expected JSON object.");
-			test_result = false;
-		}
-	}
-
 	return test_result;
 }

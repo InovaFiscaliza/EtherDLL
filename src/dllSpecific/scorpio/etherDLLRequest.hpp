@@ -474,10 +474,10 @@ void DLLFunctionCall(DLLConnectionData DLLConnID, json request, spdlog::logger& 
 {
 	ERetCode errCode = ERetCode::API_SUCCESS;
 	
-	unsigned long requestID = request.value(QueueObj::QueueId::KEY, QueueObj::QueueId::VALUE);
+	unsigned long requestID = request.value(QueueObj::QueueId::VALUE, QueueObj::QueueId::INIT_VALUE);
 
-	unsigned long cmd = request.value(QueueObj::CommandCode::KEY, QueueObj::CommandCode::VALUE);
-	json reqArguments = request.value(QueueObj::Arguments::KEY, json::object());
+	unsigned long cmd = request.value(QueueObj::CommandCode::VALUE, QueueObj::CommandCode::INIT_VALUE);
+	json reqArguments = request.value(QueueObj::Arguments::VALUE, json::object());
 
 	validateRequest(request, (ECSMSDllMsgType)cmd, logger);
 
@@ -582,7 +582,7 @@ void DLLFunctionCall(DLLConnectionData DLLConnID, json request, spdlog::logger& 
 		}
 	}
 
-	std::string reqName = request.value(QueueObj::CommandName::KEY, QueueObj::CommandName::VALUE);
+	std::string reqName = request.value(QueueObj::CommandName::VALUE, QueueObj::CommandName::INIT_VALUE);
 	if (errCode != ERetCode::API_SUCCESS)
 	{
 		loggerPtr->error("[" + reqName + "] ERROR. " + ERetCodeToString(errCode));
