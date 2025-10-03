@@ -1,7 +1,7 @@
 {
-    "commandCode": 12,
-    "commandName": "cmdRequestOccupancy",
-    "arguments": {
+    "CODE": 12,
+    "COMMAND": "cmdRequestOccupancy",
+    "ARGS": {
         "ant": 1,
         "numBands": 1,
         "storageTime": 15,

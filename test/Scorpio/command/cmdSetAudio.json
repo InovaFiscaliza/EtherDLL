@@ -1,7 +1,7 @@
 {
-    "commandCode": 16,
-    "commandName": "cmdSetAudio",
-    "arguments": {
+    "CODE": 16,
+    "COMMAND": "cmdSetAudio",
+    "ARGS": {
         "anyChannel": true,
         "bandwidth": 200000,
         "bfo": 0,

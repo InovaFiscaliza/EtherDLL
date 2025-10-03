@@ -1,7 +1,7 @@
 {
-    "commandCode": 15,
-    "commandName": "cmdRequestAVD",
-    "arguments": {
+    "CODE": 15,
+    "COMMAND": "cmdRequestAVD",
+    "ARGS": {
         "ant": 1,
         "numBands": 1,
         "avdThreshold": 1,

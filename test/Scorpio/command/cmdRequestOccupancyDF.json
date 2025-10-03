@@ -1,7 +1,7 @@
 {
-    "commandCode": 14,
-    "commandName": "cmdRequestOccupancyDF",
-    "arguments": {
+    "CODE": 14,
+    "COMMAND": "cmdRequestOccupancyDF",
+    "ARGS": {
         "numBands": 1,
         "storageTime": 15,
         "measurementTime": 300,
