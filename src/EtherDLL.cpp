@@ -246,13 +246,6 @@ int main(int argc, char* argv[]) {
 
 	initializeLog(config, *logger_ptr);
 
-	// test all levels of logging
-	loggerPtr->trace("This is a trace log using loggerPtr in main.");
-	loggerPtr->debug("This is a debug log using loggerPtr in main.");
-	loggerPtr->info("This is an info log using loggerPtr in main.");
-	loggerPtr->warn("This is a warning log using loggerPtr in main.");
-	loggerPtr->error("This is an error log using loggerPtr in main.");
-	loggerPtr->critical("This is a critical log using loggerPtr in main.");
 	loggerPtr->flush();
 
 	registerSignalHandlers();

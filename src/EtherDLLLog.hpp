@@ -138,12 +138,5 @@ void initializeLog(json config, spdlog::logger& logger) {
 
     logger.info("Starting " + log_config["name"].get<std::string>() + "...");
 
-    // test all levels of logging
-    logger.trace("This is a trace log using logger in initializeLog.");
-    logger.debug("This is a debug log using logger in initializeLog.");
-    logger.info("This is an info log using logger in initializeLog.");
-    logger.warn("This is a warning log using logger in initializeLog.");
-    logger.error("This is an error log using logger in initializeLog.");
-    logger.critical("This is a critical log using logger in initializeLog.");
     logger.flush();
 }
