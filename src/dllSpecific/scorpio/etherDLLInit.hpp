@@ -392,7 +392,7 @@ bool connectAPI(DLLConnectionData& stationConnID, const nlohmann::json& config, 
 		return false;
 	}
 
-	/* Test connection to the station
+	//Test connection to the station
 	SCapabilities StationCapabilities;
 
 	errCode = RequestCapabilities(stationConnID, StationCapabilities);
@@ -403,7 +403,7 @@ bool connectAPI(DLLConnectionData& stationConnID, const nlohmann::json& config, 
 		loggerPtr->error(message);
 		return false;
 	}
-	*/
+	
 	message = "Connected to station " + hostNameStr + " [" + portStr + "]";
 	loggerPtr->info(message);
 

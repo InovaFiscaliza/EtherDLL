@@ -62,8 +62,6 @@ private:
 	mutable std::mutex mtx;
 	// Total number of messages ever added to the queue. May return to zero if it overflows.
 	unsigned long messageCount = 0;
-	// Mutex for condition variable
-	mutable std::mutex cmtx;
 	// Condition variable to signal availability of new messages
 	std::condition_variable m_condition;
 
@@ -84,9 +82,13 @@ public:
 		std::lock_guard<std::mutex> lock(mtx);
 		item[msg::QueueId::VALUE] = messageCount;
 		if (setClientKey) {
-			item[msg::ClientId::KEY] = messageCount;
+			item[msg::ClientId::VALUE] = messageCount;
 		}
 		msgQueue.push(item);
+
+		m_condition.notify_one();
+		loggerPtr->debug("Pushed item to queue. New size: {}", msgQueue.size());
+
 		return messageCount++;
 	}
 
@@ -104,6 +106,8 @@ public:
 		}
 		json item = msgQueue.front();
 		msgQueue.pop();
+
+		loggerPtr->debug("Popped item from queue. New size: {}", msgQueue.size());
 		return item;
 	}
 
@@ -116,7 +120,9 @@ public:
 	**/
 	json waitAndPop(const edll::INT_CODE& interruptionCode) {
 
-		std::unique_lock<std::mutex> lock(cmtx);
+		std::unique_lock<std::mutex> lock(mtx);
+
+		loggerPtr->debug("Waiting for item in message queue");
 
 		// Wait until queue is not empty or we're interrupted
 		m_condition.wait(lock, [this, &interruptionCode] {
@@ -128,7 +134,11 @@ public:
 			return json(); 
 		}
 
-		return this->pop();
+		json item = msgQueue.front();
+		msgQueue.pop();
+		loggerPtr->debug("Popped item from queue. New size: {}", msgQueue.size());
+
+		return item;
 	}
 
 	/** @brief Check if the queue is empty in a thread-safe manner

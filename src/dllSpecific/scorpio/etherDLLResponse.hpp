@@ -1099,9 +1099,8 @@ void OnDataFunc(_In_  unsigned long serverId, _In_ ECSMSDllMsgType respType, _In
 
     response.push(responseJson);
 
-
-    loggerPtr->debug("OnDataFunc: serverId=%lu, respType=%d, sourceAddr=%lu, requestID=%lu", serverId, static_cast<int>(respType), sourceAddr, requestID);
-	loggerPtr->trace("OnDataFunc: responseJson=%s", responseJson.dump().c_str());
+    loggerPtr->debug("OnDataFunc: serverId={}, respType={}, sourceAddr={}, requestID={}", serverId, static_cast<int>(respType), sourceAddr, requestID);
+	loggerPtr->trace("OnDataFunc: responseJson={}", responseJson.dump());
 }
 
 // ----------------------------------------------------------------------
@@ -1124,7 +1123,7 @@ void OnErrorFunc(_In_  unsigned long serverId, _In_ const std::wstring& errorMsg
 
     response.push(errorJson);
 
-    loggerPtr->debug("OnErrorFunc: serverId=%lu, errorMsg=%s", serverId, errorMsgStr.c_str());
+    loggerPtr->debug("OnErrorFunc: serverId={}, errorMsg=`{}`", serverId, errorMsgStr);
 }
 
 // ----------------------------------------------------------------------
@@ -1149,6 +1148,6 @@ void OnRealTimeDataFunc(_In_  unsigned long serverId, _In_ ECSMSDllMsgType respT
 
     response.push(responseJson);
 
-    loggerPtr->debug("OnRealTimeDataFunc: serverId=%lu, respType=%d", serverId, static_cast<int>(respType));
-	loggerPtr->trace("OnRealTimeDataFunc: responseJson=%s", responseJson.dump().c_str());
+    loggerPtr->debug("OnRealTimeDataFunc: serverId={}, respType={}", serverId, static_cast<int>(respType));
+	loggerPtr->trace("OnRealTimeDataFunc: responseJson={}", responseJson.dump());
 }

@@ -412,7 +412,7 @@ SAVDReqData* jsonToSAVDReqData(nlohmann::json jsonObj) {
 * @return nlohmann::json: 
 * @throws NO EXCEPTION HANDLING
 **/
-std::string validateRequest(json request, ECSMSDllMsgType msgType, spdlog::logger& logger)
+std::string validateRequest(json request, ECSMSDllMsgType msgType)
 {
 	std::string msg = "";
 
@@ -470,16 +470,18 @@ std::string validateRequest(json request, ECSMSDllMsgType msgType, spdlog::logge
  * @return std::string: Empty if all required fields are present, otherwise a string describing the missing fields
  * @throws NO EXCEPTION HANDLING
 **/
-void DLLFunctionCall(DLLConnectionData DLLConnID, json request, spdlog::logger& logger)
+void DLLFunctionCall(DLLConnectionData DLLConnID, json request)
 {
 	ERetCode errCode = ERetCode::API_SUCCESS;
+
+	loggerPtr->debug("Processing request: " + request.dump());
 	
 	unsigned long requestID = request.value(QueueObj::QueueId::VALUE, QueueObj::QueueId::INIT_VALUE);
 
 	unsigned long cmd = request.value(QueueObj::CommandCode::VALUE, QueueObj::CommandCode::INIT_VALUE);
 	json reqArguments = request.value(QueueObj::Arguments::VALUE, json::object());
 
-	validateRequest(request, (ECSMSDllMsgType)cmd, logger);
+	validateRequest(request, (ECSMSDllMsgType)cmd);
 
 	switch (cmd) {
 		case ECSMSDllMsgType::GET_OCCUPANCY:
@@ -610,14 +612,14 @@ void DLLFunctionCall(DLLConnectionData DLLConnID, json request, spdlog::logger& 
  * @param logger: spdlog logger object for logging messages
  * @throws NO EXCEPTION HANDLING
 */
-void processRequestQueue(DLLConnectionData DLLConnID, MessageQueue& request, edll::INT_CODE& interruptionCode, spdlog::logger& logger)
+void processRequestQueue(DLLConnectionData DLLConnID, MessageQueue& request, edll::INT_CODE& interruptionCode)
 {
 	while (interruptionCode == edll::Code::RUNNING)
 	{
 		json oneRequest = request.waitAndPop(interruptionCode);
 
 		if (oneRequest.is_null() == false) {
-			DLLFunctionCall(DLLConnID, oneRequest, logger);
+			DLLFunctionCall(DLLConnID, oneRequest);
 		}
 		
 	}

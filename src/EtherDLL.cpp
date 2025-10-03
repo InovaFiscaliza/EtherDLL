@@ -301,20 +301,26 @@ int main(int argc, char* argv[]) {
 
 		// Start threads with completion signaling
 		auto requestComFuture = std::async(std::launch::async, [&]() {
+			logger_ptr->debug("Starting thread to receive client request and populate request queue");
 			clientConn.clientRequestToDLL(request);
 			signalCompletion();
+			logger_ptr->debug("Finished thread to receive client request and populate request queue");
 			return true;
 			});
 
 		auto requestProcFuture = std::async(std::launch::async, [&]() {
-			processRequestQueue(DLLConnID, request, interruptionCode, *logger_ptr);
+			logger_ptr->debug("Starting thread that send requests from queue to DLL");
+			processRequestQueue(DLLConnID, request, interruptionCode);
 			signalCompletion();
+			logger_ptr->debug("Finished thread that send requests from queue to DLL");
 			return true;
 			});
 
 		auto responseConFuture = std::async(std::launch::async, [&]() {
+			logger_ptr->debug("Starting thread that sends DLL response to client");
 			clientConn.DLLResponseToClient(response);
 			signalCompletion();
+			logger_ptr->debug("Finished thread that sends DLL response to client");
 			return true;
 			});
 
