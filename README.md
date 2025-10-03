@@ -13,7 +13,7 @@
 <details>
   <summary>Table of Contents</summary>
   <ol>
-    <li><a href="#about">About MIAerConn</a></li>
+    <li><a href="#about-etherdll">About EtherDLL</a></li>
     <li><a href="#installation">Instalation</a></li>
     <li><a href="#detailed-description">Detailed Description</a></li>
     <li><a href="#getting-started">Getting Started</a></li>
@@ -24,7 +24,10 @@
 </details>
 
 <!-- ABOUT THE PROJECT -->
-# About
+# About EtherDLL
+
+<div >
+<img style="margin-top: 10px; margin-right: 30px; margin-bottom: 10px;" align="left" width="100" height="100" src=".\doc\images\EtherDLL_Icon.svg">  </div>
 
 The application is a Windows Service that may also be accessed as a desktop application for debug and provides a open socket API to access DLL callback methods, allowing the integration of local windows services as if they were a web service, through TCP/IP.
 
@@ -48,59 +51,55 @@ A simulation mode is also provided, such as to enable testing of the service wit
 
 Activation or deactivation of the simulation mode is done through the configuration file.
 
-<p align="right">(<a href="#indexerd-md-top">back to top</a>)</p>
+<div>
+    <a href="#about-etherdll">
+        <img align="right" width="40" height="40" src="./doc/images/up-arrow.svg" title="Back to the top of this page">
+    </a>
+    <br><br>
+</div>
 
 <!-- Installation -->
 # Installation
 
-The application is installed as a Windows Service and must be installed with administrative privileges.
-
-The manufacturer's API must be installed in the system before running the service.
+The DLL to be used as interface must be installed prior to the installation of the service.
 
 The compiled application is composed of the following files:
 
- - MIAerConn.exe, which is a windows console application
- - config.json, which stores the configuration parameters, including the IP address and port of the MIAer Spectrum Monitoring Station
+ - EtherDLL.exe, which is a windows console application
+ - EtherDLLConfig.json, which stores the configuration parameters, including the IP address and port of the MIAer Spectrum Monitoring Station
 
-Both files should be placed within the same folder.
+By default, the executable will look for the JSON configuration file in the same folder, but arbitrary configuration files can be used by providing the path to the configuration file as a command line argument.
 
-The installation is done by running the following command in the command prompt with administrative privileges:
-
-```cmd
-sc create MIAerConn binPath= "C:\path\to\MIAerConn.exe"
-```
-
-The service may be started and stopped using the following commands:
-
-```cmd
-sc start MIAerConn
-sc stop MIAerConn
-```
-
-The service may be removed using the following command:
-
-```cmd
-sc delete MIAerConn
-```
-
-To completely remove the service, the executable and configuration file must be deleted.
-
-<p align="right">(<a href="#indexerd-md-top">back to top</a>)</p>
+<div>
+    <a href="#about-etherdll">
+        <img align="right" width="40" height="40" src="./doc/images/up-arrow.svg" title="Back to the top of this page">
+    </a>
+    <br><br>
+</div>
 
 <!-- Detailed Description -->
 # Detailed Description
 
-The application provides the communication to clients through socket connections, using multiple ports for different services, simplifying client parsing of the data.
+The application provides the communication to clients through socket connections, simplifying client parsing of the data through the use of JSON formatted messages. This also allows for the isolation between the client application and the specific DLL, allowing the use of cross platform clients, such as web applications running in different architectures (e.g. AMD64 connecting to a x86 DLL).
 
-The following diagram shows the main socket connections created by the application and associated DLL functions:
+The following diagram illustrates the module architecture of the application:
 
-![Client Station Communication Diagram](/doc/diagram.svg)
+![EtherDLL Modules](.\doc\images\modules.svg)
 
-Command, Data and Error channels use JSON format for data serialization.
+| Module       | Description                                                  |
+|--------------|--------------------------------------------------------------|
+| EtherDLL.cpp | Entry point of the application, After parsing the command line arguments, loading the configuration and initializing the log, it initialize the DLL connection and start threads responsible for message forwarding between the client and the DLL |
+| EtherDLLClient.hpp |  |
+| EtherDLLConstants.hpp |  |
+| EtherDLLLog.hpp |  |
+| EtherDLLUtils.cpp |  |
 
-Stream channel uses binary format for data serialization using the sequence of bytes '[39 10 13 39]' as the end of each message block, for client synchronization.
-
-<p align="right">(<a href="#indexerd-md-top">back to top</a>)</p>
+<div>
+    <a href="#about-etherdll">
+        <img align="right" width="40" height="40" src="./doc/images/up-arrow.svg" title="Back to the top of this page">
+    </a>
+    <br><br>
+</div>
 
 <!-- GETTING STARTED -->
 # Getting Started
@@ -120,7 +119,12 @@ The solution includes references to header files and libraries from the manufact
 
 These files should be copied to the src folder of the project from the demo project provided by the manufacturer.
 
-<p align="right">(<a href="#indexerd-md-top">back to top</a>)</p>
+<div>
+    <a href="#about-etherdll">
+        <img align="right" width="40" height="40" src="./doc/images/up-arrow.svg" title="Back to the top of this page">
+    </a>
+    <br><br>
+</div>
 
 <!-- CONTRIBUTING -->
 # Contributing
@@ -136,7 +140,12 @@ Don't forget to give the project a star! Thanks again!
 4. Push to the Branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
-<p align="right">(<a href="#indexerd-md-top">back to top</a>)</p>
+<div>
+    <a href="#about-etherdll">
+        <img align="right" width="40" height="40" src="./doc/images/up-arrow.svg" title="Back to the top of this page">
+    </a>
+    <br><br>
+</div>
 
 <!-- LICENSE -->
 # License
@@ -154,8 +163,18 @@ Further reading material can be found at:
 - <https://opensource.stackexchange.com/questions/9805/can-i-license-my-project-with-an-open-source-license-but-disallow-commercial-use>
 - <https://opensource.stackexchange.com/questions/21/whats-the-difference-between-permissive-and-copyleft-licenses/42#42>
 
-<p align="right">(<a href="#indexerd-md-top">back to top</a>)</p>
+<div>
+    <a href="#about-etherdll">
+        <img align="right" width="40" height="40" src="./doc/images/up-arrow.svg" title="Back to the top of this page">
+    </a>
+    <br><br>
+</div>
 
 # Additional References
 
-<p align="right">(<a href="#indexerd-md-top">back to top</a>)</p>
+<div>
+    <a href="#about-etherdll">
+        <img align="right" width="40" height="40" src="./doc/images/up-arrow.svg" title="Back to the top of this page">
+    </a>
+    <br><br>
+</div>
