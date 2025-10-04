@@ -27,9 +27,9 @@
         }
     },
     "log": {
-      "console": {
-        "level": "debug"
-      },
+        "console": {
+            "level": "debug"
+        },
         "file": {
             "filename": "EtherDLL.log",
             "level": "trace"
@@ -38,26 +38,27 @@
     },
     "service": {
         "Queue": {
-            "ClientId": "ID",
+            "clientId": "ID",
             "arguments": "ARGS",
-            "client_ip": "REQUEST_SOURCE",
+            "clientIP": "REQUEST_SOURCE",
             "commandCode": "CODE",
             "commandName": "COMMAND",
-            "queue_id": "QID",
-            "server_id": "SID"
+            "message": "MSG",
+            "queueId": "QID",
+            "serverId": "SID"
         },
         "buffer": 4096,
-        "buffer_ttl_period": 5,
-        "msg_keys": {
+        "bufferTTLPeriod": 5,
+        "msgKeys": {
             "ack": "ACK",
             "end": "\r\n",
             "nack": "NACK",
             "ping": "PING"
         },
-        "ping_enable": true,
-        "ping_period": 10,
+        "pingEnable": true,
+        "pingPeriod": 10,
         "port": 30000,
-        "sleep_ms": 100,
-        "timeout_s": 10
+        "sleepMs": 100,
+        "timeoutS": 10
     }
 }
