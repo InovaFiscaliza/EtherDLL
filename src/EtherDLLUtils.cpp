@@ -151,7 +151,7 @@ std::string COleTimeToIsoStr(double oleTime) {
  * @return std::vector<BYTE>: Decoded binary data
  * @throws NO EXCEPTION HANDLING
 **/
-std::string base64_encode(BYTE const* buf, unsigned int bufLen) {
+std::string base64Encode(BYTE const* buf, unsigned int bufLen) {
     std::string ret;
     int i = 0;
     int j = 0;
@@ -167,7 +167,7 @@ std::string base64_encode(BYTE const* buf, unsigned int bufLen) {
             char_array_4[3] = char_array_3[2] & 0x3f;
 
             for (i = 0; (i < 4); i++)
-                ret += base64_chars[char_array_4[i]];
+                ret += BASE64_CHARS[char_array_4[i]];
             i = 0;
         }
     }
@@ -183,7 +183,7 @@ std::string base64_encode(BYTE const* buf, unsigned int bufLen) {
         char_array_4[3] = char_array_3[2] & 0x3f;
 
         for (j = 0; (j < i + 1); j++)
-            ret += base64_chars[char_array_4[j]];
+            ret += BASE64_CHARS[char_array_4[j]];
 
         while ((i++ < 3))
             ret += '=';

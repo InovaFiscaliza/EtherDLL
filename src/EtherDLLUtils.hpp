@@ -20,28 +20,428 @@
 // Include core EtherDLL libraries
 
 // Include project libraries
+#include <nlohmann/json.hpp>
 
 // Include general C++ libraries
 #include <sstream>
 #include <fstream>
 #include <string>
 #include <vector>
+#include <functional>
 
 // Constants
-static const std::string base64_chars =
+
+// Base64 characters
+static const std::string BASE64_CHARS =
 "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 "abcdefghijklmnopqrstuvwxyz"
 "0123456789+/";
 
+constexpr std::size_t HASH_STRING = 193495088;   // djb2 hash for string "string"
+constexpr std::size_t HASH_NUMBER = 695403081;   // djb2 hash for string "number"
+constexpr std::size_t HASH_INTEGER = 2294655730; // djb2 hash for string "integer"
+constexpr std::size_t HASH_BOOLEAN = 695403073;  // djb2 hash for string "boolean"
+constexpr std::size_t HASH_ARRAY = 695403079;    // djb2 hash for string "array"
+constexpr std::size_t HASH_OBJECT = 2294655732;  // djb2 hash for string "object"
+
+// For convenience
+using json = nlohmann::json;
+
 // Definitions
 typedef unsigned char BYTE;
 
+// ----------------------------------------------------------------------
+
+// Compute djb2 hash of string
+constexpr std::size_t stringToHash(const char* str, std::size_t hash = 5381) {
+    return (*str == 0) ? hash : stringToHash(str + 1, ((hash << 5) + hash) + *str);
+}
+
+// Class to validate JSON objects against expected schema
+class JsonValidator {
+public:
+    struct ValidationError {
+        std::string path;
+        std::string message;
+
+        std::string toString() const {
+            return path + ": " + message;
+        }
+    };
+
+private:
+    std::vector<ValidationError> errors;
+    std::string currentPath;
+
+    // ----------------------------------------------------------------------
+	/** @brief Push a new segment to the current JSON path
+     * @param segment The JSON path segment to add
+	 * @return void
+	 * @throws NO EXCEPTION HANDLING
+    **/
+    void pushPath(const std::string& segment) {
+        if (currentPath.empty()) {
+            currentPath = segment;
+        }
+        else {
+            currentPath += "." + segment;
+        }
+    }
+
+    // ----------------------------------------------------------------------
+    /** @brief Pop the last segment from the current JSON path
+	 * @param None
+     * @return void
+     * @throws NO EXCEPTION HANDLING
+    **/
+    void popPath() {
+        auto pos = currentPath.find_last_of('.');
+        if (pos != std::string::npos) {
+            currentPath = currentPath.substr(0, pos);
+        }
+        else {
+            currentPath.clear();
+        }
+    }
+
+public:
+
+    // ----------------------------------------------------------------------
+    /** @brief Add a validation error with the current JSON path
+	 * @param message The error message to add
+     * @return void
+     * @throws NO EXCEPTION HANDLING
+    **/
+    void addError(const std::string& message) {
+        errors.push_back({ currentPath, message });
+    }
+
+    // ----------------------------------------------------------------------
+    /** @brief Clear previous validation results
+	 * @param None
+     * @return void
+     * @throws NO EXCEPTION HANDLING
+    **/
+    void reset() {
+        errors.clear();
+        currentPath.clear();
+    }
+
+    // ----------------------------------------------------------------------
+    /** @brief Get validation error vector
+     * @param None
+     * @return const std::vector<ValidationError>&
+     * @throws NO EXCEPTION HANDLING
+    **/
+    const std::vector<ValidationError>& getErrors() const {
+        return errors;
+    }
+
+    // ----------------------------------------------------------------------
+    /** @brief Check if validation passed
+     * @param None
+     * @return bool
+     * @throws NO EXCEPTION HANDLING
+    **/
+    bool isValid() const {
+        return errors.empty();
+    }
+
+    // ----------------------------------------------------------------------
+    /** @brief Get formatted error string
+     * @param None
+     * @return std::string
+     * @throws NO EXCEPTION HANDLING
+    **/
+    std::string getErrorString() const {
+        if (errors.empty()) return "";
+
+        std::stringstream ss;
+        for (size_t i = 0; i < errors.size(); ++i) {
+            if (i > 0) ss << "; ";
+            ss << errors[i].toString();
+        }
+        return ss.str();
+    }
+
+    // ----------------------------------------------------------------------
+	/** @brief Test if a required field exists in the JSON object
+	 * Add a validation error if the field is missing
+	 * @param obj The JSON object to validate
+	 * @param fieldName The name of the required field
+     * @return JsonValidator&
+     * @throws NO EXCEPTION HANDLING
+    **/
+    JsonValidator& requireField(const json& obj, const std::string& fieldName) {
+        pushPath(fieldName);
+        if (!obj.contains(fieldName)) {
+            addError(fieldName + "field is required");
+        }
+        popPath();
+        return *this;
+    }
+
+    // ----------------------------------------------------------------------
+	/** @brief Test if a field is of the expected type
+     * Add a validation error if the field is of the wrong type
+     * @param obj The JSON object to validate
+     * @param fieldName The name of the field to check
+     * @param typeName The expected type of the field
+     * @return JsonValidator&
+     * @throws NO EXCEPTION HANDLING
+    **/
+    JsonValidator& requireType(const json& obj, const std::string& fieldName, const std::string& typeName) {
+        pushPath(fieldName);
+        if (obj.contains(fieldName)) {
+            bool valid = false;
+            const auto& field = obj[fieldName];
+            
+            switch (stringToHash(typeName.c_str())) {
+                case HASH_STRING: {
+                    valid = field.is_string();
+                    break;
+                }
+                case HASH_NUMBER: {
+                    valid = field.is_number();
+                    break;
+                }
+                case HASH_INTEGER: {
+                    valid = field.is_number_integer();
+                    break;
+                }
+                case HASH_BOOLEAN: {
+                    valid = field.is_boolean();
+                    break;
+                }
+                case HASH_ARRAY: {
+                    valid = field.is_array();
+                    break;
+                }
+                case HASH_OBJECT: {
+                    valid = field.is_object();
+                    break;
+                }
+                default: {
+                    valid = false;
+                    break;
+                }
+            }
+
+            if (!valid) {
+                addError(fieldName + " must be of type " + typeName);
+            }
+        }
+        popPath();
+        return *this;
+    }
+
+    
+    template<typename T>
+    // ----------------------------------------------------------------------
+	/** @brief Test if a required numeric field is within a specified range
+     * @tparam T The numeric type
+     * @param obj The JSON object to validate
+     * @param fieldName The name of the field to check
+     * @param typeName The expected type of the field
+     * @param minValue The minimum allowed value
+     * @param maxValue The maximum allowed value
+     * @return JsonValidator&
+     * @throws NO EXCEPTION HANDLING
+    **/
+    JsonValidator& requireNumericRange(const json& obj, const std::string& fieldName,
+        const std::string& typeName, T minValue, T maxValue) {
+        pushPath(fieldName);
+        if (!obj.contains(fieldName)) {
+            addError(fieldName + " field is required");
+        }
+        else {
+            const auto& field = obj[fieldName];
+            bool typeValid = false;
+
+            if (typeName == "number" && field.is_number()) typeValid = true;
+            else if (typeName == "integer" && field.is_number_integer()) typeValid = true;
+
+            if (!typeValid) {
+                addError(fieldName + " must be of type " + typeName);
+            }
+            else {
+                T value = field.get<T>();
+                if (value < minValue || value > maxValue) {
+                    addError(fieldName + " must be between " + std::to_string(minValue) +
+                        " and " + std::to_string(maxValue));
+                }
+            }
+        }
+        popPath();
+        return *this;
+    }
+
+    // ----------------------------------------------------------------------
+	/** @brief Test if a required integer field is within a specified range
+     * @param obj The JSON object to validate
+     * @param fieldName The name of the field to check
+     * @param minValue The minimum allowed value
+     * @param maxValue The maximum allowed value
+     * @return JsonValidator&
+     * @throws NO EXCEPTION HANDLING
+    **/
+    JsonValidator& requireIntegerRange(const json& obj, const std::string& fieldName,
+        int minValue, int maxValue) {
+        return requireNumericRange(obj, fieldName, "integer", minValue, maxValue);
+    }
+
+    // ----------------------------------------------------------------------
+	/** @brief Test if a required number field is within a specified range
+     * @param obj The JSON object to validate
+     * @param fieldName The name of the field to check
+     * @param minValue The minimum allowed value
+     * @param maxValue The maximum allowed value
+     * @return JsonValidator&
+     * @throws NO EXCEPTION HANDLING
+    **/
+    JsonValidator& requireNumberRange(const json& obj, const std::string& fieldName,
+        double minValue, double maxValue) {
+        return requireNumericRange(obj, fieldName, "number", minValue, maxValue);
+    }
+
+    // ----------------------------------------------------------------------
+	/** @brief Test if an optional numeric field is within a specified range
+     * @tparam T The numeric type
+     * @param obj The JSON object to validate
+     * @param fieldName The name of the field to check
+     * @param typeName The expected type of the field
+     * @param minValue The minimum allowed value
+     * @param maxValue The maximum allowed value
+     * @return JsonValidator&
+     * @throws NO EXCEPTION HANDLING
+    **/
+    template<typename T>
+    JsonValidator& optionalNumericRange(const json& obj, const std::string& fieldName,
+        const std::string& typeName, T minValue, T maxValue) {
+        if (obj.contains(fieldName) && !obj[fieldName].is_null()) {
+            requireNumericRange(obj, fieldName, typeName, minValue, maxValue);
+        }
+        return *this;
+    }
+
+    // ----------------------------------------------------------------------
+    /** @brief Test if an optional integer field is within a specified range
+     * @param obj The JSON object to validate
+     * @param fieldName The name of the field to check
+     * @param minValue The minimum allowed value
+     * @param maxValue The maximum allowed value
+     * @return JsonValidator&
+	 * @throws NO EXCEPTION HANDLING
+    **/
+    JsonValidator& optionalIntegerRange(const json& obj, const std::string& fieldName,
+        int minValue, int maxValue) {
+        return optionalNumericRange(obj, fieldName, "integer", minValue, maxValue);
+    }
+
+	// ----------------------------------------------------------------------
+    /** @brief Test if an optional number field is within a specified range
+     * @param obj The JSON object to validate
+     * @param fieldName The name of the field to check
+     * @param minValue The minimum allowed value
+     * @param maxValue The maximum allowed value
+	 * @return JsonValidator&
+     * @throws NO EXCEPTION HANDLING
+    **/
+    JsonValidator& optionalNumberRange(const json& obj, const std::string& fieldName,
+        double minValue, double maxValue) {
+        return optionalNumericRange(obj, fieldName, "number", minValue, maxValue);
+    }
+
+	// ----------------------------------------------------------------------
+    /** @brief Test if a required array field exists and meets minimum size
+     * @param obj The JSON object to validate
+     * @param fieldName The name of the array field to check
+     * @param minItems The minimum number of items required in the array
+     * @return JsonValidator&
+	 * @throws NO EXCEPTION HANDLING
+    **/
+    JsonValidator& requireArray(const json& obj, const std::string& fieldName, size_t minItems = 0) {
+        pushPath(fieldName);
+        if (!obj.contains(fieldName)) {
+            addError(fieldName + " is a required array");
+        }
+        else if (!obj[fieldName].is_array()) {
+            addError(fieldName + " must be an array");
+        }
+        else if (obj[fieldName].size() < minItems) {
+            addError(fieldName + " must have at least " + std::to_string(minItems) + " items");
+        }
+        popPath();
+        return *this;
+    }
+
+	// ----------------------------------------------------------------------
+    /** @brief Test if an optional field is of the expected type
+     * Add a validation error if the field is of the wrong type
+     * @param obj The JSON object to validate
+     * @param fieldName The name of the field to check
+     * @param typeName The expected type of the field
+     * @return JsonValidator&
+	 * @throws NO EXCEPTION HANDLING
+    **/
+    JsonValidator& optionalType(const json& obj, const std::string& fieldName, const std::string& typeName) {
+        if (obj.contains(fieldName) && !obj[fieldName].is_null()) {
+            requireType(obj, fieldName, typeName);
+        }
+        return *this;
+    }
+
+	// ----------------------------------------------------------------------
+    /** @brief Validate each item in an array using a custom validator function
+     * @param obj The JSON object to validate
+     * @param fieldName The name of the array field to check
+     * @param itemValidator A function that takes a JSON item, a JsonValidator reference, and the item index
+     *                      to perform custom validation on each array item
+	 * @return JsonValidator&
+     * @throws NO EXCEPTION HANDLING
+    **/
+    JsonValidator& validateArrayItems(const json& obj, const std::string& fieldName,
+        std::function<void(const json&, JsonValidator&, size_t)> itemValidator) {
+        if (obj.contains(fieldName) && obj[fieldName].is_array()) {
+            const auto& arr = obj[fieldName];
+            for (size_t i = 0; i < arr.size(); ++i) {
+                pushPath(fieldName + "[" + std::to_string(i) + "]");
+                itemValidator(arr[i], *this, i);
+                popPath();
+            }
+        }
+        return *this;
+    }
+
+	// ----------------------------------------------------------------------
+    /** @brief Apply a custom validation function to a field if it exists
+     * @param obj The JSON object to validate
+     * @param fieldName The name of the field to check
+     * @param validator A function that takes a JSON value and returns true if valid, false otherwise
+	 * @param errorMessage The error message to add if validation fails
+	 * @return JsonValidator&
+	 * @throws NO EXCEPTION HANDLING
+    **/
+    JsonValidator& custom(const json& obj, const std::string& fieldName,
+        std::function<bool(const json&)> validator,
+        const std::string& errorMessage) {
+        pushPath(fieldName);
+        if (obj.contains(fieldName)) {
+            if (!validator(obj[fieldName])) {
+                addError(errorMessage);
+            }
+        }
+        popPath();
+        return *this;
+    }
+};
+
+// ----------------------------------------------------------------------
 // Function prototypes
 std::vector<std::string> split(std::string s, std::string delimiter);
 std::wstring stringToWString(const std::string& str);
 unsigned long stringToUnsignedLong(std::string str);
 bool stringToBool(std::string str);
 std::string COleTimeToIsoStr(double oleTime);
-std::string base64_encode(BYTE const* buf, unsigned int bufLen);
-std::vector<BYTE> base64_decode(std::string const&);
+std::string base64Encode(BYTE const* buf, unsigned int bufLen);
 std::string wchartToUtf8String(const wchar_t* wstr, size_t len);
