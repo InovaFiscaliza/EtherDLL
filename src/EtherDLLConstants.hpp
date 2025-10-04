@@ -124,27 +124,27 @@ namespace edll {
 				static constexpr int MAX_VALUE = 1000000;
 			};
 			struct Timeout {
-				static constexpr const char* KEY = "timeout_s";
+				static constexpr const char* KEY = "timeoutS";
 				static constexpr int VALUE = 10;
 			};
 			struct Sleep {
-				static constexpr const char* KEY = "sleep_ms";
+				static constexpr const char* KEY = "sleepMs";
 				static constexpr int VALUE = 100;
 			};
 			struct BufferTTL {
-				static constexpr const char* KEY = "buffer_ttl_period";
+				static constexpr const char* KEY = "bufferTTLPeriod";
 				static constexpr int VALUE = 5;
 			};
 			struct PingPeriod {
-				static constexpr const char* KEY = "ping_period";
+				static constexpr const char* KEY = "pingPeriod";
 				static constexpr int VALUE = 10;
 			};
 			struct PingEnable {
-				static constexpr const char* KEY = "ping_enable";
+				static constexpr const char* KEY = "pingEnable";
 				static constexpr bool VALUE = true;
 			};
 			struct Msg {
-				static constexpr const char* KEY = "msg_keys";
+				static constexpr const char* KEY = "msgKeys";
 
 				struct End {
 					static constexpr const char* KEY = "end";
@@ -167,22 +167,22 @@ namespace edll {
 				static constexpr const char* KEY = "Queue";
 
 				struct ClientId {
-					static constexpr const char* KEY = "ClientId";
+					static constexpr const char* KEY = "clientId";
 					static constexpr const char* VALUE = "ID";
 					static constexpr int INIT_VALUE = 0;
 				};
 				struct QueueId {
-					static constexpr const char* KEY = "queue_id";
+					static constexpr const char* KEY = "queueId";
 					static constexpr const char* VALUE = "QID";
 					static constexpr int INIT_VALUE = 0;
 				};
 				struct DLLId {
-					static constexpr const char* KEY = "server_id";
+					static constexpr const char* KEY = "serverId";
 					static constexpr const char* VALUE = "SID";
 					static constexpr int INIT_VALUE = 0;
 				};
 				struct ClientIp {
-					static constexpr const char* KEY = "client_ip";
+					static constexpr const char* KEY = "clientIP";
 					static constexpr const char* VALUE = "REQUEST_SOURCE";
 					static constexpr const char* INIT_VALUE = "Not Retrieved";
 				};
@@ -200,6 +200,11 @@ namespace edll {
 					static constexpr const char* KEY = "arguments";
 					static constexpr const char* VALUE = "ARGS";
 					static inline const json INIT_VALUE = json::object();
+				};
+				struct Message {
+					static constexpr const char* KEY = "message";
+					static constexpr const char* VALUE = "MSG";
+					static constexpr const char* INIT_VALUE = "No message";
 				};
 			};
 		};
@@ -237,6 +242,7 @@ json buildCoreDefaultConfigJson(json default_config = json::object()) {
 	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::Queue::KEY][edll::DefaultConfig::Service::Queue::CommandCode::KEY] = edll::DefaultConfig::Service::Queue::CommandCode::VALUE;
 	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::Queue::KEY][edll::DefaultConfig::Service::Queue::CommandName::KEY] = edll::DefaultConfig::Service::Queue::CommandName::VALUE;
 	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::Queue::KEY][edll::DefaultConfig::Service::Queue::Arguments::KEY] = edll::DefaultConfig::Service::Queue::Arguments::VALUE;
+	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::Queue::KEY][edll::DefaultConfig::Service::Queue::Message::KEY] = edll::DefaultConfig::Service::Queue::Message::VALUE;
 
 	return default_config;
 }
