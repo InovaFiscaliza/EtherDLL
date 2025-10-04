@@ -362,6 +362,9 @@
     <ClInclude Include="EtherDLLClient.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="dllSpecific\scorpio\etherDLLValidation.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="EtherDLL.cpp">

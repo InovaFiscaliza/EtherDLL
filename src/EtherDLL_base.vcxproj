@@ -104,6 +104,7 @@
     <ClInclude Include="dllSpecific\scorpio\etherDLLRequest.hpp" />
     <ClInclude Include="dllSpecific\scorpio\etherDLLResponse.hpp" />
     <ClInclude Include="dllSpecific\scorpio\etherDLLCodes.hpp" />
+    <ClInclude Include="dllSpecific\scorpio\etherDLLValidation.hpp" />
     <ClInclude Include="dllSpecific\scorpio\MoreEquipCtrlMsg.h" />
     <ClInclude Include="dllSpecific\scorpio\OccupSpectConnect.h" />
     <ClInclude Include="dllSpecific\scorpio\stdafx.h" />
