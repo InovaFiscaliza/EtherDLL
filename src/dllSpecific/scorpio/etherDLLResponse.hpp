@@ -487,7 +487,7 @@ json processPanResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody
     jsonObj["spectrum"]["frequencyUnit"] = "MHz";
     jsonObj["spectrum"]["binSize"] = spectrumInfo.binSize;
     jsonObj["spectrum"]["binSizeUnit"] = "Hz";
-    jsonObj["spectrum"]["sweepData"] = base64_encode(
+    jsonObj["spectrum"]["sweepData"] = base64Encode(
         parsedBinData(PanResponse->binData, PanResponse->numBins),
         static_cast<unsigned int>(sweepByteLen)
     );
