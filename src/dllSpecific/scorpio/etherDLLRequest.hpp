@@ -28,10 +28,12 @@
 // Include DLL specific libraries
 #include "etherDLLCodes.hpp"
 #include "etherDLLInit.hpp"
+#include "EtherDLLValidation.hpp"
 
 // Include core EtherDLL libraries
 #include "EtherDLLClient.hpp"
 #include "EtherDLLConstants.hpp"
+#include "EtherDLLUtils.hpp"
 
 // Include project libraries
 #include <nlohmann/json.hpp>
@@ -91,9 +93,9 @@ SAudioParams jsonToSAudioParams(nlohmann::json jsonObj) {
 SGetPanParams jsonToSGetPanParams(nlohmann::json jsonObj) {
 	SGetPanParams structSO{};
 
-	if (jsonObj["bandwidth"].is_null() == false) {
-		structSO.bandwidth = Units::Frequency(jsonObj["bandwidth"].get<unsigned long>()).GetRaw();
-	}
+	
+	structSO.bandwidth = Units::Frequency(jsonObj["bandwidth"].get<unsigned long>()).GetRaw();
+	
 	if (jsonObj["freq"].is_null() == false) {
 		structSO.freq = Units::Frequency(jsonObj["freq"].get<unsigned long>()).GetRaw();
 	}
@@ -402,62 +404,6 @@ SAVDReqData* jsonToSAVDReqData(nlohmann::json jsonObj) {
 	return avdReqMsg;
 }
 
-
-// ----------------------------------------------------------------------
-/**
-* @brief Test JSON object contains the required information is present
-*
-* @param jsonObj: JSON object containing the parameters
-* @param msgType: Message type to be validated (see ECSMSDllMsgType enum)
-* @return nlohmann::json: 
-* @throws NO EXCEPTION HANDLING
-**/
-std::string validateRequest(json request, ECSMSDllMsgType msgType)
-{
-	std::string msg = "";
-
-	switch (msgType)
-	{
-	case ECSMSDllMsgType::GET_OCCUPANCYDF:
-		// fallthrough intended to also validate GET_OCCUPANCY fields
-	case ECSMSDllMsgType::GET_OCCUPANCY:
-		if (request["band"].is_null() == true || request["band"].is_array() == false || request["band"].size() == 0) {
-			msg += "SOccupReqData: 'band' field is missing or empty in the JSON object.";
-		}
-		break;
-	case ECSMSDllMsgType::GET_AVD:
-		break;
-	case ECSMSDllMsgType::GET_MEAS:
-		break;
-	case ECSMSDllMsgType::GET_TASK_STATUS:
-		break;
-	case ECSMSDllMsgType::GET_TASK_STATE:
-		break;
-	case ECSMSDllMsgType::TASK_SUSPEND:
-		break;
-	case ECSMSDllMsgType::TASK_RESUME:
-		break;
-	case ECSMSDllMsgType::TASK_TERMINATE:
-		break;
-	case ECSMSDllMsgType::GET_BIST:
-		break;
-	case ECSMSDllMsgType::SET_AUDIO_PARAMS:
-		break;
-	case ECSMSDllMsgType::FREE_AUDIO_CHANNEL:
-		break;
-	case ECSMSDllMsgType::SET_PAN_PARAMS:
-		break;
-	case ECSMSDllMsgType::GET_PAN:
-		break;
-	default:
-		msg += "Message type not recognized.";
-		break;
-	}
-
-	loggerPtr->debug(msg);
-	return msg;
-}
-
 // ----------------------------------------------------------------------
 /**
  * @brief Call the appropriate DLL function based on the request in JSON format
@@ -465,12 +411,13 @@ std::string validateRequest(json request, ECSMSDllMsgType msgType)
  * Include the identification of the funciton based on request type
  * conversion from JSON to the appropriate struct for each function call.
  * 
- * @param jsonObj: JSON object containing the parameters
+ * @param DLLConnID: Connection ID obtained from the DLL during initialization
+ * @param request: JSON object containing the parameters
  * @param msgType: Message type to be validated (see ECSMSDllMsgType enum)
- * @return std::string: Empty if all required fields are present, otherwise a string describing the missing fields
+ * @return void
  * @throws NO EXCEPTION HANDLING
 **/
-void DLLFunctionCall(DLLConnectionData DLLConnID, json request)
+void DLLFunctionCall(DLLConnectionData DLLConnID, json request, unsigned long msgType)
 {
 	ERetCode errCode = ERetCode::API_SUCCESS;
 
@@ -478,12 +425,9 @@ void DLLFunctionCall(DLLConnectionData DLLConnID, json request)
 	
 	unsigned long requestID = request.value(QueueObj::QueueId::VALUE, QueueObj::QueueId::INIT_VALUE);
 
-	unsigned long cmd = request.value(QueueObj::CommandCode::VALUE, QueueObj::CommandCode::INIT_VALUE);
 	json reqArguments = request.value(QueueObj::Arguments::VALUE, json::object());
 
-	validateRequest(request, (ECSMSDllMsgType)cmd);
-
-	switch (cmd) {
+	switch (msgType) {
 		case ECSMSDllMsgType::GET_OCCUPANCY:
 		{
 			SOccupReqData* occupDFReqMsg = jsonToSOccupReqData(reqArguments);
@@ -612,16 +556,18 @@ void DLLFunctionCall(DLLConnectionData DLLConnID, json request)
  * @param logger: spdlog logger object for logging messages
  * @throws NO EXCEPTION HANDLING
 */
-void processRequestQueue(DLLConnectionData DLLConnID, MessageQueue& request, edll::INT_CODE& interruptionCode)
+void processRequestQueue(DLLConnectionData DLLConnID, MessageQueue& request, MessageQueue& response, edll::INT_CODE& interruptionCode)
 {
 	while (interruptionCode == edll::Code::RUNNING)
 	{
 		json oneRequest = request.waitAndPop(interruptionCode);
 
-		if (oneRequest.is_null() == false) {
-			DLLFunctionCall(DLLConnID, oneRequest);
+		unsigned long cmd = oneRequest.value(QueueObj::CommandCode::VALUE, QueueObj::CommandCode::INIT_VALUE);
+
+		if (!validRequest(oneRequest, cmd, response)) {
+			continue;
 		}
 		
+		DLLFunctionCall(DLLConnID, oneRequest, cmd);
 	}
-	
 }
