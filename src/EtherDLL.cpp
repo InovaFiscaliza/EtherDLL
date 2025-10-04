@@ -299,7 +299,7 @@ int main(int argc, char* argv[]) {
 			threadCompletionCV.notify_one();
 			};
 
-		// Start threads with completion signaling
+		// Start threads for each parallel task
 		auto requestComFuture = std::async(std::launch::async, [&]() {
 			logger_ptr->debug("Starting thread to receive client request and populate request queue");
 			clientConn.clientRequestToDLL(request);
@@ -310,13 +310,13 @@ int main(int argc, char* argv[]) {
 
 		auto requestProcFuture = std::async(std::launch::async, [&]() {
 			logger_ptr->debug("Starting thread that send requests from queue to DLL");
-			processRequestQueue(DLLConnID, request, interruptionCode);
+			processRequestQueue(DLLConnID, request, response, interruptionCode);
 			signalCompletion();
 			logger_ptr->debug("Finished thread that send requests from queue to DLL");
 			return true;
 			});
 
-		auto responseConFuture = std::async(std::launch::async, [&]() {
+		auto responseComFuture = std::async(std::launch::async, [&]() {
 			logger_ptr->debug("Starting thread that sends DLL response to client");
 			clientConn.DLLResponseToClient(response);
 			signalCompletion();
@@ -324,6 +324,15 @@ int main(int argc, char* argv[]) {
 			return true;
 			});
 
+		auto pingComFuture = std::async(std::launch::async, [&]() {
+			logger_ptr->debug("Starting thread that send ping messages to test client connection");
+			clientConn.pingClient();
+			signalCompletion();
+			logger_ptr->debug("Finished thread that send ping messages to test client connection");
+			return true;
+			});
+
+		// Wait for any thread to complete or for an interruption signal
 		{
 			std::unique_lock<std::mutex> lock(threadCompletionMutex);
 			threadCompletionCV.wait(lock, [&]() {
@@ -333,19 +342,40 @@ int main(int argc, char* argv[]) {
 
 		logger_ptr->info("Service interrupted");
 
-		// Clean up
+
+		std::vector<std::future<bool>*> futures = {
+			&requestComFuture, &requestProcFuture,
+			&responseComFuture, &pingComFuture
+		};
+
+		// Check each future for exceptions
+		for (auto* future : futures) {
+			if (future->valid()) {
+				try {
+					if (future->wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
+						future->get(); // Consume any exceptions
+					}
+				}
+				catch (const std::exception& e) {
+					logger_ptr->warn("Thread exception during cleanup: {}", e.what());
+				}
+			}
+		}
+
+		// Close client connection if still open
 		if (!clientConn.isConnected()) {
 			logger_ptr->info("Client disconnected.");
 		}
-
-		clientConn.closeConnection();
+		else
+		{
+			clientConn.closeConnection();
+		}
 	}
 
-	/* Close the connection
 	if (!disconnectAPI(DLLConnID, *logger_ptr)) {
 		logger_ptr->error("Failed to disconnect from station.");
 	}
-	*/
+
 	logger_ptr->info("Service stopped.");
 	logger_ptr->flush();
 

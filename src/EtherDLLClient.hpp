@@ -221,6 +221,8 @@ private:
 
 	std::string idStr = config[service::KEY][service::Queue::KEY][service::Queue::ClientId::KEY].get<std::string>();
 
+	std::chrono::steady_clock::time_point lastClientMsgTime = std::chrono::steady_clock::now();
+
 public:
 	// ----------------------------------------------------------------------
 	/** @brief Establish a connection with a client
@@ -362,7 +364,6 @@ public:
 	 * ACK will contain the message ID if available, NACK will contain the length of the invalid message.
 	 * If no message ID is provided by the client, a sequential number will be generated and returned in the ACK message.
 	 * The client provided or generated message ID will be used to track responses from the DLL back to the client.
-	 * If no data is received, a PING message will be sent periodically to check if the connection is still alive.
 	 *
 	 * @param clientSocket: Socket connected to the client
 	 * @param config: JSON object containing configuration
@@ -443,6 +444,10 @@ public:
 					loggerPtr->info("Connection with address" + std::to_string(clientSocket) + " lost.");
 					return;
 				}
+				else {
+					loggerPtr->debug("Sent ACK/NACK message to client: " + std::to_string(iResult) + " bytes.");
+					lastClientMsgTime = std::chrono::steady_clock::now();
+				}
 			}
 			else {
 				int error = WSAGetLastError();
@@ -464,7 +469,6 @@ public:
 					loggerPtr->error("Client connection error: " + std::to_string(error));
 					return;
 				}
-
 			}
 		}
 	}
@@ -492,42 +496,51 @@ public:
 
 		int iResult = 0;
 
-		// TODO: Improve this loop to use hold the thread until there is data to send or interruption is signaled.
-		// TODO: Move the ping timer to a separate thread to avoid delays in sending messages when there is no data to send.
-		// TODO: Implement ping reset to avoid sending pings when there is data to send.
-		while (interruptionCode == edll::Code::RUNNING) {
-			if (!response.empty()) {
-				std::string message = response.pop().dump() + msgEndStr;
+		while (interruptionCode == edll::Code::RUNNING)
+		{
+			json oneResponse = response.waitAndPop(interruptionCode);
 
-				iResult = send(clientSocket, message.c_str(), static_cast<int>(message.length()), 0);
+			std::string message = oneResponse.dump() + msgEndStr;
+
+			iResult = send(clientSocket, message.c_str(), static_cast<int>(message.length()), 0);
+			if (iResult == SOCKET_ERROR) {
+				loggerPtr->warn("Data send failed. EC:" + std::to_string(WSAGetLastError()));
+			}
+			else {
+				loggerPtr->debug("Sent message to client: " + message);
+				lastClientMsgTime = std::chrono::steady_clock::now();
+			}
+		}
+	}
+
+	// ----------------------------------------------------------------------
+	/** @brief Ping the client periodically to check if the connection is still alive
+	*
+	* This function will lock the thread. Must be run in a separate thread.
+	* PING message will contain the current timestamp in milliseconds since epoch.
+	*
+	* @param None
+	* @return void
+	* @throws NO EXCEPTION HANDLING
+	*/
+	void pingClient()
+	{
+		int pingPeriod = config[service::PingPeriod::KEY].get<int>();
+		int iResult = 0;
+
+		while (interruptionCode == edll::Code::RUNNING) {
+			auto now = std::chrono::steady_clock::now();
+			if (std::chrono::duration_cast<std::chrono::milliseconds>(now - lastClientMsgTime).count() > pingPeriod) {
+		
+				std::string ping = pingStr + std::to_string(now.time_since_epoch().count()) + msgJsonEndStr;
+				iResult = send(clientSocket, ping.c_str(), ping.length(), 0);
 				if (iResult == SOCKET_ERROR) {
-					loggerPtr->warn("Data send failed. EC:" + std::to_string(WSAGetLastError()));
+					loggerPtr->warn("Failed sending PING message. EC:" + std::to_string(WSAGetLastError()));
+					loggerPtr->info("Connection with address" + std::to_string(clientSocket) + " lost.");
 					return;
 				}
 			}
-			else {
-				if (pingPeriod == 0 && pingEnable) {
-					// test if the connection is still alive
-					auto now = std::chrono::duration_cast<std::chrono::milliseconds>(
-						std::chrono::system_clock::now().time_since_epoch()).count();
-					std::string ping = pingStr + std::to_string(now) + msgJsonEndStr;
-
-					iResult = send(clientSocket, ping.c_str(), ping.length(), 0);
-
-					if (iResult == SOCKET_ERROR) {
-						loggerPtr->warn("PING send failed. EC:" + std::to_string(WSAGetLastError()));
-						loggerPtr->info("Connection with address" + std::to_string(clientSocket) + " lost.");
-						return;
-					}
-
-					loggerPtr->info("Waiting for commands from client...");
-					pingPeriod = pingPeriodInit;
-				}
-				else {
-					pingPeriod--;
-				}
-				std::this_thread::sleep_for(std::chrono::milliseconds(config[service::Sleep::KEY].get<int>()));
-			}
+			std::this_thread::sleep_for(std::chrono::milliseconds(config[service::Sleep::KEY].get<int>()));
 		}
 	}
 
