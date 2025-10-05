@@ -143,6 +143,10 @@ namespace edll {
 				static constexpr const char* KEY = "pingEnable";
 				static constexpr bool VALUE = true;
 			};
+			struct DemoMode {
+				static constexpr const char* KEY = "demoMode";
+				static constexpr bool VALUE = false;
+			};
 			struct Msg {
 				static constexpr const char* KEY = "msgKeys";
 
@@ -163,8 +167,8 @@ namespace edll {
 					static constexpr const char* VALUE = "NACK";
 				};
 			};
-			struct Queue {
-				static constexpr const char* KEY = "Queue";
+			struct TaskKeys {
+				static constexpr const char* KEY = "taskKeys";
 
 				struct ClientId {
 					static constexpr const char* KEY = "clientId";
@@ -231,18 +235,19 @@ json buildCoreDefaultConfigJson(json default_config = json::object()) {
 	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::BufferTTL::KEY] = edll::DefaultConfig::Service::BufferTTL::VALUE;
 	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::PingPeriod::KEY] = edll::DefaultConfig::Service::PingPeriod::VALUE;
 	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::PingEnable::KEY] = edll::DefaultConfig::Service::PingEnable::VALUE;
+	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::DemoMode::KEY] = edll::DefaultConfig::Service::DemoMode::VALUE;
 	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::Msg::KEY][edll::DefaultConfig::Service::Msg::End::KEY] = edll::DefaultConfig::Service::Msg::End::VALUE;
 	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::Msg::KEY][edll::DefaultConfig::Service::Msg::Ping::KEY] = edll::DefaultConfig::Service::Msg::Ping::VALUE;
 	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::Msg::KEY][edll::DefaultConfig::Service::Msg::Ack::KEY] = edll::DefaultConfig::Service::Msg::Ack::VALUE;
 	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::Msg::KEY][edll::DefaultConfig::Service::Msg::Nack::KEY] = edll::DefaultConfig::Service::Msg::Nack::VALUE;
-	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::Queue::KEY][edll::DefaultConfig::Service::Queue::ClientId::KEY] = edll::DefaultConfig::Service::Queue::ClientId::VALUE;
-	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::Queue::KEY][edll::DefaultConfig::Service::Queue::QueueId::KEY] = edll::DefaultConfig::Service::Queue::QueueId::VALUE;
-	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::Queue::KEY][edll::DefaultConfig::Service::Queue::DLLId::KEY] = edll::DefaultConfig::Service::Queue::DLLId::VALUE;
-	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::Queue::KEY][edll::DefaultConfig::Service::Queue::ClientIp::KEY] = edll::DefaultConfig::Service::Queue::ClientIp::VALUE;
-	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::Queue::KEY][edll::DefaultConfig::Service::Queue::CommandCode::KEY] = edll::DefaultConfig::Service::Queue::CommandCode::VALUE;
-	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::Queue::KEY][edll::DefaultConfig::Service::Queue::CommandName::KEY] = edll::DefaultConfig::Service::Queue::CommandName::VALUE;
-	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::Queue::KEY][edll::DefaultConfig::Service::Queue::Arguments::KEY] = edll::DefaultConfig::Service::Queue::Arguments::VALUE;
-	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::Queue::KEY][edll::DefaultConfig::Service::Queue::Message::KEY] = edll::DefaultConfig::Service::Queue::Message::VALUE;
+	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::TaskKeys::KEY][edll::DefaultConfig::Service::TaskKeys::ClientId::KEY] = edll::DefaultConfig::Service::TaskKeys::ClientId::VALUE;
+	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::TaskKeys::KEY][edll::DefaultConfig::Service::TaskKeys::QueueId::KEY] = edll::DefaultConfig::Service::TaskKeys::QueueId::VALUE;
+	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::TaskKeys::KEY][edll::DefaultConfig::Service::TaskKeys::DLLId::KEY] = edll::DefaultConfig::Service::TaskKeys::DLLId::VALUE;
+	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::TaskKeys::KEY][edll::DefaultConfig::Service::TaskKeys::ClientIp::KEY] = edll::DefaultConfig::Service::TaskKeys::ClientIp::VALUE;
+	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::TaskKeys::KEY][edll::DefaultConfig::Service::TaskKeys::CommandCode::KEY] = edll::DefaultConfig::Service::TaskKeys::CommandCode::VALUE;
+	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::TaskKeys::KEY][edll::DefaultConfig::Service::TaskKeys::CommandName::KEY] = edll::DefaultConfig::Service::TaskKeys::CommandName::VALUE;
+	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::TaskKeys::KEY][edll::DefaultConfig::Service::TaskKeys::Arguments::KEY] = edll::DefaultConfig::Service::TaskKeys::Arguments::VALUE;
+	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::TaskKeys::KEY][edll::DefaultConfig::Service::TaskKeys::Message::KEY] = edll::DefaultConfig::Service::TaskKeys::Message::VALUE;
 
 	return default_config;
 }
@@ -369,18 +374,18 @@ bool validServiceParams(json config) {
 		}
 	}
 
-	json queueKeys = service_config.value(service::Queue::KEY, json());
+	json queueKeys = service_config.value(service::TaskKeys::KEY, json());
 	if (msgKeys.is_null()) {
 		loggerPtr->error("Missing 'queue' section in 'service' configuration.");
 		test_result = false;
 	}
-	std::vector<std::string> requiredQueueKeys = { service::Queue::ClientId::KEY,
-													service::Queue::QueueId::KEY,
-													service::Queue::DLLId::KEY,
-													service::Queue::ClientIp::KEY,
-													service::Queue::CommandCode::KEY,
-													service::Queue::CommandName::KEY,
-													service::Queue::Arguments::KEY };
+	std::vector<std::string> requiredQueueKeys = { service::TaskKeys::ClientId::KEY,
+													service::TaskKeys::QueueId::KEY,
+													service::TaskKeys::DLLId::KEY,
+													service::TaskKeys::ClientIp::KEY,
+													service::TaskKeys::CommandCode::KEY,
+													service::TaskKeys::CommandName::KEY,
+													service::TaskKeys::Arguments::KEY };
 	for (const auto& key : requiredQueueKeys) {
 		if (!queueKeys.contains(key) || !queueKeys[key].is_string() || queueKeys[key].get<std::string>().empty()) {
 			loggerPtr->error("Invalid or missing '" + key + "' in 'queue' configuration.");
@@ -388,4 +393,26 @@ bool validServiceParams(json config) {
 		}
 	}
 	return test_result;
+}
+
+
+// ------------------------------------------------------
+/** @brief Build demo data JSON object
+ *
+ * @param  none
+ * @return JSON object containing demo data
+ * @throws NO EXCEPTION HANDLING
+ **/
+json buildDemoData() {
+	json demoData = {
+		{"deviceTime", "2024-01-01T12:00:00Z"},
+		{"status", "OK"},
+		{"measurements", {
+			{"temperature", 25.0},
+			{"pressure", 1013.25},
+			{"humidity", 40.0}
+		}},
+		{"errors", json::array()}
+	};
+	return demoData;
 }

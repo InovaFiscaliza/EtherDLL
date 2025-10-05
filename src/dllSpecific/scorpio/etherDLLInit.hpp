@@ -103,7 +103,7 @@ struct DefaultDLLParam {
 			static constexpr int VALUE = 3303;
 		};
 		struct Timeout {
-			static constexpr const char* KEY = "timeout_s";
+			static constexpr const char* KEY = "timeoutS";
 			static constexpr int VALUE = 10;
 		};
 	};
@@ -356,7 +356,7 @@ bool validDLLConfigParams(const nlohmann::json& config)
 * @return bool: True if connection is successful, false otherwise
 * @throws NO EXCEPTION HANDLING
 */
-bool connectAPI(DLLConnectionData& stationConnID, const nlohmann::json& config, spdlog::logger& logger)
+bool connectAPI(DLLConnectionData& stationConnID, const nlohmann::json& config)
 {
 	std::string message;
 	SScorpioAPIClient station;

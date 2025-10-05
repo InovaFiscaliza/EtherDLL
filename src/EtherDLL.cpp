@@ -234,6 +234,14 @@ static  std::string handleInputArguments(int argc, char* argv[]) {
 */
 int main(int argc, char* argv[]) {
 
+	// Initialize Winsock
+	WSADATA wsaData;
+	int wsaResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
+	if (wsaResult != 0) {
+		std::cerr << "WSAStartup failed with error: " << wsaResult << std::endl;
+		return static_cast<int>(edll::Code::SERVICE_ERROR);
+	}
+
 	std::string configFileName = handleInputArguments(argc, argv);
 
 	json config = readConfigFile(configFileName);
@@ -252,18 +260,13 @@ int main(int argc, char* argv[]) {
 
 	if (!validDLLConfigParams(config)) {
 		logger_ptr->error("Exiting due to invalid DLL specific configuration parameters.");
+		WSACleanup();
 		return static_cast<int>(edll::Code::SERVICE_ERROR);
 	}
 	if (!validServiceParams(config)) {
 		logger_ptr->error("Exiting due to invalid Service configuration parameters.");
+		WSACleanup();
 		return static_cast<int>(edll::Code::SERVICE_ERROR);
-	}
-
-	// Initialize DLL connection
-	DLLConnectionData DLLConnID = DEFAULT_DLL_CONNECTION_DATA;
-	if (!connectAPI(DLLConnID, config, *logger_ptr)) {
-		logger_ptr->error("Exiting since no station was available.");
-		return static_cast<int>(edll::Code::STATION_ERROR);
 	}
 
 	// Add these at the top with other global variables:
@@ -271,16 +274,40 @@ int main(int argc, char* argv[]) {
 	std::condition_variable threadCompletionCV;
 	std::atomic<bool> anyThreadCompleted = false;
 
+
+	DLLConnectionData DLLConnID = DEFAULT_DLL_CONNECTION_DATA;
+	bool waitingAPIConnection = true;
+
+
+	// TODO: Move this to a thread that monitors the connection and tries to reconnect if lost. Allow clients to connect in the meantime and return error messages to clients if not connected to station.
+	while (interruptionCode == edll::Code::RUNNING && waitingAPIConnection)
+	{
+		if (!config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::DemoMode::KEY].get<bool>()) {
+			if (!connectAPI(DLLConnID, config)) {
+				logger_ptr->error("Error establishing DLL connection. Retrying in 5 seconds");
+				std::this_thread::sleep_for(std::chrono::seconds(5));
+				return(edll::Code::STATION_ERROR);
+			}
+			else {
+				waitingAPIConnection = false;
+			}
+		}
+		else {
+			logger_ptr->warn("Starting EtherDLL service in DEMO mode. No connection to station will be attempted.");
+			waitingAPIConnection = false;
+		}
+	}
+
 	while (interruptionCode == edll::Code::RUNNING)
 	{
-		// Inicialise ClientConn object to wait for a client connection
+		// Initialize ClientConn object to wait for a client connection
 		ClientConn clientConn(config, interruptionCode, *logger_ptr);
 
 		if (!clientConn.isConnected()) {
 			if (interruptionCode == edll::Code::RUNNING) {
 				logger_ptr->error("Error establishing client connection. Retrying in 5 seconds");
 				std::this_thread::sleep_for(std::chrono::seconds(5));
-				continue; 
+				continue;
 			}
 			else {
 				break;
@@ -326,7 +353,7 @@ int main(int argc, char* argv[]) {
 
 		auto pingComFuture = std::async(std::launch::async, [&]() {
 			logger_ptr->debug("Starting thread that send ping messages to test client connection");
-			clientConn.pingClient();
+			clientConn.pingClient(response);
 			signalCompletion();
 			logger_ptr->debug("Finished thread that send ping messages to test client connection");
 			return true;
@@ -378,6 +405,9 @@ int main(int argc, char* argv[]) {
 
 	logger_ptr->info("Service stopped.");
 	logger_ptr->flush();
+
+	// Cleanup Winsock
+	WSACleanup();
 
 	return static_cast<int>(interruptionCode);
 }

@@ -1094,8 +1094,8 @@ void OnDataFunc(_In_  unsigned long serverId, _In_ ECSMSDllMsgType respType, _In
         break;
     }
 
-    responseJson[edll::DefaultConfig::Service::Queue::CommandCode::VALUE] = int(respType);
-	responseJson[edll::DefaultConfig::Service::Queue::DLLId::VALUE] = serverId;
+    responseJson[edll::DefaultConfig::Service::TaskKeys::CommandCode::VALUE] = int(respType);
+	responseJson[edll::DefaultConfig::Service::TaskKeys::DLLId::VALUE] = serverId;
 
     response.push(responseJson);
 
@@ -1118,8 +1118,8 @@ void OnErrorFunc(_In_  unsigned long serverId, _In_ const std::wstring& errorMsg
     std::string errorMsgStr(errorMsg.begin(), errorMsg.end());
     errorJson["errorMsg"] = errorMsgStr;
 
-	errorJson[edll::DefaultConfig::Service::Queue::CommandCode::VALUE] = edll::DefaultConfig::Service::Queue::CommandCode::INIT_VALUE;
-    errorJson[edll::DefaultConfig::Service::Queue::DLLId::VALUE] = serverId;
+	errorJson[edll::DefaultConfig::Service::TaskKeys::CommandCode::VALUE] = edll::DefaultConfig::Service::TaskKeys::CommandCode::INIT_VALUE;
+    errorJson[edll::DefaultConfig::Service::TaskKeys::DLLId::VALUE] = serverId;
 
     response.push(errorJson);
 
@@ -1141,8 +1141,8 @@ void OnRealTimeDataFunc(_In_  unsigned long serverId, _In_ ECSMSDllMsgType respT
 
     responseJson = ProcessRealTimeData(respType, data);
 
-    responseJson[edll::DefaultConfig::Service::Queue::CommandCode::VALUE] = int(respType);
-    responseJson[edll::DefaultConfig::Service::Queue::DLLId::VALUE] = serverId;
+    responseJson[edll::DefaultConfig::Service::TaskKeys::CommandCode::VALUE] = int(respType);
+    responseJson[edll::DefaultConfig::Service::TaskKeys::DLLId::VALUE] = serverId;
 
 	//TODO Map client IP and client ID from the request and add to the responseJson
 

@@ -44,7 +44,7 @@
 
 // For convenience
 using json = nlohmann::json;
-using QueueObj = edll::DefaultConfig::Service::Queue;
+using TaskKeys = edll::DefaultConfig::Service::TaskKeys;
 
 // Global variables
 extern spdlog::logger* loggerPtr;
@@ -423,9 +423,9 @@ void DLLFunctionCall(DLLConnectionData DLLConnID, json request, unsigned long ms
 
 	loggerPtr->debug("Processing request: " + request.dump());
 	
-	unsigned long requestID = request.value(QueueObj::QueueId::VALUE, QueueObj::QueueId::INIT_VALUE);
+	unsigned long requestID = request.value(TaskKeys::QueueId::VALUE, TaskKeys::QueueId::INIT_VALUE);
 
-	json reqArguments = request.value(QueueObj::Arguments::VALUE, json::object());
+	json reqArguments = request.value(TaskKeys::Arguments::VALUE, json::object());
 
 	switch (msgType) {
 		case ECSMSDllMsgType::GET_OCCUPANCY:
@@ -528,7 +528,7 @@ void DLLFunctionCall(DLLConnectionData DLLConnID, json request, unsigned long ms
 		}
 	}
 
-	std::string reqName = request.value(QueueObj::CommandName::VALUE, QueueObj::CommandName::INIT_VALUE);
+	std::string reqName = request.value(TaskKeys::CommandName::VALUE, TaskKeys::CommandName::INIT_VALUE);
 	if (errCode != ERetCode::API_SUCCESS)
 	{
 		loggerPtr->error("[" + reqName + "] ERROR. " + ERetCodeToString(errCode));
@@ -562,12 +562,12 @@ void processRequestQueue(DLLConnectionData DLLConnID, MessageQueue& request, Mes
 	{
 		json oneRequest = request.waitAndPop(interruptionCode);
 
-		unsigned long cmd = oneRequest.value(QueueObj::CommandCode::VALUE, QueueObj::CommandCode::INIT_VALUE);
+		unsigned long cmd = oneRequest.value(TaskKeys::CommandCode::VALUE, TaskKeys::CommandCode::INIT_VALUE);
 
 		if (!validRequest(oneRequest, cmd, response)) {
 			continue;
 		}
-		
+
 		DLLFunctionCall(DLLConnID, oneRequest, cmd);
 	}
 }

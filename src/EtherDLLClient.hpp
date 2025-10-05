@@ -77,12 +77,12 @@ public:
 	**/
 	unsigned long push(json item, bool setClientKey = false) {
 
-		using msg = edll::DefaultConfig::Service::Queue;
+		using TaksKeys = edll::DefaultConfig::Service::TaskKeys;
 
 		std::lock_guard<std::mutex> lock(mtx);
-		item[msg::QueueId::VALUE] = messageCount;
+		item[TaksKeys::QueueId::VALUE] = messageCount;
 		if (setClientKey) {
-			item[msg::ClientId::VALUE] = messageCount;
+			item[TaksKeys::ClientId::VALUE] = messageCount;
 		}
 		msgQueue.push(item);
 
@@ -219,7 +219,7 @@ private:
 
 	bool pingEnable = config[service::KEY][service::PingEnable::KEY].get<bool>();
 
-	std::string idStr = config[service::KEY][service::Queue::KEY][service::Queue::ClientId::KEY].get<std::string>();
+	std::string idStr = config[service::KEY][service::TaskKeys::KEY][service::TaskKeys::ClientId::KEY].get<std::string>();
 
 	std::chrono::steady_clock::time_point lastClientMsgTime = std::chrono::steady_clock::now();
 
@@ -341,7 +341,7 @@ public:
 				loggerPtr->debug("Waiting message from client IP: " + clientIP);
 			}
 			else {
-				clientIP = edll::DefaultConfig::Service::Queue::ClientIp::INIT_VALUE;
+				clientIP = edll::DefaultConfig::Service::TaskKeys::ClientIp::INIT_VALUE;
 				loggerPtr->debug("IP address from connected client could not be determined.");
 			}
 
@@ -420,17 +420,17 @@ public:
 					accumulatedData.clear();
 
 					// add client id and queue id to object
-					jsonObj[service::Queue::ClientIp::VALUE] = clientIP;
+					jsonObj[service::TaskKeys::ClientIp::VALUE] = clientIP;
 
 					if (jsonObj.contains(idStr)) {
-						jsonObj[service::Queue::QueueId::VALUE] = request.push(jsonObj, false);
+						jsonObj[service::TaskKeys::QueueId::VALUE] = request.push(jsonObj, false);
 					}
 					else
 					{
 						jsonObj[idStr] = request.push(jsonObj,true);
 
 						// add the queue id to the message for debug/tracking purposes
-						jsonObj[service::Queue::QueueId::VALUE] = jsonObj[idStr];
+						jsonObj[service::TaskKeys::QueueId::VALUE] = jsonObj[idStr];
 					}
 						
 					loggerPtr->debug("Received message ID: " + jsonObj.dump());
@@ -518,19 +518,30 @@ public:
 	*
 	* This function will lock the thread. Must be run in a separate thread.
 	* PING message will contain the current timestamp in milliseconds since epoch.
+	* If DemoMode is enabled in the configuration, it will also send demo data messages periodically.
+	* after the ping has been sent.
 	*
 	* @param None
 	* @return void
 	* @throws NO EXCEPTION HANDLING
 	*/
-	void pingClient()
+	void pingClient(MessageQueue& response)
 	{
-		int pingPeriod = config[service::PingPeriod::KEY].get<int>();
+		int pingPeriod = config[service::KEY][service::PingPeriod::KEY].get<int>();
 		int iResult = 0;
+		bool pinged = false;
 
 		while (interruptionCode == edll::Code::RUNNING) {
 			auto now = std::chrono::steady_clock::now();
-			if (std::chrono::duration_cast<std::chrono::milliseconds>(now - lastClientMsgTime).count() > pingPeriod) {
+
+			if (config[service::KEY][service::DemoMode::KEY].get<bool>()) {
+				if (pinged) {
+					response.push(buildDemoData(), true);
+					pinged = false;
+				}
+			}
+
+			if (std::chrono::duration_cast<std::chrono::milliseconds>(now - lastClientMsgTime).count() > double(pingPeriod)*1000) {
 		
 				std::string ping = pingStr + std::to_string(now.time_since_epoch().count()) + msgJsonEndStr;
 				iResult = send(clientSocket, ping.c_str(), ping.length(), 0);
@@ -538,6 +549,10 @@ public:
 					loggerPtr->warn("Failed sending PING message. EC:" + std::to_string(WSAGetLastError()));
 					loggerPtr->info("Connection with address" + std::to_string(clientSocket) + " lost.");
 					return;
+				}
+				else {
+					loggerPtr->debug("Sent PING message to client: " + std::to_string(iResult) + " bytes.");
+					pinged = true;
 				}
 			}
 			std::this_thread::sleep_for(std::chrono::milliseconds(config[service::Sleep::KEY].get<int>()));
