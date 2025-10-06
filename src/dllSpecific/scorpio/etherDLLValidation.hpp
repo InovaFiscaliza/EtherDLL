@@ -40,6 +40,39 @@ using json = nlohmann::json;
 // Global variables
 extern spdlog::logger* loggerPtr;
 
+// Validation Constants
+const double MIN_FREQ = 20e6;      // Minimum frequency in Hz
+const double MAX_FREQ = 3e9;       // Maximum frequency in Hz
+const double MIN_BANDWIDTH = 500;  // Minimum bandwidth in Hz
+const double MAX_BANDWIDTH = 80e6; // Maximum bandwidth in Hz
+const int MIN_DURATION = 1;        // Minimum duration in seconds
+const int MAX_DURATION = 3600;     // Maximum duration in seconds
+const int MIN_ANT = 1;             // Minimum antenna number
+const int MAX_ANT = 16;            // Maximum antenna number
+const int MIN_DF_CONFIDENCE = 1;      // Minimum DF confidence level
+const int MAX_DF_CONFIDENCE = 360;    // Maximum DF confidence level
+const int MIN_AZIMUTHS = 1;        // Minimum number of azimuth
+const int MAX_AZIMUTHS = 720;      // Maximum number of azimuth
+const int MIN_RECORD_HOLDOFF = 0;  // Minimum record holdoff time
+const int MAX_RECORD_HOLDOFF = 1024; // Maximum record holdoff time
+const int MIN_SCAN_DF_THRESHOLD = 0; // Minimum scan DF threshold
+const int MAX_SCAN_DF_THRESHOLD = 256; // Maximum scan DF threshold
+const int MIN_NUM_BANDS = 1;       // Minimum number of bands
+const int MAX_NUM_BANDS = 1e20;   // Maximum number of bands
+const int MIN_STORAGE_TIME = 1;    // Minimum storage time in ms
+const int MAX_STORAGE_TIME = 3600000; // Maximum storage time in ms
+const int MIN_MEASUREMENT_TIME = 100; // Minimum measurement time in ms
+const int MAX_MEASUREMENT_TIME = 3600000; // Maximum measurement time in ms
+const int MIN_BFO = 0;             // Minimum BFO value
+const int MAX_BFO = 1024;          // Maximum BFO value
+const int MIN_DET_MODE = 0;        // Minimum detection mode
+const int MAX_DET_MODE = 256;      // Maximum detection mode
+const int MIN_RCVD_ATTEN = 0;      // Minimum receiver attenuation in dB
+const int MAX_RCVD_ATTEN = 255;     // Maximum receiver attenuation in dB
+const int MIN_AGC_TIME = 0;        // Minimum AGC time in ms
+const int MAX_AGC_TIME = 3600000;  // Maximum AGC time in
+
+
 // ----------------------------------------------------------------------
 /**
   * @brief Validate AVD request JSON object
@@ -52,9 +85,9 @@ extern spdlog::logger* loggerPtr;
 void validateAVDRequest(const json& request, JsonValidator& validator) {
 
     validator
-        .requireType(request, "freq", "number")
-        .requireType(request, "bandwidth", "number")
-        .requireType(request, "duration", "integer")
+		.requireRange(request, "freq", MIN_FREQ, MAX_FREQ)
+		.requireRange(request, "bandwidth", MIN_BANDWIDTH, MAX_BANDWIDTH)
+		.requireRange(request, "duration", MIN_DURATION, MAX_DURATION)
         .requireType(request, "modulation", "string");
 }
 
@@ -69,9 +102,9 @@ void validateAVDRequest(const json& request, JsonValidator& validator) {
  **/
 void validateMeasurementRequest(const json& request, JsonValidator& validator) {
     validator
-        .requireNumberRange(request, "ant", 1, 16)
-        .requireNumberRange(request, "freq", 20e6, 3e9)
-        .requireNumberRange(request, "bandwidth", 500, 80e6);
+        .requireRange(request, "ant", MIN_ANT, MAX_ANT)
+        .requireRange(request, "freq", MIN_FREQ, MAX_FREQ)
+        .requireRange(request, "bandwidth", MIN_BANDWIDTH, MAX_BANDWIDTH);
 }
 
 // ----------------------------------------------------------------------
@@ -86,20 +119,20 @@ void validateMeasurementRequest(const json& request, JsonValidator& validator) {
 void validateOccupancyRequest(const json& request, JsonValidator& validator) {
 
     validator
-        .requireNumberRange(request, "ant", 1, 16)
-		.requireNumberRange(request, "numBands", 1, 1e256)
-		.requireNumberRange(request, "storageTime", 1, 3600000)
-		.requireNumberRange(request, "measurementTime", 100, 3600000)
-		.requireNumberRange(request, "numAzimuths", 1, 720)
-        .requireNumberRange(request, "confidence", 1, 360)
-        .requireNumberRange(request, "recordHoldoff", 0, 1024)
-        .requireNumberRange(request, "scanDfThreshold", 0, 256)
-		.requireType(request, "recordAudioDf", "bool")
+		.requireRange(request, "ant", MIN_ANT, MAX_ANT)
+		.requireRange(request, "numBands", MIN_NUM_BANDS, MAX_NUM_BANDS)
+		.requireRange(request, "storageTime", MIN_STORAGE_TIME, MAX_STORAGE_TIME)
+		.requireRange(request, "measurementTime", MIN_MEASUREMENT_TIME, MAX_MEASUREMENT_TIME)
+		.requireRange(request, "numAzimuths", MIN_AZIMUTHS, MAX_AZIMUTHS)
+        .requireRange(request, "confidence", MIN_DF_CONFIDENCE, MAX_DF_CONFIDENCE)
+        .requireRange(request, "recordHoldoff", MIN_RECORD_HOLDOFF, MAX_RECORD_HOLDOFF)
+        .requireRange(request, "scanDfThreshold", MIN_SCAN_DF_THRESHOLD, MAX_SCAN_DF_THRESHOLD)
+		.requireType(request, "recordAudioDf", VALID_TYPE_BOOLEAN)
         .validateObjectItems(request, "band", [](const json& bandItem, JsonValidator& v, size_t index) {
-        v.requireNumberRange(bandItem, "channelBandwidth", 500, 80e6)
-            .requireType(bandItem, "exclude", "bool")
-            .requireNumberRange(bandItem, "highFrequency", 20e6, 3e9)
-            .requireNumberRange(bandItem, "lowFrequency", 20e6, 3e9)
+        v.requireRange(bandItem, "channelBandwidth", MIN_BANDWIDTH, MAX_BANDWIDTH)
+            .requireType(bandItem, "exclude", VALID_TYPE_BOOLEAN)
+			.requireRange(bandItem, "highFrequency", MIN_FREQ, MAX_FREQ)
+			.requireRange(bandItem, "lowFrequency", MIN_FREQ, MAX_FREQ)
             .custom(bandItem, "lowFrequency", [&bandItem](const json& lf) {
             if (bandItem.contains("highFrequency")) {
                 return lf.get<double>() < bandItem["highFrequency"].get<double>();
@@ -121,11 +154,11 @@ void validateOccupancyDFRequest(const json& request, JsonValidator& validator) {
 
     validator
         .validateObjectItems(request, "rcvrCtrl", [](const json& rcvrItem, JsonValidator& v, size_t index) {
-           v.requireNumberRange(rcvrItem, "freq", 20e6, 3e9)
-            .requireNumberRange(rcvrItem, "bandwidth", 500, 80e6)
-            .requireNumberRange(rcvrItem, "bfo", 0, 1024)
-            .requireNumberRange(rcvrItem, "detMode", 0, 256)
-			.requireNumberRange(rcvrItem, "agcTime", 0, 3600000);
+           v.requireRange(rcvrItem, "freq", MIN_FREQ, MAX_FREQ)
+            .requireRange(rcvrItem, "bandwidth", MIN_BANDWIDTH, MAX_BANDWIDTH)
+            .requireRange(rcvrItem, "bfo", MIN_BFO, MAX_BFO)
+            .requireRange(rcvrItem, "detMode", MIN_DET_MODE, MAX_DET_MODE)
+			.requireRange(rcvrItem, "agcTime", MIN_AGC_TIME, MAX_AGC_TIME);
         });
 }
 
@@ -140,9 +173,9 @@ void validateOccupancyDFRequest(const json& request, JsonValidator& validator) {
 void validateGetPan(const json& request, JsonValidator& validator) {
 
     validator
-        .requireNumberRange(request, "freq", 20e6, 3e9)
-        .requireNumberRange(request, "bandwidth", 5e2, 80e6)
-        .requireNumberRange(request, "rcvrAtten", 0, 255);
+        .requireRange(request, "freq", MIN_FREQ, MAX_FREQ)
+        .requireRange(request, "bandwidth", MIN_BANDWIDTH, MAX_BANDWIDTH)
+        .requireRange(request, "rcvrAtten", MIN_RCVD_ATTEN, MAX_RCVD_ATTEN);
 }
 
 // ----------------------------------------------------------------------
@@ -155,21 +188,20 @@ void validateGetPan(const json& request, JsonValidator& validator) {
 */
 void validateAudioParams(const json& request, JsonValidator& validator) {
 
-    if (!request.contains("audioParams")) {
-        validator.addError("audioParams field is required");
-    }
-
-    const auto& audioParams = request["audioParams"];
     validator
-        .optionalType(audioParams, "freq", "number")
-        .optionalType(audioParams, "channel", "integer")
-        .optionalType(audioParams, "bandwidth", "number")
-        .optionalType(audioParams, "bfo", "number")
-        .optionalType(audioParams, "anyChannel", "boolean")
-        .optionalType(audioParams, "detMode", "integer")
-        .optionalType(audioParams, "doModRec", "boolean")
-        .optionalType(audioParams, "doRDS", "boolean")
-        .optionalType(audioParams, "streamID", "integer");
+		.requireRange(request, "freq", MIN_FREQ, MAX_FREQ)
+        .optionalType(request, "channel", VALID_TYPE_NUMBER)
+		.requireRange(request, "bandwidth", MIN_BANDWIDTH, MAX_BANDWIDTH)
+        .optionalType(request, "bfo", VALID_TYPE_NUMBER)
+        .optionalType(request, "anyChannel", VALID_TYPE_BOOLEAN)
+        .optionalType(request, "detMode", VALID_TYPE_NUMBER)
+        .optionalType(request, "doModRec", VALID_TYPE_BOOLEAN)
+        .optionalType(request, "doRDS", VALID_TYPE_BOOLEAN)
+        .optionalType(request, "streamID", VALID_TYPE_NUMBER)
+		.requireArray(request, "test_array", VALID_TYPE_NUMBER, 2)
+        .requireArray(request, "test_string_array", VALID_TYPE_STRING, 2)
+        .requireType(request, "test_float", VALID_TYPE_NUMBER)
+        .requireType(request, "test_string", VALID_TYPE_STRING);
 }
 
 // ----------------------------------------------------------------------
@@ -203,22 +235,24 @@ nlohmann::json buildErrorResponse(const nlohmann::json& jsonObj, const std::stri
 **/
 bool validRequest(json request, unsigned long msgType, MessageQueue& response) {
 
+	const std::string logSource = "EtherDLLValidation::validRequest";
+    
     JsonValidator validator;
 
 	// Validate common fields
 	using TaskKeys = edll::DefaultConfig::Service::TaskKeys;
 
     validator
-        .requireType(request, TaskKeys::CommandCode::VALUE, "number")
-        .requireType(request, TaskKeys::CommandName::VALUE, "string")
-		.requireType(request, TaskKeys::Arguments::VALUE, "object");
+        .requireType(request, TaskKeys::CommandCode::VALUE, VALID_TYPE_NUMBER)
+	    .requireType(request, TaskKeys::CommandName::VALUE, VALID_TYPE_STRING)
+		.requireType(request, TaskKeys::Arguments::VALUE, VALID_TYPE_OBJECT);
 
     switch (msgType) {          
-        case ECSMSDllMsgType::GET_OCCUPANCY:
-            validateOccupancyRequest(request[TaskKeys::Arguments::VALUE], validator);
-			// Fall through intended
         case ECSMSDllMsgType::GET_OCCUPANCYDF:
             validateOccupancyDFRequest(request[TaskKeys::Arguments::VALUE], validator);
+            // Fall through intended
+        case ECSMSDllMsgType::GET_OCCUPANCY:
+            validateOccupancyRequest(request[TaskKeys::Arguments::VALUE], validator);
 			break;
         case ECSMSDllMsgType::GET_AVD:
 			validateAVDRequest(request[TaskKeys::Arguments::VALUE], validator);
@@ -239,7 +273,7 @@ bool validRequest(json request, unsigned long msgType, MessageQueue& response) {
         case ECSMSDllMsgType::GET_BIST:
             return true;
         case ECSMSDllMsgType::SET_AUDIO_PARAMS:
-			validateAudioParams(request, validator);
+			validateAudioParams(request[TaskKeys::Arguments::VALUE], validator);
 			break;
         case ECSMSDllMsgType::FREE_AUDIO_CHANNEL:
             return true;
@@ -257,7 +291,7 @@ bool validRequest(json request, unsigned long msgType, MessageQueue& response) {
     if (!validator.isValid()) {
 		std::string message = "Request validation failed: " + validator.getErrorString();
         loggerPtr->error(message);
-		response.push(buildErrorResponse(request, message));
+		response.push(buildErrorResponse(request, message), logSource);
         return false;
 	}
 	loggerPtr->debug("Request validation passed");

@@ -119,7 +119,7 @@ namespace edll {
 				static constexpr int VALUE = 5555;
 			};
 			struct BufferSize {
-				static constexpr const char* KEY = "buffer";
+				static constexpr const char* KEY = "bufferSizeBytes";
 				static constexpr int VALUE = 4096;
 				static constexpr int MAX_VALUE = 1000000;
 			};
@@ -132,12 +132,12 @@ namespace edll {
 				static constexpr int VALUE = 100;
 			};
 			struct BufferTTL {
-				static constexpr const char* KEY = "bufferTTLPeriod";
+				static constexpr const char* KEY = "bufferTTLMsgCount";
 				static constexpr int VALUE = 5;
 			};
 			struct PingPeriod {
-				static constexpr const char* KEY = "pingPeriod";
-				static constexpr int VALUE = 10;
+				static constexpr const char* KEY = "pingPeriodS";
+				static constexpr int VALUE = 30;
 			};
 			struct PingEnable {
 				static constexpr const char* KEY = "pingEnable";
@@ -259,6 +259,9 @@ json buildCoreDefaultConfigJson(json default_config = json::object()) {
  * @throws std::runtime_error if configuration is invalid
 **/
 bool testLogConfig(json config) {
+
+	// TODO: Refactor to use JsonValidator class
+
 	using log = edll::DefaultConfig::Log;
 	json log_config = config.value(log::KEY, json());
 	std::string test_result = "";
@@ -309,6 +312,8 @@ bool testLogConfig(json config) {
  * @throws NO EXCEPTION HANDLING
 **/
 bool validServiceParams(json config) {
+
+	// TODO: Refactor to use JsonValidator class
 
 	using service = edll::DefaultConfig::Service;
 

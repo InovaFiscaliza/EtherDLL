@@ -39,13 +39,16 @@ static const std::string BASE64_CHARS =
 "0123456789+/";
 
 constexpr std::size_t HASH_STRING = 479440892;   // djb2 hash for string "string"
-constexpr std::size_t HASH_NUMBER = 617324298;   // djb2 hash for string "number"
-constexpr std::size_t HASH_NUMBER_FLOAT = 8243081075794;    // djb2 hash for string "number_float"
-constexpr std::size_t HASH_NUMBER_INTEGER = 8243081075722;  // djb2 hash for string "number_integer"
-constexpr std::size_t HASH_NUMBER_UNSIGNED = 8243081075730; // djb2 hash for string "number_unsigned"
-constexpr std::size_t HASH_BOOLEAN = 695403073;  // djb2 hash for string "boolean"
+constexpr std::size_t HASH_NUMBER = 284762254;   // djb2 hash for string "number"
+constexpr std::size_t HASH_BOOLEAN = 2257391749;  // djb2 hash for string "boolean"
 constexpr std::size_t HASH_ARRAY = 695403079;    // djb2 hash for string "array"
 constexpr std::size_t HASH_OBJECT = 301260540;  // djb2 hash for string "object"
+
+constexpr const char* VALID_TYPE_STRING = "string";
+constexpr const char* VALID_TYPE_NUMBER = "number";
+constexpr const char* VALID_TYPE_BOOLEAN = "boolean";
+constexpr const char* VALID_TYPE_ARRAY = "array";
+constexpr const char* VALID_TYPE_OBJECT = "object";
 
 // For convenience
 using json = nlohmann::json;
@@ -207,57 +210,45 @@ public:
 		}
 
         pushPath(fieldName);
-        if (obj.contains(fieldName)) {
-            bool valid = false;
-            const auto& field = obj[fieldName];
+        
+        bool valid = false;
+        const auto& field = obj[fieldName];
 
-			size_t hash = stringToHash(typeName.c_str());
+		size_t hash = stringToHash(typeName.c_str());
 
-			loggerPtr->debug("Validation of field '{}'. Expected <{}>. received <{}>, hash {}", fieldName, typeName, obj[fieldName].type_name(), hash);
+		loggerPtr->debug("Validation of field '{}'. Expected <{}>. received <{}>, hash {}", fieldName, typeName, obj[fieldName].type_name(), hash);
 
-            switch (hash) {
-                case HASH_STRING: {
-                    valid = field.is_string();
-                    break;
-                }
-                case HASH_NUMBER: {
-                    valid = field.is_number();
-                    break;
-                }
-                case HASH_NUMBER_FLOAT: {
-                    valid = field.is_number_float();
-                    break;
-				}
-                case HASH_NUMBER_INTEGER: {
-                    valid = field.is_number_integer();
-                    break;
-                }
-				case HASH_NUMBER_UNSIGNED: {
-					valid = field.is_number_unsigned();
-                    break;
-                }
-                case HASH_BOOLEAN: {
-                    valid = field.is_boolean();
-                    break;
-                }
-                case HASH_ARRAY: {
-                    valid = field.is_array();
-                    break;
-                }
-                case HASH_OBJECT: {
-                    valid = field.is_object();
-                    break;
-                }
-                default: {
-                    valid = false;
-                    break;
-                }
+        switch (hash) {
+            case HASH_STRING: {
+                valid = field.is_string();
+                break;
             }
-
-            if (!valid) {
-                addError("Type required: '" + typeName + "'");
+            case HASH_NUMBER: {
+                valid = field.is_number();
+                break;
+            }
+            case HASH_BOOLEAN: {
+                valid = field.is_boolean();
+                break;
+            }
+            case HASH_ARRAY: {
+                valid = field.is_array();
+                break;
+            }
+            case HASH_OBJECT: {
+                valid = field.is_object();
+                break;
+            }
+            default: {
+                valid = false;
+                break;
             }
         }
+
+        if (!valid) {
+            addError("Type required: '" + typeName + "'");
+        }
+
         popPath();
         return *this;
     }
@@ -266,6 +257,7 @@ public:
     template<typename T>
     // ----------------------------------------------------------------------
 	/** @brief Test if a required numeric field is within a specified range
+     * Range limits are included (>= min and <= max)
      * @tparam T The numeric type
      * @param obj The JSON object to validate
      * @param fieldName The name of the field to check
@@ -276,10 +268,10 @@ public:
      * @throws NO EXCEPTION HANDLING
     **/
     JsonValidator& requireRange(const json& obj, const std::string& fieldName,
-        const std::string& typeName, T minValue, T maxValue) {
+        T minValue, T maxValue) {
 
         int numErrors = static_cast<int>(errors.size());
-		*this = requireType(obj, fieldName, typeName);
+		*this = requireType(obj, fieldName, VALID_TYPE_NUMBER);
 
 		if (static_cast<int>(errors.size()) > numErrors) {
 			return *this;
@@ -298,34 +290,6 @@ public:
     }
 
     // ----------------------------------------------------------------------
-	/** @brief Test if a required integer field is within a specified range
-     * @param obj The JSON object to validate
-     * @param fieldName The name of the field to check
-     * @param minValue The minimum allowed value
-     * @param maxValue The maximum allowed value
-     * @return JsonValidator&
-     * @throws NO EXCEPTION HANDLING
-    **/
-    JsonValidator& requireIntegerRange(const json& obj, const std::string& fieldName,
-        int minValue, int maxValue) {
-        return requireRange(obj, fieldName, "integer", minValue, maxValue);
-    }
-
-    // ----------------------------------------------------------------------
-	/** @brief Test if a required number field is within a specified range
-     * @param obj The JSON object to validate
-     * @param fieldName The name of the field to check
-     * @param minValue The minimum allowed value
-     * @param maxValue The maximum allowed value
-     * @return JsonValidator&
-     * @throws NO EXCEPTION HANDLING
-    **/
-    JsonValidator& requireNumberRange(const json& obj, const std::string& fieldName,
-        double minValue, double maxValue) {
-        return requireRange(obj, fieldName, "number", minValue, maxValue);
-    }
-
-    // ----------------------------------------------------------------------
     /** @brief Test if an optional integer field is within a specified range
      * @param obj The JSON object to validate
      * @param fieldName The name of the field to check
@@ -334,28 +298,11 @@ public:
      * @return JsonValidator&
 	 * @throws NO EXCEPTION HANDLING
     **/
-    JsonValidator& optionalIntegerRange(const json& obj, const std::string& fieldName,
+    JsonValidator& optionalRange(const json& obj, const std::string& fieldName,
         int minValue, int maxValue) {
         if (obj.contains(fieldName) && !obj[fieldName].is_null()) {
-            return requireRange(obj, fieldName, "integer", minValue, maxValue);
+            return requireRange(obj, fieldName, minValue, maxValue);
         }
-		return *this;
-    }
-
-	// ----------------------------------------------------------------------
-    /** @brief Test if an optional number field is within a specified range
-     * @param obj The JSON object to validate
-     * @param fieldName The name of the field to check
-     * @param minValue The minimum allowed value
-     * @param maxValue The maximum allowed value
-	 * @return JsonValidator&
-     * @throws NO EXCEPTION HANDLING
-    **/
-    JsonValidator& optionalNumberRange(const json& obj, const std::string& fieldName,
-        double minValue, double maxValue) {
-        if (obj.contains(fieldName) && !obj[fieldName].is_null()) {
-            return requireRange(obj, fieldName, "number", minValue, maxValue);
-		}
 		return *this;
     }
 
