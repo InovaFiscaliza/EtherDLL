@@ -36,30 +36,30 @@
         },
         "name": "EtherDLL"
     },
-    "service": {
-        "taskKeys": {
-            "arguments": "ARGS",
-            "clientIP": "REQUEST_SOURCE",
-            "clientId": "ID",
-            "commandCode": "CODE",
-            "commandName": "COMMAND",
-            "message": "MSG",
-            "queueId": "QID",
-            "serverId": "SID"
-        },
-        "buffer": 4096,
-        "bufferTTLPeriod": 5,
-        "demoMode": true,
-        "msgKeys": {
-            "ack": "ACK",
-            "end": "\r\n",
-            "nack": "NACK",
-            "ping": "PING"
-        },
-        "pingEnable": true,
-        "pingPeriod": 10,
-        "port": 31000,
-        "sleepMs": 100,
-        "timeoutS": 10
-    }
+  "service": {
+    "taskKeys": {
+      "arguments": "ARGS",
+      "clientIP": "REQUEST_SOURCE",
+      "clientId": "ID",
+      "commandCode": "CODE",
+      "commandName": "COMMAND",
+      "message": "MSG",
+      "queueId": "QID",
+      "serverId": "SID"
+    },
+    "bufferSizeBytes": 4096,
+    "bufferTTLMsgCount": 5,
+    "demoMode": true,
+    "msgKeys": {
+      "ack": "ACK",
+      "end": "\r\n",
+      "nack": "NACK",
+      "ping": "PING"
+    },
+    "pingEnable": true,
+    "pingPeriodS": 5,
+    "port": 31000,
+    "sleepMs": 100,
+    "timeoutS": 10
+  }
 }
