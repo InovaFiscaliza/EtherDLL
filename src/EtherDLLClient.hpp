@@ -198,8 +198,6 @@ public:
 			return interruptionCode != edll::Code::RUNNING;
 			});
 
-		loggerPtr->debug("WaitAction: MessagePushed [" + std::to_string(messagePushed) + "]; Notified [" + std::to_string(notified) + "]");
-
 		if (messagePushed) {
 			messagePushed = false;
 			return interruptionCode == edll::Code::RUNNING;
