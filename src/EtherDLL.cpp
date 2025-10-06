@@ -329,7 +329,7 @@ int main(int argc, char* argv[]) {
 		// Start threads for each parallel task
 		auto requestComFuture = std::async(std::launch::async, [&]() {
 			logger_ptr->debug("Starting thread to receive client request and populate request queue");
-			clientConn.clientRequestToDLL(request);
+			clientConn.clientRequestToDLL(request, response);
 			signalCompletion();
 			logger_ptr->debug("Finished thread to receive client request and populate request queue");
 			return true;
