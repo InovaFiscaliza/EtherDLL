@@ -1,4 +1,4 @@
-classdef EtherDLLTestClient_exported < matlab.apps.AppBase
+classdef EtherDLLTestClient < matlab.apps.AppBase
 
     % Properties that correspond to app components
     properties (Access = public)
@@ -76,6 +76,16 @@ classdef EtherDLLTestClient_exported < matlab.apps.AppBase
                 return;
             end
 
+            app.loadCommandList();
+        end
+
+        %-----------------------------------------------------------------%
+        function loadCommandList(app)
+        %LOADCOMMANDLIST load commands to be sent to EtherDLL
+        % use configured folder to get all commands and populate the
+        % dropdown control
+            
+
             % list json files present in the app folder
             cd (app.config.service.command_path);
             files = dir('cmd*.json');
@@ -115,6 +125,7 @@ classdef EtherDLLTestClient_exported < matlab.apps.AppBase
                 app.connection = tcpclient(app.config.proxy.address,app.config.service.port, 'Timeout',app.config.service.timeout_s, 'ConnectTimeout',app.config.service.timeout_s, 'Tag', 'EtherDLL');
                 configureCallback(app.connection,"terminator",@app.receivedData);
                 configureTerminator(app.connection,app.PACK_END);
+                app.loadCommandList();
                 doing_fine = true;
             catch
                 warning('Failed to connect to EtherDLL');
@@ -419,7 +430,7 @@ classdef EtherDLLTestClient_exported < matlab.apps.AppBase
     methods (Access = public)
 
         % Construct app
-        function app = EtherDLLTestClient_exported
+        function app = EtherDLLTestClient
 
             runningApp = getRunningApp(app);
 
