@@ -93,13 +93,17 @@ SAudioParams jsonToSAudioParams(nlohmann::json jsonObj) {
 SGetPanParams jsonToSGetPanParams(nlohmann::json jsonObj) {
 	SGetPanParams structSO{};
 
-	
-	structSO.bandwidth = Units::Frequency(jsonObj["bandwidth"].get<unsigned long>()).GetRaw();
-	
-	if (jsonObj["freq"].is_null() == false) {
-		structSO.freq = Units::Frequency(jsonObj["freq"].get<unsigned long>()).GetRaw();
-	}
-	structSO.rcvrAtten = jsonObj["rcvrAtten"].is_null() == true ? NULL : jsonObj["rcvrAtten"].get<unsigned char>();
+	unsigned long bandwidth = jsonObj["bandwidth"].get<unsigned long>();
+	loggerPtr->debug("Bandwidth (Hz): {}", bandwidth);
+	structSO.bandwidth = Units::Frequency(bandwidth).GetRaw();
+
+	unsigned long freq = jsonObj["freq"].get<unsigned long>();
+	loggerPtr->debug("Frequency (Hz): {}", freq);
+	structSO.freq = Units::Frequency(freq).GetRaw();
+
+	unsigned char rcvrAtten = jsonObj["rcvrAtten"].get<unsigned char>();
+	loggerPtr->debug("Receiver Attenuation (dB): {}", (unsigned int)rcvrAtten);
+	structSO.rcvrAtten = rcvrAtten;
 	
 	return structSO;
 }
@@ -459,17 +463,17 @@ void DLLFunctionCall(DLLConnectionData DLLConnID, json request, unsigned long ms
 		}
 		case ECSMSDllMsgType::GET_TASK_STATE:
 		{
-			errCode = RequestTaskState(DLLConnID, (ECSMSDllMsgType)reqArguments["taskType"].get<unsigned long>(), requestID);
+			errCode = RequestTaskState(DLLConnID, (ECSMSDllMsgType)reqArguments, requestID);
 			break;
 		}
 		case ECSMSDllMsgType::TASK_SUSPEND:
 		{
-			errCode = SuspendTask(DLLConnID, (ECSMSDllMsgType)reqArguments["taskType"].get<unsigned long>(), requestID);
+			errCode = SuspendTask(DLLConnID, (ECSMSDllMsgType)reqArguments, requestID);
 			break;
 		}
 		case ECSMSDllMsgType::TASK_RESUME:
 		{
-			errCode = ResumeTask(DLLConnID, (ECSMSDllMsgType)reqArguments["taskType"].get<unsigned long>(), requestID);
+			errCode = ResumeTask(DLLConnID, (ECSMSDllMsgType)reqArguments, requestID);
 			break;
 		}
 		case ECSMSDllMsgType::TASK_TERMINATE:
@@ -479,12 +483,12 @@ void DLLFunctionCall(DLLConnectionData DLLConnID, json request, unsigned long ms
 		}
 		case ECSMSDllMsgType::GET_BIST:
 		{
-			errCode = RequestBist(DLLConnID, (EBistScope)reqArguments["scope"].get<int>(), &requestID);
+			errCode = RequestBist(DLLConnID, (EBistScope)reqArguments, &requestID);
 			break;
 		}
 		case ECSMSDllMsgType::SET_AUDIO_PARAMS:
 		{
-			SAudioParams audioParams = jsonToSAudioParams(reqArguments["audioParams"]);
+			SAudioParams audioParams = jsonToSAudioParams(reqArguments);
 			errCode = SetAudio(DLLConnID, audioParams, &requestID);
 
 			/* Todo: Start audio streaming service and send link to client
@@ -504,19 +508,19 @@ void DLLFunctionCall(DLLConnectionData DLLConnID, json request, unsigned long ms
 		}
 		case ECSMSDllMsgType::FREE_AUDIO_CHANNEL:
 		{
-			errCode = FreeAudio(DLLConnID, reqArguments["channel"].get<unsigned long>(), &requestID);
+			errCode = FreeAudio(DLLConnID, reqArguments, &requestID);
 			loggerPtr->info("Finished audio capture.");
 			break;
 		}
 		case ECSMSDllMsgType::SET_PAN_PARAMS:
 		{
-			SPanParams panParams = jsonToSPanParams(reqArguments["panParams"]);
+			SPanParams panParams = jsonToSPanParams(reqArguments);
 			errCode = SetPanParams(DLLConnID, panParams, &requestID);
 			break;
 		}
 		case ECSMSDllMsgType::GET_PAN:
 		{
-			SGetPanParams panParamsGet = jsonToSGetPanParams(reqArguments["panParams"]);
+			SGetPanParams panParamsGet = jsonToSGetPanParams(reqArguments);
 			errCode = RequestPan(DLLConnID, panParamsGet, &requestID);
 			break;
 		}

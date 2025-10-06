@@ -364,6 +364,12 @@ bool connectAPI(DLLConnectionData& stationConnID, const nlohmann::json& config)
 	using station_conf = DefaultDLLParam::Station;
 	json station_config = config[DefaultDLLParam::KEY][station_conf::KEY].get<json>();
 	
+	// Check if running in demo mode and skip connection if so
+	if (config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::DemoMode::KEY].get<bool>()) {
+		loggerPtr->warn("Starting EtherDLL service in DEMO mode. No connection to station will be attempted.");
+		stationConnID = DEFAULT_DLL_CONNECTION_DATA;
+		return true;
+	}
 
 	// Prepare station data structure from the config data
 	std::string hostNameStr = station_config[station_conf::Address::KEY].get<std::string>();

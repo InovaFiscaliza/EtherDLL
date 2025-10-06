@@ -172,7 +172,7 @@ public:
 				});
 		}
 
-		// It wait was interrupted, return empty json
+		// If wait was interrupted, return empty json
 		if (interruptionCode != edll::Code::RUNNING) {
 			return json(); 
 		}

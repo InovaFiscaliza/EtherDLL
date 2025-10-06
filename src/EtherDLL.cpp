@@ -276,26 +276,10 @@ int main(int argc, char* argv[]) {
 
 
 	DLLConnectionData DLLConnID = DEFAULT_DLL_CONNECTION_DATA;
-	bool waitingAPIConnection = true;
 
-
-	// TODO: Move this to a thread that monitors the connection and tries to reconnect if lost. Allow clients to connect in the meantime and return error messages to clients if not connected to station.
-	while (interruptionCode == edll::Code::RUNNING && waitingAPIConnection)
-	{
-		if (!config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::DemoMode::KEY].get<bool>()) {
-			if (!connectAPI(DLLConnID, config)) {
-				logger_ptr->error("Error establishing DLL connection. Retrying in 5 seconds");
-				std::this_thread::sleep_for(std::chrono::seconds(5));
-				return(edll::Code::STATION_ERROR);
-			}
-			else {
-				waitingAPIConnection = false;
-			}
-		}
-		else {
-			logger_ptr->warn("Starting EtherDLL service in DEMO mode. No connection to station will be attempted.");
-			waitingAPIConnection = false;
-		}
+	if (!connectAPI(DLLConnID, config)) {
+		logger_ptr->error("Error establishing DLL connection.");
+		interruptionCode = edll::Code::STATION_ERROR;
 	}
 
 	while (interruptionCode == edll::Code::RUNNING)
