@@ -558,9 +558,11 @@ void DLLFunctionCall(DLLConnectionData DLLConnID, json request, unsigned long ms
 */
 void processRequestQueue(DLLConnectionData DLLConnID, MessageQueue& request, MessageQueue& response, edll::INT_CODE& interruptionCode)
 {
+	const std::string funcName = "processRequestQueue";
+
 	while (interruptionCode == edll::Code::RUNNING)
 	{
-		json oneRequest = request.waitAndPop(interruptionCode);
+		json oneRequest = request.waitAndPop(interruptionCode, funcName);
 
 		unsigned long cmd = oneRequest.value(TaskKeys::CommandCode::VALUE, TaskKeys::CommandCode::INIT_VALUE);
 

@@ -1033,6 +1033,8 @@ json ProcessRealTimeData(_In_ ECSMSDllMsgType respType, _In_ SSmsRealtimeMsg::UB
 **/
 void OnDataFunc(_In_  unsigned long serverId, _In_ ECSMSDllMsgType respType, _In_ unsigned long sourceAddr, _In_ unsigned long requestID, _In_ SEquipCtrlMsg::UBody* data)
 {
+	const std::string logSource = "Scorpio::OnDataFunc";
+
     json responseJson = {};
 
     switch (respType)
@@ -1097,7 +1099,7 @@ void OnDataFunc(_In_  unsigned long serverId, _In_ ECSMSDllMsgType respType, _In
     responseJson[edll::DefaultConfig::Service::TaskKeys::CommandCode::VALUE] = int(respType);
 	responseJson[edll::DefaultConfig::Service::TaskKeys::DLLId::VALUE] = serverId;
 
-    response.push(responseJson);
+    response.push(responseJson, logSource);
 
     loggerPtr->debug("OnDataFunc: serverId={}, respType={}, sourceAddr={}, requestID={}", serverId, static_cast<int>(respType), sourceAddr, requestID);
 	loggerPtr->trace("OnDataFunc: responseJson={}", responseJson.dump());
@@ -1113,6 +1115,8 @@ void OnDataFunc(_In_  unsigned long serverId, _In_ ECSMSDllMsgType respType, _In
 **/
 void OnErrorFunc(_In_  unsigned long serverId, _In_ const std::wstring& errorMsg)
 {
+	const std::string logSource = "Scorpio::OnErrorFunc";
+
     json errorJson = {};
 
     std::string errorMsgStr(errorMsg.begin(), errorMsg.end());
@@ -1121,7 +1125,7 @@ void OnErrorFunc(_In_  unsigned long serverId, _In_ const std::wstring& errorMsg
 	errorJson[edll::DefaultConfig::Service::TaskKeys::CommandCode::VALUE] = edll::DefaultConfig::Service::TaskKeys::CommandCode::INIT_VALUE;
     errorJson[edll::DefaultConfig::Service::TaskKeys::DLLId::VALUE] = serverId;
 
-    response.push(errorJson);
+    response.push(errorJson, logSource);
 
     loggerPtr->debug("OnErrorFunc: serverId={}, errorMsg=`{}`", serverId, errorMsgStr);
 }
@@ -1137,6 +1141,8 @@ void OnErrorFunc(_In_  unsigned long serverId, _In_ const std::wstring& errorMsg
 **/
 void OnRealTimeDataFunc(_In_  unsigned long serverId, _In_ ECSMSDllMsgType respType, _In_ SSmsRealtimeMsg::UBody* data)
 {
+	const std::string logSource = "Scorpio::OnRealTimeDataFunc";
+    
     json responseJson = {};
 
     responseJson = ProcessRealTimeData(respType, data);
@@ -1146,7 +1152,7 @@ void OnRealTimeDataFunc(_In_  unsigned long serverId, _In_ ECSMSDllMsgType respT
 
 	//TODO Map client IP and client ID from the request and add to the responseJson
 
-    response.push(responseJson);
+	response.push(responseJson, logSource);
 
     loggerPtr->debug("OnRealTimeDataFunc: serverId={}, respType={}", serverId, static_cast<int>(respType));
 	loggerPtr->trace("OnRealTimeDataFunc: responseJson={}", responseJson.dump());
