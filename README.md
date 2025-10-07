@@ -29,27 +29,19 @@
 <div >
 <img style="margin-top: 10px; margin-right: 30px; margin-bottom: 10px;" align="left" width="100" height="100" src=".\doc\images\EtherDLL_Icon.svg">  </div>
 
-The application is a Windows Service that may also be accessed as a desktop application for debug and provides a open socket API to access DLL callback methods, allowing the integration of local windows services as if they were a web service, through TCP/IP.
+The application is a console application that provides a TCP/IP Socket API to access local host services available only through DLL methods. This enables the integration of restricted and legacy Windows services through TCP/IP, allowing the the development solutions for cross platform clients, either locally, such as a x64 application accessing a x86 DLL, or remotely, such as a web application accessing the windows local service through the network.
 
-Current version was specifically designed to work with MIAer Spectrum Monitoring Stations and may be modified to work with other DLL or APIs working in the local windows environment.
+The executable can be configured using a json file (config.json). The file may use the default name "EtherDLLConfig.json" and be placed in the same folder as the executable or the filename may be set as argument of the executable via command line.
 
-The API is not included in this repository and must be provided by the manufacturer, being dependent on the manufacturer's SDK and licensing.
+The JSON configuration file is read at startup and stores information such as log format, message format used for the TCP/IP socket communication, and also default parameters that may be used to enable a more friendly operation of the DLL API. The application needs to be restarted for any changes in the configuration file to take effect.
 
-The main application is intended to be a single portable application (.exe) that may be installed as a Windows Service and accessed as a console application for debug.
+All communication with the clients is done through TCP/IP sockets using JSON formatted messages. The port and IP address are also defined in in the configuration file.
 
-Output from the executable is in the form of log, that may be directed to file or the console.
+Although the core modules and functions can be reused in different projects, the communication with the DLL API is done through callback functions and specific C++ methods. Thus the program must be compiled with the specific header files and linked with the DLL library files.
 
-Configuration is done through a json file (config.json) that must be placed in the same folder as the executable.
+The application was originally designed to work with the DLL provided by TCI SPX Inc for their Spectrum Monitoring Stations, thus using Visual Studio 2022 as IDE and Windows as operating system. The solution itself follows the C++17 standard. For testing purposes of this integration, a test client in matlab was also developed. Some of the components used in this example are dependent on the manufacturer's SDK and licensing, thus they are not included in this repository.
 
-The JSON file is read at startup and stores not only the log format but also parameters used to connect to the monitoring station equipment and also that define the services provided.
-
-If not found, the application will create a default configuration file.
-
-Additionally, a test client in matlab is provided, such as to enable testing of the service.
-
-A simulation mode is also provided, such as to enable testing of the service without the need of the manufacturer's equipment, although the execution will require the specific DLL files.
-
-Activation or deactivation of the simulation mode is done through the configuration file.
+Additional examples are intended to be provided in the future.
 
 <div>
     <a href="#about-etherdll">
@@ -86,13 +78,22 @@ The following diagram illustrates the module architecture of the application:
 
 ![EtherDLL Modules](.\doc\images\modules.svg)
 
-| Module       | Description                                                  |
+| Core Module | Description                                                  |
 |--------------|--------------------------------------------------------------|
 | EtherDLL.cpp | Entry point of the application, After parsing the command line arguments, loading the configuration and initializing the log, it initialize the DLL connection and start threads responsible for message forwarding between the client and the DLL |
 | EtherDLLClient.hpp |  |
 | EtherDLLConstants.hpp |  |
 | EtherDLLLog.hpp |  |
 | EtherDLLUtils.cpp |  |
+
+| Specific Example Module | Description                                                  |
+|--------------|--------------------------------------------------------------|
+| etherDLLCodes.hpp |  |
+| etherDLLInit.hpp |  |
+| etherDLLRequest.hpp |  |
+| etherDLLValidation.hpp |  |
+| etherDLLDataProcess.hpp |  |
+| etherDLLResponse.hpp |  |
 
 <div>
     <a href="#about-etherdll">
