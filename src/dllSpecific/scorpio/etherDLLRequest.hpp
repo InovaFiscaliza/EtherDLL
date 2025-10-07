@@ -94,15 +94,15 @@ SGetPanParams jsonToSGetPanParams(nlohmann::json jsonObj) {
 	SGetPanParams structSO{};
 
 	unsigned long bandwidth = jsonObj["bandwidth"].get<unsigned long>();
-	loggerPtr->debug("Bandwidth (Hz): {}", bandwidth);
+	//loggerPtr->debug("Bandwidth (Hz): {}", bandwidth);
 	structSO.bandwidth = Units::Frequency(bandwidth).GetRaw();
 
 	unsigned long freq = jsonObj["freq"].get<unsigned long>();
-	loggerPtr->debug("Frequency (Hz): {}", freq);
+	//loggerPtr->debug("Frequency (Hz): {}", freq);
 	structSO.freq = Units::Frequency(freq).GetRaw();
 
 	unsigned char rcvrAtten = jsonObj["rcvrAtten"].get<unsigned char>();
-	loggerPtr->debug("Receiver Attenuation (dB): {}", (unsigned int)rcvrAtten);
+	//loggerPtr->debug("Receiver Attenuation (dB): {}", (unsigned int)rcvrAtten);
 	structSO.rcvrAtten = rcvrAtten;
 	
 	return structSO;
@@ -119,20 +119,15 @@ SGetPanParams jsonToSGetPanParams(nlohmann::json jsonObj) {
 SPanParams jsonToSPanParams(nlohmann::json jsonObj) {
 	SPanParams structSO{};
 
-	structSO.antenna = jsonObj["antenna"].is_null() == true ? (SEquipCtrlMsg::EAnt)NULL : jsonObj["antenna"].get<SEquipCtrlMsg::EAnt>();
+	structSO.antenna = jsonObj["antenna"].get<SEquipCtrlMsg::EAnt>();
 	
 	SEquipCtrlMsg::SRcvrCtrlCmd rcvr;
-	if (jsonObj["rcvr"]["freq"].is_null() == false) {
-		rcvr.freq = Units::Frequency(jsonObj["rcvr"]["freq"].get<unsigned long>()).GetRaw();
-	}
-	if (jsonObj["rcvr"]["freq"].is_null() == false) {
-		rcvr.bandwidth = Units::Frequency(jsonObj["rcvr"]["bandwidth"].get<unsigned long>()).GetRaw();
-	}
+	rcvr.freq = Units::Frequency(jsonObj["rcvr"]["freq"].get<unsigned long>()).GetRaw();
+	rcvr.bandwidth = Units::Frequency(jsonObj["rcvr"]["bandwidth"].get<unsigned long>()).GetRaw();
+	rcvr.bfo = Units::Frequency(jsonObj["rcvr"]["bfo"].get<unsigned long>()).GetRaw();
+
 	rcvr.detMode = jsonObj["rcvr"]["detMode"].is_null() == true ? (SSmsMsg::SRcvrCtrlCmdV1::EDetMode)NULL : jsonObj["rcvr"]["detMode"].get<SSmsMsg::SRcvrCtrlCmdV1::EDetMode>();
 	rcvr.agcTime = jsonObj["rcvr"]["agcTime"].is_null() == true ? NULL : jsonObj["rcvr"]["agcTime"].get<unsigned long>();
-	if (jsonObj["rcvr"]["bfo"].is_null() == false) {
-		rcvr.bfo = Units::Frequency(jsonObj["rcvr"]["bfo"].get<unsigned long>()).GetRaw();
-	}
 	
 	structSO.rcvr = rcvr;
 	return structSO;
