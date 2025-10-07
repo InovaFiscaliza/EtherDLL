@@ -11,9 +11,9 @@ classdef EtherDLLTestClient < matlab.apps.AppBase
         ConnectButton    matlab.ui.control.StateButton
         CommandDropDown  matlab.ui.control.DropDown
         sentMsg          matlab.ui.control.TextArea
-        SPTAxes          matlab.ui.control.UIAxes
-        OCCAxes          matlab.ui.control.UIAxes
         AOAAxes          matlab.ui.control.UIAxes
+        OCCAxes          matlab.ui.control.UIAxes
+        SPTAxes          matlab.ui.control.UIAxes
     end
 
     
@@ -28,6 +28,15 @@ classdef EtherDLLTestClient < matlab.apps.AppBase
 
         % EtherDLL Constants
         PACK_END = "CR/LF"
+
+        % Scorpio Command Codes
+        AVD = 15
+        MEASURE = 84
+        OCC = 12
+        OCC_DF = 14
+        PAN = 55
+        SET_AUDIO = 16
+
     end
 
     %-----------------------------------------------------------------%
@@ -149,16 +158,15 @@ classdef EtherDLLTestClient < matlab.apps.AppBase
         %-----------------------------------------------------------------%
         function receivedData(app, src, ~)
             % Handle incomming data in the command channel
-            data = read(src,src.NumBytesAvailable,"string");
-            app.receivedMsg.Value = [data; app.receivedMsg.Value];
-            data = app.processRawData(data);
-            app.processDataTypes(data);
+            raw_data = read(src,src.NumBytesAvailable,"string");
+            struct_data = app.processRawData(raw_data);
+            app.processServiceData(struct_data);
         end
 
         %-----------------------------------------------------------------%
-        function out_data = processRawData(~, in_data)
+        function out_data = processRawData(app, in_data)
             % Process raw data from socket into structures
-
+            
             try
                 data = split(in_data,"\r\n");
                 if isstring(data)
@@ -171,47 +179,59 @@ classdef EtherDLLTestClient < matlab.apps.AppBase
                         end
                     end
                 end
+                app.receivedMsg.Value = [evalc(['disp(data)']);app.receivedMsg.Value];
             catch
-                warning("error parsing JSON data")
+                if in_data == null
+                    app.ConnectButton.Value = not(app.ConnectButton.Value);
+                    return;
+                end
+                message = newline + "error parsing data: <" + evalc(['disp(data)']) + ">";
+                app.receivedMsg.Value = [message;app.receivedMsg.Value];
             end
         end
 
         %-----------------------------------------------------------------%
-        function processDataTypes(app,data)
-            % Process diferent kinds of data from the received data into
-            % adjusted structure
-
-            switch in_data.respType
-                case app.PAN
-                    data.spectrum.powerLevel = app.base64ToFloat32(data.spectrum.sweepData);
-                    data.spectrum.frequencyAxis = linspace(data.spectrum.startFrequency, data.spectrum.stopFrequency, data.spectrum.numBins);
-                    app.presentData(data);
-                case app.S_STATE_RESP
-
-                case app.S_SCAN_DF_VS_CHANNEL
-
-                otherwise
-                    warning("No processing defined for received data type")
+        function processServiceData(app, in_data)
+            % Check for specific keys
+            if isfield(in_data, 'PING')
+                % Handle PING response
+                disp('Received PING');
+            elseif isfield(in_data, 'ACK')
+                % Handle ACK response
+                disp('Received ACK');
+            elseif isfield(in_data, 'NACK')
+                % Handle NACK response
+                disp('Received NACK');
+            else
+                app.processStationData(in_data);
             end
-
         end
 
         %-----------------------------------------------------------------%
-        function presentData(app,data)
+            function processStationData(app,data)
             % Process diferent kinds of data from the received data into
             % adjusted structure
             
-            switch data.respType
-                case app.PAN
-                    app.plotSpectrum(data);
-                    fields = {'frequencyAxis', 'powerLevel','sweepData'};
-                    data.spectrum = rmfield(data.spectrum, fields);
-                    app.DCBText.Value = [jsonencode(data);app.DCBText.Value];
-                otherwise
-                    app.DCBText.Value = [data;app.DCBText.Value];
+                switch data.CODE
+                    case app.AVD
+                        warning("No processing defined")
+                    case app.MEASURE
+                        warning("No processing defined")
+                    case app.OCC
+                        warning("No processing defined")
+                    case app.OCC_DF
+                        warning("No processing defined")
+                    case app.PAN
+                        data.spectrum.powerLevel = app.base64ToFloat32(data.spectrum.sweepData);
+                        data.spectrum.frequencyAxis = linspace(data.spectrum.startFrequency, data.spectrum.stopFrequency, data.spectrum.numBins);
+                        app.plotSpectrum(data);
+                    case app.SET_AUDIO
+                        warning("No processing defined")
+                    otherwise
+                        warning("Received " + data);
+                        warning("No processing defined for received data type");
+                end
             end
-
-        end
 
         %-----------------------------------------------------------------%
         function plotSpectrum(app, data)
@@ -226,6 +246,10 @@ classdef EtherDLLTestClient < matlab.apps.AppBase
             xlim(app.SPTAxes,[data.spectrum.startFrequency data.spectrum.stopFrequency]);
             xlabel(app.SPTAxes,{"Frequency",data.spectrum.frequencyUnit});
             plot(app.SPTAxes,data.spectrum.frequencyAxis,data.spectrum.powerLevel,'-', 'Color',[0.2 0.5 0.9 0.1], 'LineWidth',2.5);
+
+            % fields = {'frequencyAxis', 'powerLevel','sweepData'};
+            % data.spectrum = rmfield(data.spectrum, fields);
+
         end
 
         %-----------------------------------------------------------------%
@@ -341,13 +365,13 @@ classdef EtherDLLTestClient < matlab.apps.AppBase
             app.mainGrid.RowHeight = {'fit', 'fit', '1x', '2x', 'fit', 'fit', '1x', '8x', '6x', 'fit'};
             app.mainGrid.BackgroundColor = [1 1 1];
 
-            % Create AOAAxes
-            app.AOAAxes = uiaxes(app.mainGrid);
-            xlabel(app.AOAAxes, {'Frequency'; '(MHz)'})
-            ylabel(app.AOAAxes, {'Angle'; '(degrees from north)'})
-            zlabel(app.AOAAxes, 'Z')
-            app.AOAAxes.Layout.Row = 8;
-            app.AOAAxes.Layout.Column = 6;
+            % Create SPTAxes
+            app.SPTAxes = uiaxes(app.mainGrid);
+            xlabel(app.SPTAxes, {'Frequency'; '(MHz)'})
+            ylabel(app.SPTAxes, {'Level'; '(dBm)'})
+            zlabel(app.SPTAxes, 'Z')
+            app.SPTAxes.Layout.Row = [1 7];
+            app.SPTAxes.Layout.Column = 6;
 
             % Create OCCAxes
             app.OCCAxes = uiaxes(app.mainGrid);
@@ -356,13 +380,13 @@ classdef EtherDLLTestClient < matlab.apps.AppBase
             app.OCCAxes.Layout.Row = [9 10];
             app.OCCAxes.Layout.Column = 6;
 
-            % Create SPTAxes
-            app.SPTAxes = uiaxes(app.mainGrid);
-            xlabel(app.SPTAxes, {'Frequency'; '(MHz)'})
-            ylabel(app.SPTAxes, {'Level'; '(dBm)'})
-            zlabel(app.SPTAxes, 'Z')
-            app.SPTAxes.Layout.Row = [1 7];
-            app.SPTAxes.Layout.Column = 6;
+            % Create AOAAxes
+            app.AOAAxes = uiaxes(app.mainGrid);
+            xlabel(app.AOAAxes, {'Frequency'; '(MHz)'})
+            ylabel(app.AOAAxes, {'Angle'; '(degrees from north)'})
+            zlabel(app.AOAAxes, 'Z')
+            app.AOAAxes.Layout.Row = 8;
+            app.AOAAxes.Layout.Column = 6;
 
             % Create sentMsg
             app.sentMsg = uitextarea(app.mainGrid);
