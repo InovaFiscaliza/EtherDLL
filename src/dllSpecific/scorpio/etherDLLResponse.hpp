@@ -30,7 +30,7 @@
 #include "etherDLLCodes.hpp"
 
 // Include core EtherDLL libraries
-#include "EtherDLLConstants.hpp"
+#include "EtherDLLConfig.hpp"
 #include "EtherDLLUtils.hpp"
 #include "EtherDLLClient.hpp"
 #include "EtherDLLLog.hpp"

@@ -26,7 +26,7 @@
 // Include core EtherDLL headers
 #include "EtherDLLLog.hpp"
 #include "EtherDLLUtils.hpp"
-#include "EtherDLLConstants.hpp"
+#include "EtherDLLConfig.hpp"
 #include "EtherDLLClient.hpp"
 
 // Include additional libraries

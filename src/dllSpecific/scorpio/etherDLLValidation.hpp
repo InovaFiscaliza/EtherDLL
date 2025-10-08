@@ -24,7 +24,7 @@
 // Include DLL specific libraries
 
 // Include core EtherDLL libraries
-#include "EtherDLLConstants.hpp"
+#include "EtherDLLConfig.hpp"
 #include "EtherDLLUtils.hpp"
 
 // Include project libraries

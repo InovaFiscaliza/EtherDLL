@@ -11,7 +11,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="EtherDLLConstants.hpp">
+    <ClInclude Include="EtherDLLConfig.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="EtherDLLLog.hpp">

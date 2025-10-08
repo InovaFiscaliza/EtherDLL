@@ -109,7 +109,7 @@
     <ClInclude Include="dllSpecific\scorpio\OccupSpectConnect.h" />
     <ClInclude Include="dllSpecific\scorpio\stdafx.h" />
     <ClInclude Include="EtherDLLClient.hpp" />
-    <ClInclude Include="EtherDLLConstants.hpp" />
+    <ClInclude Include="EtherDLLConfig.hpp" />
     <ClInclude Include="EtherDLLLog.hpp" />
     <ClInclude Include="EtherDLLUtils.hpp" />
     <ClInclude Include="nlohmann\json.hpp" />

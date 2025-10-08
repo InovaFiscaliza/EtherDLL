@@ -21,7 +21,7 @@
 #pragma once
 
 // Include core EtherDLL libraries
-#include "EtherDLLConstants.hpp"
+#include "EtherDLLConfig.hpp"
 
 // Include project libraries
 #include <nlohmann/json.hpp>

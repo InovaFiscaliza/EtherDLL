@@ -28,7 +28,7 @@
 #include "etherDLLResponse.hpp"
 
 // Include core EtherDLL libraries
-#include "EtherDLLConstants.hpp"
+#include "EtherDLLConfig.hpp"
 
 // Include project libraries
 
