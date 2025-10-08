@@ -96,10 +96,7 @@
         <path d="M-379.918 -119.854 L189.082 -119.854 L189.082 333.146 L-379.918 333.146 L-379.918 -119.854 Z"/>
       </clipPath>
     </defs>
-    <g fill="white" text-rendering="geometricPrecision" shape-rendering="geometricPrecision" transform="translate(96,551)" stroke="white">
-      <rect x="-96" width="569" height="453" y="-551" clip-path="url(#clipPath2)" stroke="none"/>
-    </g>
-    <g fill="rgb(255,242,188)" text-rendering="geometricPrecision" shape-rendering="geometricPrecision" transform="matrix(1,0,0,1,96,551)" stroke="rgb(255,242,188)">
+    <g fill="silver" text-rendering="geometricPrecision" shape-rendering="geometricPrecision" transform="matrix(1,0,0,1,96,551)" stroke="silver">
       <path d="M-80.474 -535.098 L-80.474 -113.93 L-50.474 -113.93 L-50.474 -535.098 Z" stroke="none" clip-path="url(#clipPath2)"/>
       <rect x="-50.474" width="507.542" height="421.168" y="-535.098" clip-path="url(#clipPath2)" stroke="none"/>
       <rect x="-50.474" y="-535.098" clip-path="url(#clipPath2)" fill="white" width="507.542" height="421.168" stroke="none"/>
