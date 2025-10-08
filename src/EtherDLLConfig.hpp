@@ -1,5 +1,5 @@
 /**
-* @file EtherDLLConstants.hpp
+* @file EtherDLLConfig.hpp
 *
 * @brief Heder file constants and types used across the core EtherDLL modules
 *
@@ -398,26 +398,4 @@ bool validServiceParams(json config) {
 		}
 	}
 	return test_result;
-}
-
-
-// ------------------------------------------------------
-/** @brief Build demo data JSON object
- *
- * @param  none
- * @return JSON object containing demo data
- * @throws NO EXCEPTION HANDLING
- **/
-json buildDemoData() {
-	json demoData = {
-		{"deviceTime", "2024-01-01T12:00:00Z"},
-		{"status", "OK"},
-		{"measurements", {
-			{"temperature", 25.0},
-			{"pressure", 1013.25},
-			{"humidity", 40.0}
-		}},
-		{"errors", json::array()}
-	};
-	return demoData;
 }
