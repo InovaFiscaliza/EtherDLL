@@ -420,11 +420,10 @@ bool connectAPI(DLLConnectionData& stationConnID, const nlohmann::json& config)
 /** @brief Disconnect station and socket clients
 *
 * @param stationConnID: DLLConnectionData structure containing connection parameters
-* @param logger: spdlog logger object for logging messages
 * @return bool: True if disconnection is successful, false otherwise
 * @throws NO EXCEPTION HANDLING
 */
-bool disconnectAPI(DLLConnectionData& stationConnID, spdlog::logger& logger)
+bool disconnectAPI(DLLConnectionData& stationConnID)
 {
 
 	ERetCode errCode = Disconnect(stationConnID);
