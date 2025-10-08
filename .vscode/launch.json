@@ -5,12 +5,11 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Sandbox Start",
-            "type": "PowerShell",
+            "name": "MatEther Client",
+            "type": "matlab",
             "request": "launch",
-            "script": "${workspaceFolder}/test/sandbox_test.wsb",
-            "args": []
-        },        
+            "programToRun": "${file}"
+        },
         {
             "name": "PowerShell: Launch Current File",
             "type": "PowerShell",

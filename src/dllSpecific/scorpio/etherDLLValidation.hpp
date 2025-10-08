@@ -58,7 +58,7 @@ const int MAX_RECORD_HOLDOFF = 1024; // Maximum record holdoff time
 const int MIN_SCAN_DF_THRESHOLD = 0; // Minimum scan DF threshold
 const int MAX_SCAN_DF_THRESHOLD = 256; // Maximum scan DF threshold
 const int MIN_NUM_BANDS = 1;       // Minimum number of bands
-const int MAX_NUM_BANDS = 1e20;   // Maximum number of bands
+const int MAX_NUM_BANDS = 255;   // Maximum number of bands
 const int MIN_STORAGE_TIME = 1;    // Minimum storage time in ms
 const int MAX_STORAGE_TIME = 3600000; // Maximum storage time in ms
 const int MIN_MEASUREMENT_TIME = 100; // Minimum measurement time in ms
@@ -131,15 +131,19 @@ void validateOccupancyRequest(const json& request, JsonValidator& validator) {
         .validateObjectItems(request, "band", [](const json& bandItem, JsonValidator& v, size_t index) {
         v.requireRange(bandItem, "channelBandwidth", MIN_BANDWIDTH, MAX_BANDWIDTH)
             .requireType(bandItem, "exclude", VALID_TYPE_BOOLEAN)
-			.requireRange(bandItem, "highFrequency", MIN_FREQ, MAX_FREQ)
-			.requireRange(bandItem, "lowFrequency", MIN_FREQ, MAX_FREQ)
-            .custom(bandItem, "lowFrequency", [&bandItem](const json& lf) {
-            if (bandItem.contains("highFrequency")) {
-                return lf.get<double>() < bandItem["highFrequency"].get<double>();
+			.requireRange(bandItem, "stopFrequency", MIN_FREQ, MAX_FREQ)
+			.requireRange(bandItem, "startFrequency", MIN_FREQ, MAX_FREQ)
+            .custom(bandItem,
+                "startFrequency",
+                [&bandItem](const json& lf) {
+                    if (bandItem.contains("stopFrequency")) {
+                        return lf.get<double>() < bandItem["stopFrequency"].get<double>();
+                    }
+                    return true;
+                        },
+                "startFrequency must be less than stopFrequency");
             }
-            return true;
-                }, "lowFrequency must be less than highFrequency");
-            });
+        );
 }
 
 // ----------------------------------------------------------------------
@@ -173,8 +177,8 @@ void validateOccupancyDFRequest(const json& request, JsonValidator& validator) {
 void validateGetPan(const json& request, JsonValidator& validator) {
 
     validator
-        .requireRange(request, "freq", MIN_FREQ, MAX_FREQ)
-        .requireRange(request, "bandwidth", MIN_BANDWIDTH, MAX_BANDWIDTH)
+        .requireRange(request, "centerFrequency", MIN_FREQ, MAX_FREQ)
+        .requireRange(request, "span", MIN_BANDWIDTH, MAX_BANDWIDTH)
         .requireRange(request, "rcvrAtten", MIN_RCVD_ATTEN, MAX_RCVD_ATTEN);
 }
 

@@ -49,7 +49,6 @@
 #include "EtherDLLUtils.hpp"
 #include "EtherDLLLog.hpp"
 #include "EtherDLLConfig.hpp"
-#include "EtherDLLCodes.hpp"
 
 // Include project libraries
 #include <nlohmann/json.hpp>
