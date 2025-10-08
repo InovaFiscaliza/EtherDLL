@@ -67,27 +67,28 @@ json ProcessGpsData(SEquipCtrlMsg::SGpsResponse* gpsResponse)
 {
     json jsonObj;
 
-    jsonObj["dateTime"] = double(gpsResponse->dateTime);
-    jsonObj["latitude"] = double(gpsResponse->latitude);
-    jsonObj["longitude"] = double(gpsResponse->longitude);
-    jsonObj["status"]["accuracy"] = int(gpsResponse->status.accuracy);
-    jsonObj["status"]["antenna"] = int(gpsResponse->status.antenna);
-    jsonObj["status"]["batVolt"] = int(gpsResponse->status.batVolt);
-    jsonObj["status"]["lockHist"] = int(gpsResponse->status.lockHist);
-    jsonObj["status"]["mode"] = int(gpsResponse->status.mode);
+    jsonObj["dateTime"] = COleTimeToIsoStr(gpsResponse->dateTime); // using COleTime format
+    jsonObj["latitude"] = double(gpsResponse->latitude); // degrees (+ North, - South)
+    jsonObj["longitude"] = double(gpsResponse->longitude); // degrees (+ East, - West)
+    jsonObj["status"]["numSats"] = int(gpsResponse->status.numSats); // >7 stored as 7
+	/* Data which use is unclear at the moment
+    jsonObj["status"]["accuracy"] = int(gpsResponse->status.accuracy); // = A,B,C,D
+    jsonObj["status"]["antenna"] = int(gpsResponse->status.antenna);  //  = -,O,S
+    jsonObj["status"]["batVolt"] = int(gpsResponse->status.batVolt); // = -,B
+    jsonObj["status"]["lockHist"] = int(gpsResponse->status.lockHist); //  = -,a,A
+    jsonObj["status"]["mode"] = int(gpsResponse->status.mode); // = T,A,S,D
     jsonObj["status"]["noGps"] = int(gpsResponse->status.noGps);
-    jsonObj["status"]["notTested"] = int(gpsResponse->status.notTested);
-    jsonObj["status"]["numSats"] = int(gpsResponse->status.numSats);
-    jsonObj["status"]["nvRam"] = int(gpsResponse->status.nvRam);
-    jsonObj["status"]["oscVolt"] = int(gpsResponse->status.oscVolt);
-    jsonObj["status"]["pllSynth"] = int(gpsResponse->status.pllSynth);
-    jsonObj["status"]["receiver"] = int(gpsResponse->status.receiver);
-    jsonObj["status"]["satLock"] = int(gpsResponse->status.satLock);
-    jsonObj["status"]["timErr1"] = int(gpsResponse->status.timErr1);
-    jsonObj["status"]["timErr2"] = int(gpsResponse->status.timErr2);
-    jsonObj["status"]["timSrce"] = int(gpsResponse->status.timSrce);
-    jsonObj["status"]["tracking"] = int(gpsResponse->status.tracking);
-
+    jsonObj["status"]["notTested"] = int(gpsResponse->status.notTested); //
+    jsonObj["status"]["nvRam"] = int(gpsResponse->status.nvRam); // = -,N
+    jsonObj["status"]["oscVolt"] = int(gpsResponse->status.oscVolt); // = -,X
+    jsonObj["status"]["pllSynth"] = int(gpsResponse->status.pllSynth); // = -,P
+    jsonObj["status"]["receiver"] = int(gpsResponse->status.receiver); // = -,R
+    jsonObj["status"]["satLock"] = int(gpsResponse->status.satLock); // = L,U
+    jsonObj["status"]["timErr1"] = int(gpsResponse->status.timErr1); // = -,U
+    jsonObj["status"]["timErr2"] = int(gpsResponse->status.timErr2); // = -,U
+    jsonObj["status"]["timSrce"] = int(gpsResponse->status.timSrce); //= G,F,I,N
+    jsonObj["status"]["tracking"] = int(gpsResponse->status.tracking); // = -,T
+    */
     return jsonObj;
 }
 
@@ -181,8 +182,8 @@ json processAutoViolateResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMs
     {
         SEquipCtrlMsg::SStateResp* AVDResponse = (SEquipCtrlMsg::SStateResp*)data;
 
-        jsonObj["SStateResp"]["completionTime"] = double(AVDResponse->completionTime);
-        jsonObj["SStateResp"]["state"] = eStateRespToString(AVDResponse->state);
+        jsonObj["task"]["completionTime"] = double(AVDResponse->completionTime);
+        jsonObj["task"]["state"] = eStateRespToString(AVDResponse->state);
     }
     break;
 
@@ -545,8 +546,8 @@ json processOccupancyResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg:
     case ECSMSDllMsgType::OCC_SOLICIT_STATE_RESPONSE:
     {
         SEquipCtrlMsg::SStateResp* OCCResponse = (SEquipCtrlMsg::SStateResp*)data;
-        jsonObj["SStateResp"]["completionTime"] = (unsigned long)OCCResponse->completionTime;
-        jsonObj["SStateResp"]["state"] = eStateRespToString(OCCResponse->state);
+        jsonObj["task"]["completionTime"] = (unsigned long)OCCResponse->completionTime;
+        jsonObj["task"]["state"] = eStateRespToString(OCCResponse->state);
     }
     break;
 
@@ -720,8 +721,8 @@ json processOccupancyDFResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMs
         //SEquipCtrlMsg::SStateResp* OCCDFResponse = (SEquipCtrlMsg::SStateResp*)data;
         SEquipCtrlMsg::SStateResp* OCCDFResponse = reinterpret_cast<SEquipCtrlMsg::SStateResp*>(data);
 
-        jsonObj["SStateResp"]["completionTime"] = OCCDFResponse->completionTime;
-        jsonObj["SStateResp"]["state"] = eStateRespToString(OCCDFResponse->state);
+        jsonObj["task"]["completionTime"] = OCCDFResponse->completionTime;
+        jsonObj["task"]["state"] = eStateRespToString(OCCDFResponse->state);
     }
     break;
 
@@ -731,38 +732,69 @@ json processOccupancyDFResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMs
         SEquipCtrlMsg::SFrequencyVsChannelResp* OCCDFResponse = reinterpret_cast<SEquipCtrlMsg::SFrequencyVsChannelResp*>(data);
 
         std::vector<float> freqVsChanData(OCCDFResponse->occHdr.numTotalChannels);
-        float maxValue = (std::numeric_limits<float>::max)();
-        float minValue = -maxValue;
 
-        int j = (int)OCCDFResponse->occHdr.firstChannel;
-        for (int i = 0; i < int(OCCDFResponse->occHdr.numChannels); i++, j++)
+        freqVsChanData[0] = static_cast<float>(Units::Frequency(OCCDFResponse->frequencies[0]).Hz<double>() / edll::MHZ_MULTIPLIER);
+        float maxFrequency = freqVsChanData[0];
+        float minFrequency = maxFrequency;
+        float frequencyDelta = 0;
+        float maxDelta = (std::numeric_limits<float>::lowest)();
+        float minDelta = (std::numeric_limits<float>::max)();
+
+		loggerPtr->trace("maxDelta initial: {}, minDelta initial: {}", maxDelta, minDelta);
+
+        // int j = (int)OCCDFResponse->occHdr.firstChannel;
+        for (int i = 1; i < int(OCCDFResponse->occHdr.numChannels); i++) // j++
         {
-            freqVsChanData[j] = static_cast<float>(Units::Frequency(OCCDFResponse->frequencies[i]).Hz<double>() / edll::MHZ_MULTIPLIER);
-            if (freqVsChanData[j] < minValue) minValue = freqVsChanData[j];
-            if (freqVsChanData[j] > maxValue) maxValue = freqVsChanData[j];
+            freqVsChanData[i] = static_cast<float>(Units::Frequency(OCCDFResponse->frequencies[i]).Hz<double>() / edll::MHZ_MULTIPLIER); // freqVsChanData[j]
+            if (freqVsChanData[i] < minFrequency) minFrequency = freqVsChanData[i]; // freqVsChanData[j]
+            if (freqVsChanData[i] > maxFrequency) maxFrequency = freqVsChanData[i]; // freqVsChanData[j]
+
+            frequencyDelta = freqVsChanData[i] - freqVsChanData[i - 1];
+			if (frequencyDelta < minDelta) minDelta = frequencyDelta;
+			if (frequencyDelta > maxDelta) maxDelta = frequencyDelta;
         }
 
-        jsonObj["site"] = ProcessGpsData(&(OCCDFResponse->occHdr.gpsResponse));
+        loggerPtr->trace("maxDelta: {}, minDelta: {}", maxDelta, minDelta);
 
+        if (maxDelta - minDelta < 0.00001f)
+        {
+            jsonObj["spectrum"]["numBins"] = OCCDFResponse->occHdr.numChannels;
+            jsonObj["spectrum"]["startFrequency"] = minFrequency;
+            jsonObj["spectrum"]["stopFrequency"] = maxFrequency;
+            jsonObj["spectrum"]["frequencyUnit"] = "MHz";
+            jsonObj["spectrum"]["binSize"] = frequencyDelta;
+            jsonObj["spectrum"]["binSizeUnit"] = "Hz";
+		}
+        else
+        {
+            jsonObj["spectrum"]["FrequencyData"] = base64Encode(
+                reinterpret_cast<const unsigned char*>(freqVsChanData.data()), 
+                static_cast<unsigned int>(freqVsChanData.size() * sizeof(float))
+            );
+            jsonObj["spectrum"]["startFrequency"] = minFrequency;
+            jsonObj["spectrum"]["stopFrequency"] = maxFrequency;
+            jsonObj["spectrum"]["frequencyUnit"] = "MHz";
+		}
+
+        jsonObj["site"] = ProcessGpsData(&(OCCDFResponse->occHdr.gpsResponse));
         jsonObj["equipment"]["hostName"] = OCCDFResponse->hostName;
         jsonObj["equipment"]["selectedAntenna"] = eAntToString(OCCDFResponse->selectedAntenna);
 
-        jsonObj["channel"]["Occupancy"]["status"] = eErrorCodeToString(OCCDFResponse->occHdr.status);
-        jsonObj["channel"]["Occupancy"]["firstChannel"] = OCCDFResponse->occHdr.firstChannel;
-        jsonObj["channel"]["Occupancy"]["lastChannel"] = j;
-        jsonObj["channel"]["Occupancy"]["numChannels"] = OCCDFResponse->occHdr.numChannels;
-        jsonObj["channel"]["Occupancy"]["numTotalChannels"] = OCCDFResponse->occHdr.numTotalChannels;
-        jsonObj["channel"]["Occupancy"]["numTimeOfDays"] = OCCDFResponse->occHdr.numTimeOfDays;
-        jsonObj["channel"]["Occupancy"]["numBands"] = OCCDFResponse->numBands;
-        jsonObj["channel"]["Occupancy"]["maxValue"] = maxValue;
-        jsonObj["channel"]["Occupancy"]["minValue"] = minValue;
-        jsonObj["channel"]["Occupancy"]["Unit"] = "MHz";
-        jsonObj["channel"]["Occupancy"]["frequencyData"] = freqVsChanData;
 
-        jsonObj["settings"]["primaryThreshold"]["absolute"] = OCCDFResponse->occPrimaryThreshold[0];
-        jsonObj["settings"]["primaryThreshold"]["aboveNoise"] = OCCDFResponse->occPrimaryThreshold[1];
-        jsonObj["settings"]["secondaryThreshold"]["absolute"] = OCCDFResponse->occSecondaryThreshold[0];
-        jsonObj["settings"]["secondaryThreshold"]["aboveNoise"] = OCCDFResponse->occSecondaryThreshold[1];
+        /* TODO: Get fields exclusive to the band into the band item
+        jsonObj["band"]["Spectrum"]["status"] = eErrorCodeToString(OCCDFResponse->occHdr.status);
+        jsonObj["band"]["Spectrum"]["firstChannel"] = OCCDFResponse->occHdr.firstChannel;
+        jsonObj["band"]["Spectrum"]["lastChannel"] = j;
+        jsonObj["band"]["Spectrum"]["numChannels"] = OCCDFResponse->occHdr.numChannels;
+        jsonObj["band"]["Spectrum"]["numTotalChannels"] = OCCDFResponse->occHdr.numTotalChannels;
+        jsonObj["band"]["Spectrum"]["numTimeOfDays"] = OCCDFResponse->occHdr.numTimeOfDays;
+        jsonObj["band"]["Spectrum"]["numBands"] = OCCDFResponse->numBands;
+        */
+
+        jsonObj["settings"]["primaryThreshold"]["dBuV/m absolute"] = static_cast<int>(OCCDFResponse->occPrimaryThreshold[0]); // dBuV/m
+        jsonObj["settings"]["primaryThreshold"]["dB aboveNoise"] = static_cast<int>(OCCDFResponse->occPrimaryThreshold[1]); // dB
+        jsonObj["settings"]["secondaryThreshold"]["dBuV/m absolute"] = static_cast<int>(OCCDFResponse->occSecondaryThreshold[0]); // dBuV/m
+        jsonObj["settings"]["secondaryThreshold"]["dB aboveNoise"] = static_cast<int>(OCCDFResponse->occSecondaryThreshold[1]); // dB
         jsonObj["settings"]["saveIntermediateData"] = bool(OCCDFResponse->saveIntermediateData);
         jsonObj["settings"]["useSecondaryThreshold"] = bool(OCCDFResponse->useSecondaryThreshold);
     }
@@ -773,26 +805,37 @@ json processOccupancyDFResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMs
         // SEquipCtrlMsg::SScanDfVsChannelResp* OCCDFResponse = (SEquipCtrlMsg::SScanDfVsChannelResp*)data;
         SEquipCtrlMsg::SScanDfVsChannelResp* OCCDFResponse = reinterpret_cast<SEquipCtrlMsg::SScanDfVsChannelResp*>(data);
 
-        std::vector<unsigned long> chanData(OCCDFResponse->occHdr.numTotalChannels);
-
-        std::copy(OCCDFResponse->scanDfData,
-            OCCDFResponse->scanDfData + OCCDFResponse->occHdr.numChannels,
-            chanData.begin() + OCCDFResponse->occHdr.firstChannel);
+        jsonObj["channel"]["Occupancy"]["status"] = eErrorCodeToString(OCCDFResponse->occHdr.status);
 
         jsonObj["site"] = ProcessGpsData(&(OCCDFResponse->occHdr.gpsResponse));
 
-        jsonObj["channel"]["Occupancy"]["data"] = chanData;
-
-        jsonObj["channel"]["Occupancy"]["status"] = eErrorCodeToString(OCCDFResponse->occHdr.status);
-        jsonObj["channel"]["Occupancy"]["firstChannel"] = OCCDFResponse->occHdr.firstChannel;
-        jsonObj["channel"]["Occupancy"]["numChannels"] = OCCDFResponse->occHdr.numChannels;
         jsonObj["channel"]["Occupancy"]["numTotalChannels"] = OCCDFResponse->occHdr.numTotalChannels;
+        jsonObj["channel"]["Occupancy"]["firstChannel"] = OCCDFResponse->occHdr.firstChannel;
+
         jsonObj["channel"]["Occupancy"]["numTimeOfDays"] = OCCDFResponse->occHdr.numTimeOfDays;
-        jsonObj["channel"]["Occupancy"]["aveFldStr"] = OCCDFResponse->aveFldStr;
-        jsonObj["channel"]["Occupancy"]["aveRange"] = OCCDFResponse->aveRange;
+
+        int numChannels = OCCDFResponse->occHdr.numTotalChannels;
+
         jsonObj["channel"]["Occupancy"]["numAzimuths"] = OCCDFResponse->numAzimuths;
-        // jsonObj["channel"]["Occupancy"]["numChannels"] = OCCDFResponse->numChannels;
-        jsonObj["channel"]["Occupancy"]["azimuthData"] = chanData;
+        jsonObj["channel"]["Occupancy"]["numChannels"] = numChannels;
+
+        std::vector<int> chanData(numChannels);
+        std::copy(OCCDFResponse->scanDfData,
+            OCCDFResponse->scanDfData + OCCDFResponse->occHdr.numChannels,
+            chanData.begin() + OCCDFResponse->occHdr.firstChannel);
+        jsonObj["channel"]["Occupancy"]["chanData"] = chanData;
+
+        std::vector<int> aveRange(numChannels);
+        std::copy(OCCDFResponse->aveRange,
+            OCCDFResponse->aveRange + OCCDFResponse->occHdr.numChannels,
+			aveRange.begin() + OCCDFResponse->occHdr.firstChannel);
+        jsonObj["channel"]["Occupancy"]["aveRange"] = aveRange;
+
+        std::vector<int> aveFldStr(numChannels);
+        std::copy(OCCDFResponse->aveFldStr,
+            OCCDFResponse->aveFldStr + OCCDFResponse->occHdr.numChannels,
+            aveFldStr.begin() + OCCDFResponse->occHdr.firstChannel);
+        jsonObj["channel"]["Occupancy"]["aveFldStr"] = aveFldStr;
     }
     break;
 
@@ -1035,6 +1078,8 @@ void OnDataFunc(_In_  unsigned long serverId, _In_ ECSMSDllMsgType respType, _In
 {
 	const std::string logSource = "Scorpio::OnDataFunc";
 
+    loggerPtr->debug("OnDataFunc: serverId={}, respType={}, sourceAddr={}, requestID={}", serverId, static_cast<int>(respType), sourceAddr, requestID);
+
     json responseJson = {};
 
     switch (respType)
@@ -1101,7 +1146,6 @@ void OnDataFunc(_In_  unsigned long serverId, _In_ ECSMSDllMsgType respType, _In
 
     response.push(responseJson, logSource);
 
-    loggerPtr->debug("OnDataFunc: serverId={}, respType={}, sourceAddr={}, requestID={}", serverId, static_cast<int>(respType), sourceAddr, requestID);
 	loggerPtr->trace("OnDataFunc: responseJson={}", responseJson.dump());
 }
 

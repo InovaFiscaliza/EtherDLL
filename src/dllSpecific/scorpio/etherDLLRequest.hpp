@@ -93,11 +93,11 @@ SAudioParams jsonToSAudioParams(nlohmann::json jsonObj) {
 SGetPanParams jsonToSGetPanParams(nlohmann::json jsonObj) {
 	SGetPanParams structSO{};
 
-	unsigned long bandwidth = jsonObj["bandwidth"].get<unsigned long>();
+	unsigned long bandwidth = jsonObj["span"].get<unsigned long>();
 	//loggerPtr->debug("Bandwidth (Hz): {}", bandwidth);
 	structSO.bandwidth = Units::Frequency(bandwidth).GetRaw();
 
-	unsigned long freq = jsonObj["freq"].get<unsigned long>();
+	unsigned long freq = jsonObj["centerFrequency"].get<unsigned long>();
 	//loggerPtr->debug("Frequency (Hz): {}", freq);
 	structSO.freq = Units::Frequency(freq).GetRaw();
 
@@ -285,69 +285,104 @@ SOccupReqData* jsonToSOccupReqData(nlohmann::json jsonObj) {
 	return m_occReqMsg;
 }
 
+
 // ----------------------------------------------------------------------
 /**
-* @brief Convert JSON object in SOccDFReqData struct
-* 
-* @param jsonObj: JSON object containing the parameters
-* @return SOccDFReqData structure populated with values from the JSON object
-* @throws NO EXCEPTION HANDLING
-*/
+ * @brief
+ * @brief Helper function to fill in band data from JSON object
+ * @param band: Reference to the SBand struct to be filled
+ * @param bandJson: JSON object containing the band parameters
+ * @throws NO EXCEPTION HANDLING
+**/
+void fillBandData(SSmsMsg::SGetScanDfCmdV1::SBand& band, const json& bandJson) {
+	if (!bandJson["channelBandwidth"].is_null()) {
+		band.channelBandwidth = Units::Frequency(bandJson["channelBandwidth"].get<unsigned long>()).GetRaw();
+	}
+	band.exclude = bandJson["exclude"].is_null() ? false : bandJson["exclude"].get<bool>();
+	if (!bandJson["stopFrequency"].is_null()) {
+		band.highFrequency = Units::Frequency(bandJson["stopFrequency"].get<unsigned long>()).GetRaw();
+	}
+	if (!bandJson["startFrequency"].is_null()) {
+		band.lowFrequency = Units::Frequency(bandJson["startFrequency"].get<unsigned long>()).GetRaw();
+	}
+
+	// TODO: #25 Improve to add default values if signalType is missing.
+	// The implementation of default values should be in the Validation module.
+	if (bandJson.find("signalType") == bandJson.end()) {
+		loggerPtr->debug("signalType object missing in band JSON. Using default values.");
+		band.signalType.gsm = 0;
+		band.signalType.horizPol = 0;
+		band.signalType.narrow = 0;
+		band.signalType.unused = 0;
+		return;
+	}
+
+	band.signalType.gsm = bandJson["signalType"]["gsm"].is_null() ? 0 : bandJson["signalType"]["gsm"].get<unsigned char>();
+	band.signalType.horizPol = bandJson["signalType"]["horizPol"].is_null() ? 0 : bandJson["signalType"]["horizPol"].get<unsigned char>();
+	band.signalType.narrow = bandJson["signalType"]["narrow"].is_null() ? 0 : bandJson["signalType"]["narrow"].get<unsigned char>();
+	band.signalType.unused = bandJson["signalType"]["unused"].is_null() ? 0 : bandJson["signalType"]["unused"].get<unsigned char>();
+}
+
+
+// ----------------------------------------------------------------------
+/**
+ * @brief Convert JSON object in SOccDFReqData struct
+ * 
+ * @param jsonObj: JSON object containing the parameters
+ * @return SOccDFReqData structure populated with values from the JSON object
+ * @throws NO EXCEPTION HANDLING
+**/
 SOccDFReqData* jsonToSOccDFReqData(nlohmann::json jsonObj) {
-	SOccDFReqData structSO;
-	SSmsMsg::SGetScanDfCmdV1::SBand band;
-
-	if (jsonObj["band"]["channelBandwidth"].is_null() == false) {
-		band.channelBandwidth = Units::Frequency(jsonObj["band"]["channelBandwidth"].get<unsigned long>()).GetRaw();
+	// Determine number of bands
+	unsigned short numBands;
+	if (jsonObj["band"].is_array()) {
+		numBands = static_cast<unsigned short>(jsonObj["band"].size());
 	}
-	
-	band.exclude = jsonObj["band"]["exclude"].is_null() == true ? NULL : jsonObj["band"]["exclude"].get<bool>();
-	
-	if (jsonObj["band"]["highFrequency"].is_null() == false) {
-		band.highFrequency = Units::Frequency(jsonObj["band"]["highFrequency"].get<unsigned long>()).GetRaw();
+	else {
+		numBands = 1;
+		json singleBand = jsonObj["band"];
+		jsonObj["band"] = json::array({ singleBand });
 	}
-	
-	if (jsonObj["band"]["lowFrequency"].is_null() == false) {
-		band.lowFrequency = Units::Frequency(jsonObj["band"]["lowFrequency"].get<unsigned long>()).GetRaw();
+
+	// Allocate memory for the structure with correct size
+	auto occupDFbodySize = offsetof(SOccDFReqData, band) + numBands * sizeof(SSmsMsg::SGetScanDfCmdV1::SBand);
+	SOccDFReqData* occDFReqMsg = (SOccDFReqData*)malloc(occupDFbodySize);
+
+	if (occDFReqMsg == nullptr) {
+		loggerPtr->error("Memory allocation failed in jsonToSOccDFReqData. Size: {}", occupDFbodySize);
+		return nullptr;
 	}
-	
-	band.signalType.gsm = jsonObj["band"]["signalType"]["gsm"].is_null() == true ? NULL : jsonObj["band"]["signalType"]["gsm"].get<unsigned char>();
-	band.signalType.horizPol = jsonObj["band"]["signalType"]["horizPol"].is_null() == true ? NULL : jsonObj["band"]["signalType"]["horizPol"].get<unsigned char>();
-	band.signalType.narrow = jsonObj["band"]["signalType"]["narrow"].is_null() == true ? NULL : jsonObj["band"]["signalType"]["narrow"].get<unsigned char>();
-	band.signalType.unused = jsonObj["band"]["signalType"]["unused"].is_null() == true ? NULL : jsonObj["band"]["signalType"]["unused"].get<unsigned char>();
 
-	structSO.band[0] = band;
-	
-	structSO.storageTime = jsonObj["storageTime"].is_null() == true ? NULL : jsonObj["storageTime"].get<unsigned long>();
-	structSO.measurementTime = jsonObj["measurementTime"].is_null() == true ? NULL : jsonObj["measurementTime"].get<unsigned long>();
-	structSO.numAzimuths = jsonObj["numAzimuths"].is_null() == true ? NULL :jsonObj["numAzimuths"].get<unsigned long>();
-	structSO.confidence = jsonObj["confidence"].is_null() == true ? NULL : jsonObj["confidence"].get<unsigned long>();
-	structSO.recordHoldoff = jsonObj["recordHoldoff"].is_null() == true ? NULL : jsonObj["recordHoldoff"].get<unsigned long>();
-	structSO.scanDfThreshold = jsonObj["scanDfThreshold"].is_null() == true ? NULL : jsonObj["scanDfThreshold"].get<unsigned char>();
-	structSO.recordAudioDf = jsonObj["recordAudioDf"].is_null() == true ? NULL : jsonObj["recordAudioDf"].get<bool>();
-	structSO.numBands = jsonObj["numBands"].is_null() == true ? NULL : jsonObj["numBands"].get<unsigned short>();
+	// Initialize the struct
+	memset(occDFReqMsg, 0, occupDFbodySize);
+	occDFReqMsg->numBands = numBands;
 
-	SEquipCtrlMsg::SRcvrCtrlCmd rcvrCtrl;
-	rcvrCtrl.agcTime = jsonObj["rcvrCtrl"]["agcTime"].is_null() == true ? NULL : jsonObj["rcvrCtrl"]["agcTime"].get<unsigned long>();
+	// Fill in band data directly in the allocated structure
+	for (size_t i = 0; i < numBands; ++i) {
+		fillBandData(occDFReqMsg->band[i], jsonObj["band"][i]);
+		loggerPtr->trace("Processed band {}", i);
+	}
+
+	// Fill in other fields
+	occDFReqMsg->storageTime = jsonObj["storageTime"].is_null() ? 0 : jsonObj["storageTime"].get<unsigned long>();
+	occDFReqMsg->measurementTime = jsonObj["measurementTime"].is_null() ? 0 : jsonObj["measurementTime"].get<unsigned long>();
+	occDFReqMsg->numAzimuths = jsonObj["numAzimuths"].is_null() ? 0 : jsonObj["numAzimuths"].get<unsigned long>();
+	occDFReqMsg->confidence = jsonObj["confidence"].is_null() ? 0 : jsonObj["confidence"].get<unsigned long>();
+	occDFReqMsg->recordHoldoff = jsonObj["recordHoldoff"].is_null() ? 0 : jsonObj["recordHoldoff"].get<unsigned long>();
+	occDFReqMsg->scanDfThreshold = jsonObj["scanDfThreshold"].is_null() ? 0 : jsonObj["scanDfThreshold"].get<unsigned char>();
+	occDFReqMsg->recordAudioDf = jsonObj["recordAudioDf"].is_null() ? false : jsonObj["recordAudioDf"].get<bool>();
+	// Fill rcvrCtrl
+	occDFReqMsg->rcvrCtrl.agcTime = jsonObj["rcvrCtrl"]["agcTime"].is_null() ? 0 : jsonObj["rcvrCtrl"]["agcTime"].get<unsigned long>();
+
 	if (jsonObj["rcvrCtrl"]["bandwidth"].is_null() == false) {
-		rcvrCtrl.bandwidth = Units::Frequency(jsonObj["rcvrCtrl"]["bandwidth"].get<unsigned long>()).GetRaw();
+		occDFReqMsg->rcvrCtrl.bandwidth = Units::Frequency(jsonObj["rcvrCtrl"]["bandwidth"].get<unsigned long>()).GetRaw();
 	}
 	if (jsonObj["rcvrCtrl"]["bfo"].is_null() == false) {
-		rcvrCtrl.bfo = Units::Frequency(jsonObj["rcvrCtrl"]["bfo"].get<unsigned long>()).GetRaw();
+		occDFReqMsg->rcvrCtrl.bfo = Units::Frequency(jsonObj["rcvrCtrl"]["bfo"].get<unsigned long>()).GetRaw();
 	}
-	rcvrCtrl.detMode = jsonObj["rcvrCtrl"]["detMode"].is_null() == true ? (SSmsMsg::SRcvrCtrlCmdV1::EDetMode)NULL : jsonObj["rcvrCtrl"]["detMode"].get<SSmsMsg::SRcvrCtrlCmdV1::EDetMode>();
+	occDFReqMsg->rcvrCtrl.detMode = jsonObj["rcvrCtrl"]["detMode"].is_null() ? (SSmsMsg::SRcvrCtrlCmdV1::EDetMode)0 : jsonObj["rcvrCtrl"]["detMode"].get<SSmsMsg::SRcvrCtrlCmdV1::EDetMode>();
 	if (jsonObj["rcvrCtrl"]["freq"].is_null() == false) {
-		rcvrCtrl.freq = Units::Frequency(jsonObj["rcvrCtrl"]["freq"].get<unsigned long>()).GetRaw();
-	}
-
-	structSO.rcvrCtrl = rcvrCtrl;
-
-	auto occupDFbodySize = offsetof(SOccDFReqData, band) + jsonObj["numBands"].get<unsigned short>() * sizeof(SSmsMsg::SGetScanDfCmdV1::SBand);
-	SOccDFReqData* occDFReqMsg;
-	occDFReqMsg = (SOccDFReqData*)malloc(occupDFbodySize);
-	if (occDFReqMsg != nullptr)
-	{
-		memcpy(occDFReqMsg, &structSO, occupDFbodySize);
+		occDFReqMsg->rcvrCtrl.freq = Units::Frequency(jsonObj["rcvrCtrl"]["freq"].get<unsigned long>()).GetRaw();
 	}
 
 	return occDFReqMsg;
@@ -435,8 +470,24 @@ void DLLFunctionCall(DLLConnectionData DLLConnID, json request, unsigned long ms
 		}
 		case ECSMSDllMsgType::GET_OCCUPANCYDF:
 		{
+			// request realtime data for output
+			errCode = RequestRealTime(DLLConnID, true, &requestID);
+
 			SOccDFReqData* occDFReqMsg = jsonToSOccDFReqData(reqArguments);
-			errCode = RequestOccupancyDF(DLLConnID, occDFReqMsg, &requestID);
+			if (occDFReqMsg == nullptr) {
+				errCode = ERetCode::MEMORY_ALLOC_ERROR;
+				break;
+			}
+			try
+			{
+				errCode = RequestOccupancyDF(DLLConnID, occDFReqMsg, &requestID);
+			}
+			catch (const std::exception&)
+			{
+				free(occDFReqMsg);
+				throw;
+
+			}
 			break;
 		}
 		case ECSMSDllMsgType::GET_AVD:

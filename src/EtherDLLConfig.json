@@ -28,7 +28,7 @@
     },
     "log": {
         "console": {
-            "level": "debug"
+            "level": "trace"
         },
         "file": {
             "filename": "EtherDLL.log",
