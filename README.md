@@ -37,13 +37,15 @@ The is a console application that provides a TCP/IP Socket API to local host ser
 
 This enables the integration of restricted and legacy Windows services through TCP/IP, allowing the development of cross platform solutions, either locally, such as a x64 application accessing a x86 DLL API, or remotely, such as a web application accessing a windows local service through the network.
 
-Core modules and functions provide methods for client communication through TCP/IP sockets using JSON formatted messages and additional reusable componentes for logging, runtime configuration and general utilities. These core modules can be reused in different projects.
+Core modules and functions provide methods for client communication through TCP/IP sockets using JSON formatted messages and additional reusable components for logging, runtime configuration and general utilities. These core modules can be reused in different projects.
 
 The communication with the DLL API is done through callback functions and specific C++ methods. Thus the program must be compiled with the specific header files and linked with the DLL files in order to actually provide the intended service.
 
-The application was originally designed to work with the DLL provided by TCI SPX Inc for their [Spectrum Monitoring Stations](https://www.tcibr.com/spectrum-monitoring-systems/), using Visual Studio 2022 as IDE and Windows as operating system in a x86 architecture. The solution itself follows the C++17 standard. For testing purposes of this initial integration, a test client in matlab was also developed. Some of the components used in this example are dependent on the manufacturer's SDK and licensing, thus they are not included in this repository.
+The application was originally designed to work with the DLL provided by TCI SPX Inc for their [Spectrum Monitoring Stations](https://www.tcibr.com/spectrum-monitoring-systems/), using Visual Studio 2022 as IDE and Windows as operating system in a x86 architecture. The solution itself follows the C++17 standard.
 
-Additional examples are intended to be provided in the future.
+For testing purposes of this initial integration, a test client in matlab was also developed. Some of the components used in this example are dependent on the manufacturer's SDK and licensing, thus they are not included in this repository.
+
+Additional examples are intended to be provided in the future, enabling easier testing and adaptation to other DLL APIs before the final release of the first stable version.
 
 <div>
     <a href="#about-etherdll">
@@ -86,7 +88,7 @@ The specific modules are placed in the `src/specific/<DLLName>` folder, where <D
 | Specific Example Module | Description                                                  |
 |--------------|--------------------------------------------------------------|
 | `etherDLLCodes.hpp` | Define functions used to translate DLL specific codes and enumerations into human readable or machine readable format. |
-| `etherprovidesDLLInit.hpp` | Define functions to initialize and terminate DLL resources, including registering callback functions. It also includes functions to build default configuration parameters associated with the DLL API. |
+| `etherDLLInit.hpp` | Define functions to initialize and terminate DLL resources, including registering callback functions. It also includes functions to build default configuration parameters associated with the DLL API. |
 | `etherDLLRequest.hpp` | Define functions access the received message queue and translates the JSON messages received from clients to the in memory structures used by the DLL, including . |
 | `etherDLLValidation.hpp` | Define functions for validating json data before putting sending it to the DLL. If error is detected, the appropriate response to the client is sending, thus avoiding DLL errors that might compromise the overall application and system stability. |
 | `etherDLLDataProcess.hpp` | Define functions for processing data received from the DLL. |
@@ -183,6 +185,8 @@ Further reading material can be found at:
 </div>
 
 # Additional References
+
+None at this time.
 
 <div>
     <a href="#about-etherdll">
