@@ -1,0 +1,65 @@
+{
+    "dll_default": {
+        "OCCRequest": {
+            "ant": 1,
+            "confidenceLevel": 90,
+            "desiredAccuracy": 90,
+            "durationMethod": "Fixed",
+            "measurementTime": 1,
+            "occPrimaryThreshold": 10,
+            "occflags": {
+                "eFieldVsChannel": false,
+                "msglengthDistribution": false,
+                "msglengthVsChannel": false,
+                "occupancyVsChannel": true,
+                "occupancyVsTimeOfDay": false,
+                "spectrogram": false,
+                "timegram": false
+            },
+            "occupancyMinGap": 1,
+            "storageTime": 1,
+            "thresholdMethod": "Noise Riding"
+        },
+        "station": {
+            "address": "172.24.3.15",
+            "port": 3303,
+            "timeoutS": 10
+        }
+    },
+    "log": {
+        "console": {
+            "level": "debug"
+        },
+        "file": {
+            "filename": "EtherDLL.log",
+            "level": "trace"
+        },
+        "name": "EtherDLL"
+    },
+    "service": {
+        "taskKeys": {
+            "arguments": "ARGS",
+            "clientIP": "REQUEST_SOURCE",
+            "clientId": "ID",
+            "commandCode": "CODE",
+            "commandName": "COMMAND",
+            "message": "MSG",
+            "queueId": "QID",
+            "serverId": "SID"
+        },
+        "bufferSizeBytes": 4096,
+        "bufferTTLMsgCount": 5,
+        "demoMode": false,
+        "msgKeys": {
+            "ack": "ACK",
+            "end": "\r\n",
+            "nack": "NACK",
+            "ping": "PING"
+        },
+        "pingEnable": true,
+        "pingPeriodS": 5,
+        "port": 31000,
+        "sleepMs": 100,
+        "timeoutS": 10
+    }
+}

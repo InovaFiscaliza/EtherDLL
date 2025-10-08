@@ -1,0 +1,9 @@
+{
+    "CODE": 84,
+    "COMMAND": "cmdRequestMeasurement",
+    "ARGS": {
+        "freq": 101300000,
+        "bandwidth": 200000,
+        "ant": 1
+    }
+}

@@ -1,0 +1,19 @@
+{
+    "CODE": 16,
+    "COMMAND": "cmdSetAudio",
+    "ARGS": {
+        "anyChannel": true,
+        "bandwidth": 200000,
+        "bfo": 0,
+        "channel": 0,
+        "detMode": 3,
+        "doModRec": false,
+        "doRDS": false,
+        "freq": 101300000,
+        "streamID": 0,
+      "test_array": [ 1, 2, 3, 4, 5 ],
+      "test_string_array": [ "one", "two", "three" ],
+      "test_float": 12.34,
+      "test_string": "Hello, World!"
+    }
+}

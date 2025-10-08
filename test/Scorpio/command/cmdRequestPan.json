@@ -1,0 +1,9 @@
+{
+    "CODE": 55,
+    "COMMAND": "cmdRequestPan",
+    "ARGS": {
+        "bandwidth": 1000000,
+        "freq": 101300000,
+        "rcvrAtten": 255
+    }
+}

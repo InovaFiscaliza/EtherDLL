@@ -1,0 +1,20 @@
+{
+    "log": {
+        "file": {
+            "enable": true,
+            "level": "trace",
+            "path": "log.txt"
+        }
+    },
+    "proxy": {
+        "address": "localhost",
+        "timeout_s": 10
+    },
+    "service": {
+        "port": 31000,
+        "timeout_s": 10000,
+        "sleep_ms": 100,
+        "check_period": 10,
+        "command_path": "./command"
+    }
+}
