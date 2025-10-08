@@ -23,6 +23,7 @@
 // Include core EtherDLL libraries
 #include "EtherDLLConfig.hpp"
 #include "EtherDLLLog.hpp"
+#include "EtherDLLUtils.hpp"
 
 // Include project libraries
 #include <nlohmann/json.hpp>
