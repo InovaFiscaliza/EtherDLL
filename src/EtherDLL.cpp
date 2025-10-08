@@ -18,10 +18,8 @@
 
 // ----------------------------------------------------------------------
 // Include to DLL specific headers
-#include "etherDLLCodes.hpp"
 #include "etherDLLInit.hpp"
 #include "etherDLLRequest.hpp"
-#include "etherDLLResponse.hpp"
 
 // Include core EtherDLL headers
 #include "EtherDLLLog.hpp"
@@ -383,7 +381,7 @@ int main(int argc, char* argv[]) {
 		}
 	}
 
-	if (!disconnectAPI(DLLConnID, *logger_ptr)) {
+	if (!disconnectAPI(DLLConnID)) {
 		logger_ptr->error("Failed to disconnect from station.");
 	}
 
