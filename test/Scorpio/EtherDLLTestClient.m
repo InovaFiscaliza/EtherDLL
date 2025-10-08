@@ -11,9 +11,9 @@ classdef EtherDLLTestClient < matlab.apps.AppBase
         ConnectButton    matlab.ui.control.StateButton
         CommandDropDown  matlab.ui.control.DropDown
         sentMsg          matlab.ui.control.TextArea
-        AOAAxes          matlab.ui.control.UIAxes
-        OCCAxes          matlab.ui.control.UIAxes
         SPTAxes          matlab.ui.control.UIAxes
+        OCCAxes          matlab.ui.control.UIAxes
+        AOAAxes          matlab.ui.control.UIAxes
     end
 
     
@@ -179,13 +179,13 @@ classdef EtherDLLTestClient < matlab.apps.AppBase
                         end
                     end
                 end
-                app.receivedMsg.Value = [evalc(['disp(data)']);app.receivedMsg.Value];
+                app.receivedMsg.Value = [evalc('disp(data)');app.receivedMsg.Value];
             catch
                 if in_data == null
                     app.ConnectButton.Value = not(app.ConnectButton.Value);
                     return;
                 end
-                message = newline + "error parsing data: <" + evalc(['disp(data)']) + ">";
+                message = newline + "error parsing data: <" + evalc('disp(data)') + ">";
                 app.receivedMsg.Value = [message;app.receivedMsg.Value];
             end
         end
@@ -276,7 +276,7 @@ classdef EtherDLLTestClient < matlab.apps.AppBase
         end
 
         % Value changed function: ConnectButton
-        function ConnectButtonValueChanged(app, event)
+        function ConnectButtonValueChanged(app, ~)
             app.ConnectButton.Enable = false;
             if app.ConnectButton.Value % True value is associated with Disconnected state, i.e. User required to connect
                 connected = app.connect();
@@ -298,7 +298,7 @@ classdef EtherDLLTestClient < matlab.apps.AppBase
         end
 
         % Clicked callback: CommandDropDown
-        function CommandDropDownClicked(app, event)
+        function CommandDropDownClicked(app, ~)
             %  change color and first item value to indicate that options
             %  are active.
             app.CommandDropDown.FontColor = [0.0, 0.0, 0.0];
@@ -306,7 +306,7 @@ classdef EtherDLLTestClient < matlab.apps.AppBase
         end
 
         % Value changed function: CommandDropDown
-        function CommandDropDownValueChanged(app, event)
+        function CommandDropDownValueChanged(app, ~)
             if app.CommandDropDown.ValueIndex > 1
                 
                 app.sentMsg.Value = app.CommandDropDown.Value;
@@ -322,22 +322,22 @@ classdef EtherDLLTestClient < matlab.apps.AppBase
         end
 
         % Image clicked function: repeatCmd
-        function repeatCmdClicked(app, event)
+        function repeatCmdClicked(app, ~)
             write(app.connection,string((app.sentMsg.Value{1})));
         end
 
         % Close request function: EtherDLLTest
-        function EtherDLLTestCloseRequest(app, event)
+        function EtherDLLTestCloseRequest(app, ~)
             delete(app);
         end
 
         % Value changed function: sentMsg
-        function sentMsgValueChanged(app, event)
+        function sentMsgValueChanged(app, ~)
             app.refresh = true;
         end
 
         % Image clicked function: cleanArea
-        function cleanAreaClicked(app, event)
+        function cleanAreaClicked(app, ~)
             app.receivedMsg.Value = "";
         end
     end
@@ -365,13 +365,13 @@ classdef EtherDLLTestClient < matlab.apps.AppBase
             app.mainGrid.RowHeight = {'fit', 'fit', '1x', '2x', 'fit', 'fit', '1x', '8x', '6x', 'fit'};
             app.mainGrid.BackgroundColor = [1 1 1];
 
-            % Create SPTAxes
-            app.SPTAxes = uiaxes(app.mainGrid);
-            xlabel(app.SPTAxes, {'Frequency'; '(MHz)'})
-            ylabel(app.SPTAxes, {'Level'; '(dBm)'})
-            zlabel(app.SPTAxes, 'Z')
-            app.SPTAxes.Layout.Row = [1 7];
-            app.SPTAxes.Layout.Column = 6;
+            % Create AOAAxes
+            app.AOAAxes = uiaxes(app.mainGrid);
+            xlabel(app.AOAAxes, {'Frequency'; '(MHz)'})
+            ylabel(app.AOAAxes, {'Angle'; '(degrees from north)'})
+            zlabel(app.AOAAxes, 'Z')
+            app.AOAAxes.Layout.Row = 8;
+            app.AOAAxes.Layout.Column = 6;
 
             % Create OCCAxes
             app.OCCAxes = uiaxes(app.mainGrid);
@@ -380,13 +380,13 @@ classdef EtherDLLTestClient < matlab.apps.AppBase
             app.OCCAxes.Layout.Row = [9 10];
             app.OCCAxes.Layout.Column = 6;
 
-            % Create AOAAxes
-            app.AOAAxes = uiaxes(app.mainGrid);
-            xlabel(app.AOAAxes, {'Frequency'; '(MHz)'})
-            ylabel(app.AOAAxes, {'Angle'; '(degrees from north)'})
-            zlabel(app.AOAAxes, 'Z')
-            app.AOAAxes.Layout.Row = 8;
-            app.AOAAxes.Layout.Column = 6;
+            % Create SPTAxes
+            app.SPTAxes = uiaxes(app.mainGrid);
+            xlabel(app.SPTAxes, {'Frequency'; '(MHz)'})
+            ylabel(app.SPTAxes, {'Level'; '(dBm)'})
+            zlabel(app.SPTAxes, 'Z')
+            app.SPTAxes.Layout.Row = [1 7];
+            app.SPTAxes.Layout.Column = 6;
 
             % Create sentMsg
             app.sentMsg = uitextarea(app.mainGrid);
