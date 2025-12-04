@@ -1,5 +1,4 @@
-/**
- * @file EtherDLLUtils.hpp
+/** @file EtherDLLUtils.hpp
  * @brief Declarations of utility functions for EtherDLL base program
  *
  * @author fslobao
@@ -30,7 +29,6 @@
 #include <vector>
 #include <functional>
 #include <cmath>
-#include <queue>
 
 // Constants
 
@@ -599,50 +597,31 @@ public:
     }
 };
 
-// Class to store and perform online computation of basic descriptive indexes for a variable not normally distributed   
+/** Class to store and perform online computation of basic descriptive indexes for a variable that do not follow a normal probability distribution
+ *  May work with windowed data, histogram computation or only min/max tracking
+**/
 class NonNormal {
 private:
-    // data fields
+    // basic fields
     double maximum_value;
     double minimum_value;
-    std::queue<double> data;
-    size_t max_size;
+    size_t count;
+
+	// windowed data fields
+	bool windowed;
+    size_t window_size;
+    std::vector<double> window_data;
+    size_t write_index;      // Current write position in circular buffer
+    size_t current_size;     // Number of valid elements in buffer
 
     // histogram fields
+	bool has_histogram;
     std::vector<size_t> histogram;
     size_t num_bins;
     double hist_min;
     double hist_max;
     double bin_width;
 
-    // ----------------------------------------------------------------------
-    /** @brief Recalculate min and max values from current queue data
-     * @return void
-     * @throws NO EXCEPTION HANDLING
-    **/
-    void recalculateMinMax() {
-        if (data.empty()) {
-            maximum_value = 0.0f;
-            minimum_value = 0.0f;
-            return;
-        }
-
-        // Create temporary queue to iterate through elements
-        std::queue<double> temp = data;
-        maximum_value = temp.front();
-        minimum_value = temp.front();
-        
-        while (!temp.empty()) {
-            double val = temp.front();
-            temp.pop();
-            if (val > maximum_value) {
-                maximum_value = val;
-            }
-            if (val < minimum_value) {
-                minimum_value = val;
-            }
-        }
-    }
 
     // ----------------------------------------------------------------------
     /** @brief Calculate the bin index for a given value
@@ -672,80 +651,125 @@ private:
 
 public:
     // ----------------------------------------------------------------------
-    /** @brief Constructor with sample size and histogram parameters
-     * @param sampleSize The maximum number of elements to store in the queue
+    /** @brief Constructor with defined window size and histogram parameters
+	 * @param windowSize The maximum number of elements to store in the buffer. 0 for no buffer, min and max will track all elements submitted
      * @param histogramBins The number of bins for the histogram (0 to disable)
      * @param histogramMin The minimum value for histogram range
      * @param histogramMax The maximum value for histogram range
-     * @throws NO EXCEPTION HANDLING
+	 * @throws std::invalid_argument if histogram parameters are invalid
     **/
-    explicit NonNormal(size_t sampleSize, size_t histogramBins = 0, double histogramMin = 0.0, double histogramMax = 0.0) 
-        : maximum_value(0.0), minimum_value(0.0), data(), max_size(sampleSize),
-          histogram(), num_bins(histogramBins), hist_min(histogramMin), hist_max(histogramMax), bin_width(0.0) {
-        if (num_bins > 0 && hist_max > hist_min) {
-            histogram.resize(num_bins, 0);
-            bin_width = (hist_max - hist_min) / static_cast<double>(num_bins);
+    explicit NonNormal(size_t window_size, size_t histogram_bins = 0, double histogram_min = 0.0, double histogram_max = 0.0) 
+        : maximum_value(std::numeric_limits<double>::lowest()), minimum_value(std::numeric_limits<double>::max()), count(0), 
+          window_data(), window_size(window_size), write_index(0), current_size(0),
+          histogram(), num_bins(histogram_bins), hist_min(histogram_min), hist_max(histogram_max), bin_width(0.0) {
+
+		// Initialize histogram if requested
+        if (num_bins > 0) {
+            if (hist_max > hist_min) {
+                histogram.resize(num_bins, 0);
+                bin_width = (hist_max - hist_min) / static_cast<double>(num_bins);
+                has_histogram = true;
+            }
+            else {
+                throw std::invalid_argument("Histogram max must be greater than min when histogram is enabled");
+            }
         }
         else {
             num_bins = 0;
+			has_histogram = false;
         }
+
+		// Initialize windowed data if requested
+        if (window_size > 0) {
+            windowed = true;
+            window_data.resize(window_size, 0.0);
+        }
+        else {
+			windowed = false;
+        }
+
+		count = 0;
     }
 
     // ----------------------------------------------------------------------
     /** @brief Default constructor with default sample size of 1000 and no histogram
      * @throws NO EXCEPTION HANDLING
     **/
-    NonNormal() : maximum_value(0.0), minimum_value(0.0), data(), max_size(1000),
-                  histogram(), num_bins(0), hist_min(0.0), hist_max(0.0), bin_width(0.0) {}
+    NonNormal() :   maximum_value(std::numeric_limits<double>::lowest()),
+                    minimum_value(std::numeric_limits<double>::max()),
+                    count(0),
+
+		            windowed(false),
+                    window_size(1000),
+                    window_data(),
+                    write_index(0),
+                    current_size(0),
+
+		            has_histogram(false),
+                    hist_min(0.0),
+                    hist_max(0.0),
+                    num_bins(0),
+                    bin_width(0.0),
+                    histogram() {}
 
     // ----------------------------------------------------------------------
     /** @brief Add element to the distribution statistics
-     * Removes oldest element if maximum size is reached
+     * Overwrites oldest element if maximum size is reached
      * Updates histogram if enabled
      * @param new_element The new value to add
      * @return void
      * @throws NO EXCEPTION HANDLING
     **/
     void add_element(double new_element) {
-        bool needRecalculate = false;
         double removedValue = 0.0;
+        bool elementRemoved = false;
 
-        // Remove oldest element if at max capacity
-        if (max_size > 0 && data.size() >= max_size) {
-            removedValue = data.front();
-            data.pop();
+        // Handle windowed data
+        if (windowed) {
+            // Check if we're overwriting an existing element
+            if (current_size >= window_size) {
+                removedValue = window_data[write_index];
+                elementRemoved = true;
+            }
+
+            // Write new element at current position
+            window_data[write_index] = new_element;
             
-            // Check if removed value was min or max
-            if (removedValue >= maximum_value || removedValue <= minimum_value) {
-                needRecalculate = true;
+            // Advance write index (circular)
+            write_index = (write_index + 1) % window_size;
+            
+            // Update current size (cap at window_size)
+            if (current_size < window_size) {
+                current_size++;
+            }
+
+            // Recalculate min/max if removed element was an extreme value
+            if (elementRemoved) {
+                if (removedValue >= maximum_value || removedValue <= minimum_value) {
+                    auto [minIt, maxIt] = std::minmax_element(window_data.begin(), window_data.begin() + current_size);
+                    minimum_value = *minIt;
+                    maximum_value = *maxIt;
+                }
             }
         }
 
-        // Store the element in the queue
-        data.push(new_element);
-
         // Update histogram if enabled
-        if (num_bins > 0) {
+        if (has_histogram) {
             size_t binIndex = getBinIndex(new_element);
             histogram[binIndex]++;
         }
 
-        // Update maximum and minimum
-        if (data.size() == 1) {
+        // Update min/max values
+        if (new_element > maximum_value) {
             maximum_value = new_element;
+        }
+
+        if (new_element < minimum_value) {
             minimum_value = new_element;
         }
-        else if (needRecalculate) {
-            recalculateMinMax();
-        }
-        else {
-            if (new_element > maximum_value) {
-                maximum_value = new_element;
-            }
-            if (new_element < minimum_value) {
-                minimum_value = new_element;
-            }
-        }
+
+        // update count
+        count++;
     }
 
     // ----------------------------------------------------------------------
@@ -767,12 +791,21 @@ public:
     }
 
     // ----------------------------------------------------------------------
-    /** @brief Get the current count of elements
-     * @return size_t The number of elements in the queue
+    /** @brief Get the total count of elements added
+     * @return size_t The number of elements added
+	 * @throws NO EXCEPTION HANDLING
+    **/
+    size_t count() const {
+        return count;
+    }
+
+    // ----------------------------------------------------------------------
+    /** @brief Get the current count of elements in the window
+     * @return size_t The number of elements in the buffer
      * @throws NO EXCEPTION HANDLING
     **/
-    size_t size() const {
-        return data.size();
+    size_t used() const {
+        return current_size;
     }
 
     // ----------------------------------------------------------------------
@@ -780,8 +813,33 @@ public:
      * @return size_t The maximum number of elements allowed
      * @throws NO EXCEPTION HANDLING
     **/
-    size_t capacity() const {
-        return max_size;
+    size_t available() const {
+        return window_size - current_size;
+    }
+
+    // ----------------------------------------------------------------------
+	/** @brief Get the available window data vector
+	 * @return const std::vector<double>& Reference to the window data ordered from newest to oldest
+     * @throws NO EXCEPTION HANDLING
+    **/
+    const std::vector<double>& window() const {
+		// create a copy from the initial segment of the circular buffer
+        if (!windowed) {
+            throw std::runtime_error("Windowed data not enabled");
+		}
+
+		// create a vector with the same size as current_size
+		std::vector<double> available_data(current_size);
+
+        size_t index = write_index;
+        for(int i = 0; i < current_size; i++) {
+            available_data[i] = window_data[index];
+			index--;
+            if (index == static_cast<size_t>(-1)) {
+                index = window_size - 1;
+			}
+		}
+		return available_data;
     }
 
     // ----------------------------------------------------------------------
@@ -789,7 +847,7 @@ public:
      * @return const std::vector<size_t>& Reference to the histogram data
      * @throws NO EXCEPTION HANDLING
     **/
-    const std::vector<size_t>& getHistogram() const {
+    const std::vector<size_t>& histogram() const {
         return histogram;
     }
 
@@ -798,7 +856,7 @@ public:
      * @return size_t The number of bins (0 if histogram disabled)
      * @throws NO EXCEPTION HANDLING
     **/
-    size_t getNumBins() const {
+    size_t n_bins() const {
         return num_bins;
     }
 
@@ -808,9 +866,12 @@ public:
      * @throws NO EXCEPTION HANDLING
     **/
     void reset() {
-        maximum_value = 0.0;
-        minimum_value = 0.0;
-        std::queue<double>().swap(data);
+        maximum_value = std::numeric_limits<double>::lowest();
+        minimum_value = std::numeric_limits<double>::max();
+        write_index = 0;
+        current_size = 0;
+        count = 0;
+        // Note: No need to clear window_data - elements will be overwritten
         if (num_bins > 0) {
             std::fill(histogram.begin(), histogram.end(), 0);
         }
