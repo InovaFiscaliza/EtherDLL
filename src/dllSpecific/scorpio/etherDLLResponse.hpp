@@ -488,8 +488,8 @@ json processPanResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody
     jsonObj["spectrum"]["frequencyUnit"] = "MHz";
     jsonObj["spectrum"]["binSize"] = spectrumInfo.binSize;
     jsonObj["spectrum"]["binSizeUnit"] = "Hz";
-    jsonObj["spectrum"]["sweepData"] = base64Encode(
-        parsedBinData(PanResponse->binData, PanResponse->numBins),
+    jsonObj["spectrum"]["traceData"] = base64Encode(
+        parsedBinData(PanResponse->binData, PanResponse->numBins, PAN_BYTE_POWER_OFFSET),
         static_cast<unsigned int>(sweepByteLen)
     );
     jsonObj["spectrum"]["conversionFactorForFS"] = PanResponse->conversionFactorForFS;
@@ -915,13 +915,23 @@ json ProcessRealTimeData(_In_ ECSMSDllMsgType respType, _In_ SSmsRealtimeMsg::UB
     {
         const SSmsRealtimeMsg::SSpectrumV2* RTResponse = (SSmsRealtimeMsg::SSpectrumV2*)data;
 
-        jsonObj["Spectrum"]["taskId"] = RTResponse->taskId;
-        jsonObj["Spectrum"]["bandIndex"] = RTResponse->bandIndex;
-        jsonObj["Spectrum"]["startFreq"]["internal"] = RTResponse->firstChanFreq.internal;
-        jsonObj["Spectrum"]["binSize"]["internal"] = RTResponse->chanSize.internal;
-        jsonObj["Spectrum"]["numChan"] = RTResponse->numChan;
-        jsonObj["Spectrum"]["noiseFloor"] = RTResponse->noiseFloor;
-        jsonObj["Spectrum"]["levelData"] = std::string(reinterpret_cast<const char*>(RTResponse->chanData), RTResponse->numChan);
+        double startFreq = double(RTResponse->firstChanFreq.internal) / FREQ_FACTOR;
+		double binSize = double(RTResponse->chanSize.internal) / FREQ_FACTOR;
+		double stopFreq = startFreq + (binSize * RTResponse->numChan);
+
+        jsonObj["measure"]["taskId"] = RTResponse->taskId;
+        jsonObj["measure"]["noiseFloor"] = RTResponse->noiseFloor;
+        
+        jsonObj["spectrum"]["numBins"] = RTResponse->numChan;
+        jsonObj["spectrum"]["bandIndex"] = RTResponse->bandIndex;
+        jsonObj["spectrum"]["startFreq"]["internal"] = startFreq / edll::MHZ_MULTIPLIER;
+		jsonObj["spectrum"]["stopFrequency"] = stopFreq / edll::MHZ_MULTIPLIER;
+        jsonObj["spectrum"]["frequencyUnit"] = "MHz";
+        jsonObj["spectrum"]["binSize"] = double(RTResponse->chanSize.internal) / FREQ_FACTOR;
+
+        size_t sweepByteLen = static_cast<size_t>(RTResponse->numChan) * sizeof(float);
+        jsonObj["spectrum"]["traceData"] = base64Encode(
+            parsedBinData(RTResponse->chanData, RTResponse->numChan, OCC_BYTE_POWER_OFFSET), static_cast<unsigned int>(sweepByteLen));
     }
     break;
     case ECSMSDllMsgType::RT_SPECTRUM_RESPONSE:
