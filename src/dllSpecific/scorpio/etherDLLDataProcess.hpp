@@ -26,6 +26,7 @@
 
 // Include DLL specific libraries
 #include "etherDLLResponse.hpp"
+#include "etherDLLData.hpp"
 
 // Include core EtherDLL libraries
 #include "EtherDLLConfig.hpp"
@@ -39,17 +40,6 @@
 #include <limits>
 
 // For convenience
-
-// Data structures
-struct SpectrumInfo {
-    double startFrequency;  // MHz
-    double stopFrequency;   // MHz  
-    double binSize;         // Hz
-};
-
-// Constants
-constexpr double FREQ_FACTOR = 1920.0;
-constexpr float BYTE_POWER_OFFSET = 192.0;
 
 // ----------------------------------------------------------------------
 /** @brief Expand scan data from compressed format
@@ -107,9 +97,9 @@ int ScanDataExpand(int ninput, int* input, int noutput, int* output)
  * @return const unsigned char*: Pointer to the output data array (uint8) containing float32 values
  * @throws NO EXCEPTION HANDLING
 **/
-const unsigned char* parsedBinData(const unsigned char* binData, unsigned short numBins)
+const unsigned char* parsedBinData(const unsigned char* binData, unsigned short numBins, float offset)
 {
-    static_assert(sizeof(float) == 4, "Esperado float32");
+    static_assert(sizeof(float) == 4, "Expected float32");
 
     // TODO REMOVE THUS CONSTANT
     const size_t nRequested = static_cast<size_t>(numBins);
@@ -121,7 +111,7 @@ const unsigned char* parsedBinData(const unsigned char* binData, unsigned short 
     float* outFloats = reinterpret_cast<float*>(parsedData.data());
 
     for (size_t i = 0; i < nRequested; ++i) {
-        outFloats[i] = static_cast<float>(binData[i]) - BYTE_POWER_OFFSET;
+        outFloats[i] = static_cast<float>(binData[i]) - offset;
     }
 
     return parsedData.data();
