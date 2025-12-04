@@ -30,6 +30,7 @@
 #include <vector>
 #include <functional>
 #include <cmath>
+#include <queue>
 
 // Constants
 
@@ -597,6 +598,225 @@ public:
         sum_squares = newSumSquares;
     }
 };
+
+// Class to store and perform online computation of basic descriptive indexes for a variable not normally distributed   
+class NonNormal {
+private:
+    // data fields
+    double maximum_value;
+    double minimum_value;
+    std::queue<double> data;
+    size_t max_size;
+
+    // histogram fields
+    std::vector<size_t> histogram;
+    size_t num_bins;
+    double hist_min;
+    double hist_max;
+    double bin_width;
+
+    // ----------------------------------------------------------------------
+    /** @brief Recalculate min and max values from current queue data
+     * @return void
+     * @throws NO EXCEPTION HANDLING
+    **/
+    void recalculateMinMax() {
+        if (data.empty()) {
+            maximum_value = 0.0f;
+            minimum_value = 0.0f;
+            return;
+        }
+
+        // Create temporary queue to iterate through elements
+        std::queue<double> temp = data;
+        maximum_value = temp.front();
+        minimum_value = temp.front();
+        
+        while (!temp.empty()) {
+            double val = temp.front();
+            temp.pop();
+            if (val > maximum_value) {
+                maximum_value = val;
+            }
+            if (val < minimum_value) {
+                minimum_value = val;
+            }
+        }
+    }
+
+    // ----------------------------------------------------------------------
+    /** @brief Calculate the bin index for a given value
+     * Uses discrete approximation to the closest bin
+     * @param value The value to find the bin for
+     * @return size_t The bin index (clamped to valid range)
+     * @throws NO EXCEPTION HANDLING
+    **/
+    size_t getBinIndex(double value) const {
+        if (num_bins == 0 || bin_width <= 0.0) {
+            return 0;
+        }
+
+        // Calculate bin index with rounding to nearest bin
+        double normalized = (value - hist_min) / bin_width;
+        int bin = static_cast<int>(std::round(normalized));
+
+        // Clamp to valid range [0, num_bins - 1]
+        if (bin < 0) {
+            return 0;
+        }
+        if (static_cast<size_t>(bin) >= num_bins) {
+            return num_bins - 1;
+        }
+        return static_cast<size_t>(bin);
+    }
+
+public:
+    // ----------------------------------------------------------------------
+    /** @brief Constructor with sample size and histogram parameters
+     * @param sampleSize The maximum number of elements to store in the queue
+     * @param histogramBins The number of bins for the histogram (0 to disable)
+     * @param histogramMin The minimum value for histogram range
+     * @param histogramMax The maximum value for histogram range
+     * @throws NO EXCEPTION HANDLING
+    **/
+    explicit NonNormal(size_t sampleSize, size_t histogramBins = 0, double histogramMin = 0.0, double histogramMax = 0.0) 
+        : maximum_value(0.0), minimum_value(0.0), data(), max_size(sampleSize),
+          histogram(), num_bins(histogramBins), hist_min(histogramMin), hist_max(histogramMax), bin_width(0.0) {
+        if (num_bins > 0 && hist_max > hist_min) {
+            histogram.resize(num_bins, 0);
+            bin_width = (hist_max - hist_min) / static_cast<double>(num_bins);
+        }
+        else {
+            num_bins = 0;
+        }
+    }
+
+    // ----------------------------------------------------------------------
+    /** @brief Default constructor with default sample size of 1000 and no histogram
+     * @throws NO EXCEPTION HANDLING
+    **/
+    NonNormal() : maximum_value(0.0), minimum_value(0.0), data(), max_size(1000),
+                  histogram(), num_bins(0), hist_min(0.0), hist_max(0.0), bin_width(0.0) {}
+
+    // ----------------------------------------------------------------------
+    /** @brief Add element to the distribution statistics
+     * Removes oldest element if maximum size is reached
+     * Updates histogram if enabled
+     * @param new_element The new value to add
+     * @return void
+     * @throws NO EXCEPTION HANDLING
+    **/
+    void add_element(double new_element) {
+        bool needRecalculate = false;
+        double removedValue = 0.0;
+
+        // Remove oldest element if at max capacity
+        if (max_size > 0 && data.size() >= max_size) {
+            removedValue = data.front();
+            data.pop();
+            
+            // Check if removed value was min or max
+            if (removedValue >= maximum_value || removedValue <= minimum_value) {
+                needRecalculate = true;
+            }
+        }
+
+        // Store the element in the queue
+        data.push(new_element);
+
+        // Update histogram if enabled
+        if (num_bins > 0) {
+            size_t binIndex = getBinIndex(new_element);
+            histogram[binIndex]++;
+        }
+
+        // Update maximum and minimum
+        if (data.size() == 1) {
+            maximum_value = new_element;
+            minimum_value = new_element;
+        }
+        else if (needRecalculate) {
+            recalculateMinMax();
+        }
+        else {
+            if (new_element > maximum_value) {
+                maximum_value = new_element;
+            }
+            if (new_element < minimum_value) {
+                minimum_value = new_element;
+            }
+        }
+    }
+
+    // ----------------------------------------------------------------------
+    /** @brief Get the maximum value
+     * @return double The current maximum value
+     * @throws NO EXCEPTION HANDLING
+    **/
+    double max() const {
+        return maximum_value;
+    }
+
+    // ----------------------------------------------------------------------
+    /** @brief Get the minimum value
+     * @return double The current minimum value
+     * @throws NO EXCEPTION HANDLING
+    **/
+    double min() const {
+        return minimum_value;
+    }
+
+    // ----------------------------------------------------------------------
+    /** @brief Get the current count of elements
+     * @return size_t The number of elements in the queue
+     * @throws NO EXCEPTION HANDLING
+    **/
+    size_t size() const {
+        return data.size();
+    }
+
+    // ----------------------------------------------------------------------
+    /** @brief Get the maximum capacity
+     * @return size_t The maximum number of elements allowed
+     * @throws NO EXCEPTION HANDLING
+    **/
+    size_t capacity() const {
+        return max_size;
+    }
+
+    // ----------------------------------------------------------------------
+    /** @brief Get the histogram vector
+     * @return const std::vector<size_t>& Reference to the histogram data
+     * @throws NO EXCEPTION HANDLING
+    **/
+    const std::vector<size_t>& getHistogram() const {
+        return histogram;
+    }
+
+    // ----------------------------------------------------------------------
+    /** @brief Get the number of histogram bins
+     * @return size_t The number of bins (0 if histogram disabled)
+     * @throws NO EXCEPTION HANDLING
+    **/
+    size_t getNumBins() const {
+        return num_bins;
+    }
+
+    // ----------------------------------------------------------------------
+    /** @brief Reset all values to initial state
+     * @return void
+     * @throws NO EXCEPTION HANDLING
+    **/
+    void reset() {
+        maximum_value = 0.0;
+        minimum_value = 0.0;
+        std::queue<double>().swap(data);
+        if (num_bins > 0) {
+            std::fill(histogram.begin(), histogram.end(), 0);
+        }
+    }
+};
+
 
 // ----------------------------------------------------------------------
 // Function prototypes
