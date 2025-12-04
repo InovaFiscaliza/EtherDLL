@@ -99,6 +99,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="dllSpecific\scorpio\etherDLLData.hpp" />
     <ClInclude Include="dllSpecific\scorpio\etherDLLInit.hpp" />
     <ClInclude Include="dllSpecific\scorpio\etherDLLDataProcess.hpp" />
     <ClInclude Include="dllSpecific\scorpio\etherDLLRequest.hpp" />
