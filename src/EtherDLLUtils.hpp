@@ -29,6 +29,7 @@
 #include <string>
 #include <vector>
 #include <functional>
+#include <cmath>
 
 // Constants
 
@@ -411,22 +412,192 @@ public:
     }
 }; 
 
+/** Class to store and perform online computation of basic descriptive indexes for a normally distributed variable
+  * Algorithm description according to:
+  *   @ARTICLE{Welford62noteon,
+  *    author = {Author(s) B. P. Welford and B. P. Welford},
+  *    title = {Note on a method for calculating corrected sums of squares and products},
+  *    journal = {Technometrics},
+  *    year = {1962},
+  *    pages = {419--420}
+  *  }
+ **/
+class Normal {
+private:
+    // data fields
+    double mean_value;      // mean_value = ((count*mean_value)+ X )/(count+1);
+    double std_value;       // std_value = ( n-2 / n-1 ) std_value {n-1}+{1\over n}(X_n-\bar X_{n-1})^2.
+    int count;              // count = count + 1;
+    double sum;             // to reduce computational effort and rounding error on average computation
+    double sum_squares;     // to reduce computational effort and reduce error on standard deviation computation
 
-// ------------------------------------------------------
-/** @brief Build demo data JSON object
- *
- * @param  none
- * @return JSON object containing demo data
- * @throws NO EXCEPTION HANDLING
+    // ---------------------------------------------------------------
+    /** @brief Validate arithmetic calculations for mean and standard deviation
+     * Ensures count is positive (prevents division by zero), validates that computed
+     * values are finite (not NaN or Inf), and ensures sum_squares is non-negative
+     * @return void
+     * @throws NO EXCEPTION HANDLING
+    **/
+    void validateArguments(double newMean, double newStd, size_t newCount, double newSum, double newSumSquares) {
+        // Validation: Ensure count is positive to avoid division by zero
+        if (newCount < 0) {
+			throw std::invalid_argument("Count must be positive. Error in validateArguments");
+        }
+        else if (newCount == 0) {
+            if (newMean != 0.0 || newStd != 0.0 || newSum != 0.0 || newSumSquares != 0.0) {
+                throw std::invalid_argument("All values must be zero when count is 0. Error in validateArguments");
+            }
+            else {
+                return; // All values are valid for count 0
+            }
+        }
+        else if (newCount == 1) {
+            if (newStd != 0.0) {
+                throw std::invalid_argument("Standard deviation must be zero when count is 1. Error in validateArguments");
+            }
+            if (newSum != newMean) {
+                throw std::invalid_argument("Sum must equal mean when count is 1. Error in validateArguments");
+            }
+            if (newSumSquares != 0.0) {
+                throw std::invalid_argument("Sum of squares must be zero when count is 1. Error in validateArguments");
+            }
+		}
 
-json buildDemoData() {
+        // Validation: Check for NaN or Inf in mean_value
+        if (!std::isfinite(newMean)) {
+            throw std::invalid_argument("Mean must be finite. Error in validateArguments");
+        }
 
-    json demoData = {
-        {"CODE", 55},
-		{"SID", 1} };
-/*
+        // Validation: sum_squares should never be negative (mathematical property)
+        if (newSumSquares < 0.0) {
+            throw std::invalid_argument("Sum of squares must be non-negative. Error in validateArguments");
+        }
 
- */
+        // Validation: Check for NaN or Inf in std_value
+        if (!std::isfinite(newStd)) {
+            throw std::invalid_argument("Standard deviation must be finite. Error in validateArguments");
+        }
+
+
+		// Considering that newCount is greater than 1 and all values so far are valid, test the arithmetic relationships
+        if (newSum / newCount != newMean) {
+            throw std::invalid_argument("Sum divided by count must equal mean. Error in validateArguments");
+		}
+
+        double computedStd = sqrt(newSumSquares / static_cast<double>(newCount));
+        if (std::abs(computedStd - newStd) > 1e-6) {
+            throw std::invalid_argument("Standard deviation does not match computed value. Error in validateArguments");
+        }
+    }
+
+public:
+    // Default constructor
+    Normal() : mean_value(0.0), std_value(0.0), count(0), sum(0.0), sum_squares(0.0) {}
+
+
+    // ---------------------------------------------------------------
+    /** @brief Add element to the normal distribution statistics
+     * @param new_element The new value to add
+     * @return void
+     * @throws NO EXCEPTION HANDLING
+    **/
+    void add_element(double new_element) {
+        double previous_mean_value;
+        double delta;
+
+        if (count > 1) {
+            previous_mean_value = mean_value;
+
+            sum = sum + new_element;
+            count++;
+            mean_value = sum / (double)count;
+
+            sum_squares = sum_squares + ((new_element - previous_mean_value) * (new_element - mean_value));
+
+            std_value = sqrt(sum_squares / (double)count);
+        }
+        else {
+            if (count < 1) {
+                mean_value = new_element;
+                count = 1;
+                sum = new_element;
+            }
+            else {
+                count = 2;
+                mean_value = (mean_value + new_element) / (double)count;
+                sum = sum + new_element;
+                delta = new_element - mean_value;
+                sum_squares = delta * delta;
+            }
+        }
+    }
+
+    // ---------------------------------------------------------------
+    /** @brief Get the mean value
+     * @param None
+     * @return double The current mean value
+     * @throws NO EXCEPTION HANDLING
+    **/
+    double mean() const {
+        return mean_value;
+    }
+
+    // ---------------------------------------------------------------
+    /** @brief Get the standard deviation value
+     * @param None
+     * @return double The current standard deviation
+     * @throws NO EXCEPTION HANDLING
+    **/
+    double std() const {
+        return std_value;
+    }
+
+    // ---------------------------------------------------------------
+    /** @brief Get the count of elements
+     * @param None
+     * @return int The number of elements added
+     * @throws NO EXCEPTION HANDLING
+    **/
+    int count() const {
+        return count;
+    }
+
+    // ---------------------------------------------------------------
+    /** @brief Reset all values to initial state
+     * @param None
+     * @return void
+     * @throws NO EXCEPTION HANDLING
+    **/
+    void reset() {
+        mean_value = 0.0;
+        std_value = 0.0;
+        count = 0;
+        sum = 0.0;
+        sum_squares = 0.0;
+    }
+
+    // ---------------------------------------------------------------
+    /** @brief Set all values manually
+     * @param newMean The mean value to set
+     * @param newStd The standard deviation to set
+     * @param newCount The count to set
+     * @param newSum The sum to set
+     * @param newSumSquares The sum of squares to set
+     * @return void
+     * @throws NO EXCEPTION HANDLING
+    **/
+    void set(double newMean, size_t newCount, double newSum, double newStd = 0.0, double newSumSquares = 0.0) {
+
+		validateArguments(newMean, newStd, newCount, newSum, newSumSquares);
+
+        mean_value = newMean;
+        std_value = newStd;
+        count = newCount;
+        sum = newSum;
+        sum_squares = newSumSquares;
+    }
+};
+
 // ----------------------------------------------------------------------
 // Function prototypes
 std::vector<std::string> split(std::string s, std::string delimiter);
