@@ -861,6 +861,24 @@ public:
     }
 
     // ----------------------------------------------------------------------
+	/** @brief Get the mode from the histogram data
+	 * @return double The center value of the bin with the highest count
+     * @throws NO EXCEPTION HANDLING
+    **/
+    double mode() const {
+        if (num_bins == 0) {
+            throw std::runtime_error("Histogram is not enabled");
+        }
+
+        // Find the bin with the highest count
+        auto max_it = std::max_element(histogram.begin(), histogram.end());
+        size_t max_bin = std::distance(histogram.begin(), max_it);
+
+        // Calculate the center value of the bin
+        return hist_min + (max_bin + 0.5) * bin_width;
+    }
+
+    // ----------------------------------------------------------------------
     /** @brief Reset all values to initial state
      * @return void
      * @throws NO EXCEPTION HANDLING
