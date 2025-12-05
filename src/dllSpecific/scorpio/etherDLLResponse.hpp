@@ -731,37 +731,33 @@ json processOccupancyDFResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMs
 
         std::vector<float> freqVsChanData(OCCDFResponse->occHdr.numTotalChannels);
 
-        freqVsChanData[0] = static_cast<float>(Units::Frequency(OCCDFResponse->frequencies[0]).Hz<double>() / edll::MHZ_MULTIPLIER);
+        freqVsChanData[0] = static_cast<float>(Units::Frequency(OCCDFResponse->frequencies[0]).Hz<double>());
         float maxFrequency = freqVsChanData[0];
         float minFrequency = maxFrequency;
-        float frequencyDelta = 0;
-        float maxDelta = (std::numeric_limits<float>::lowest)();
-        float minDelta = (std::numeric_limits<float>::max)();
 
-		loggerPtr->trace("maxDelta initial: {}, minDelta initial: {}", maxDelta, minDelta);
+		// Take the distance between the first two frequency values as the expected delta, using one hertz precision for representation, up to twice the estimated size
+        float minDelta = static_cast<float>(std::round((freqVsChanData[1] - freqVsChanData[0]) * 1e6)) / 1e6f;
+        float maxDelta = minDelta;
+		size_t histoSize = size_t((freqVsChanData[1] - freqVsChanData[0])*2);
 
-        // int j = (int)OCCDFResponse->occHdr.firstChannel;
+		NonNormal frequeDelta(0, histoSize, 0, histoSize - 1);
+
         for (int i = 1; i < int(OCCDFResponse->occHdr.numChannels); i++) // j++
         {
-            freqVsChanData[i] = static_cast<float>(Units::Frequency(OCCDFResponse->frequencies[i]).Hz<double>() / edll::MHZ_MULTIPLIER); // freqVsChanData[j]
+            freqVsChanData[i] = static_cast<float>(Units::Frequency(OCCDFResponse->frequencies[i]).Hz<double>()); // freqVsChanData[j]
             if (freqVsChanData[i] < minFrequency) minFrequency = freqVsChanData[i]; // freqVsChanData[j]
             if (freqVsChanData[i] > maxFrequency) maxFrequency = freqVsChanData[i]; // freqVsChanData[j]
 
-            frequencyDelta = freqVsChanData[i] - freqVsChanData[i - 1];
-			if (frequencyDelta < minDelta) minDelta = frequencyDelta;
-			if (frequencyDelta > maxDelta) maxDelta = frequencyDelta;
+            frequeDelta.add_element(freqVsChanData[i] - freqVsChanData[i - 1]);
         }
 
-        loggerPtr->trace("maxDelta: {}, minDelta: {}", maxDelta, minDelta);
-
-        if (maxDelta - minDelta < 0.00001f)
+        if ((double)frequeDelta.histogramMaxCount() / (double)(frequeDelta.count()) > 0.99)
         {
             jsonObj["spectrum"]["numBins"] = OCCDFResponse->occHdr.numChannels;
             jsonObj["spectrum"]["startFrequency"] = minFrequency;
             jsonObj["spectrum"]["stopFrequency"] = maxFrequency;
-            jsonObj["spectrum"]["frequencyUnit"] = "MHz";
-            jsonObj["spectrum"]["binSize"] = frequencyDelta;
-            jsonObj["spectrum"]["binSizeUnit"] = "Hz";
+            jsonObj["spectrum"]["binSize"] = ( maxFrequency - minFrequency ) / static_cast<float>(OCCDFResponse->occHdr.numChannels);
+            jsonObj["spectrum"]["unit"] = "Hz";
 		}
         else
         {
@@ -778,16 +774,12 @@ json processOccupancyDFResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMs
         jsonObj["equipment"]["hostName"] = OCCDFResponse->hostName;
         jsonObj["equipment"]["selectedAntenna"] = eAntToString(OCCDFResponse->selectedAntenna);
 
-
-        /* TODO: Get fields exclusive to the band into the band item
         jsonObj["band"]["Spectrum"]["status"] = eErrorCodeToString(OCCDFResponse->occHdr.status);
         jsonObj["band"]["Spectrum"]["firstChannel"] = OCCDFResponse->occHdr.firstChannel;
-        jsonObj["band"]["Spectrum"]["lastChannel"] = j;
         jsonObj["band"]["Spectrum"]["numChannels"] = OCCDFResponse->occHdr.numChannels;
         jsonObj["band"]["Spectrum"]["numTotalChannels"] = OCCDFResponse->occHdr.numTotalChannels;
         jsonObj["band"]["Spectrum"]["numTimeOfDays"] = OCCDFResponse->occHdr.numTimeOfDays;
         jsonObj["band"]["Spectrum"]["numBands"] = OCCDFResponse->numBands;
-        */
 
         jsonObj["settings"]["primaryThreshold"]["dBuV/m absolute"] = static_cast<int>(OCCDFResponse->occPrimaryThreshold[0]); // dBuV/m
         jsonObj["settings"]["primaryThreshold"]["dB aboveNoise"] = static_cast<int>(OCCDFResponse->occPrimaryThreshold[1]); // dB
