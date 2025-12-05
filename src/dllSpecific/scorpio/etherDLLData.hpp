@@ -49,19 +49,63 @@ constexpr float OCC_BYTE_POWER_OFFSET = 200.0;
 
 
 // Data structures
-struct SpectrumInfo {
-    double startFrequency;  // MHz
-    double stopFrequency;   // MHz  
-    double binSize;         // Hz
-};
 
-struct SiteInfo {
+// ------------------------------------------------------
+/** @brief Structure to hold site GPS information
+ *
+ * latitude and longitude with measurement count, average and standard deviation,
+ * Satellite measurement count and histogram up to 8 bins (0 to 7 satellites)
+ * Timestamps for the first and last measurments.
+ *
+**/
+struct Site {
     Normal latitude;    // Average coordinate in decimal degrees
     Normal longitude;   // Average coordinate in decimal degrees
     NonNormal satelliteCount{/*sampleSize=*/0,
                             /*histogramBins=*/8,
                             /*histogramMin=*/0.0,
                             /*histogramMax=*/7.0 };
+    std::string firstUpdateTime; // datetime in ISO 8601 format "YYYY-MM-DDThh:mm:ss.ssssZ"
+    std::string lastUpdateTime; // datetime in ISO 8601 format "YYYY-MM-DDThh:mm:ss.ssssZ"
 };
+
+
+struct Equipment {
+    std::string lastUpdateTime; // datetime in ISO 8601 format "YYYY-MM-DDThh:mm:ss.ssssZ"
+    std::string model;
+    std::string serialNumber;
+    std::string firmwareVersion;
+    std::string hardwareVersion;
+    std::string softwareVersion;
+    std::string calibrationDate; // date in ISO 8601 format "YYYY-MM-DD"
+};
+
+
+struct Frequency {
+    double startFrequency;      // in Hz
+    double stopFrequency;       // in Hz
+    double binSize;             // in Hz
+};
+
+struct Configuration {
+    Frequency frequencyInfo;
+    double receiverAttenuation; // in dB
+    double referenceLevel;      // in dBm
+    double preselectorAttenuation; // in dB
+    std::string lastUpdateTime; // datetime in ISO 8601 format "YYYY-MM-DDThh:mm:ss.ssssZ"
+};
+
+struct Spectrum {
+    unsigned long taskId;
+	Frequency frequencyInfo;
+    std::vector<double> trace;      // Power Amplitude Normalized data in dBm
+	std::string unit;               // e.g., "dBm"; "dBuV/m", "%", "degrees"
+    std::string firstUpdateTime;    // datetime in ISO 8601 format "YYYY-MM-DDThh:mm:ss.ssssZ"
+    std::string lastUpdateTime;     // datetime in ISO 8601 format "YYYY-MM-DDThh:mm:ss.ssssZ"
+};
+
+
+
+
 
 
