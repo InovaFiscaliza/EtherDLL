@@ -426,7 +426,7 @@ private:
     // data fields
     double mean_value;      // mean_value = ((count*mean_value)+ X )/(count+1);
     double std_value;       // std_value = ( n-2 / n-1 ) std_value {n-1}+{1\over n}(X_n-\bar X_{n-1})^2.
-    int count;              // count = count + 1;
+    size_t count;              // count = count + 1;
     double sum;             // to reduce computational effort and rounding error on average computation
     double sum_squares;     // to reduce computational effort and reduce error on standard deviation computation
 
@@ -557,7 +557,7 @@ public:
      * @return int The number of elements added
      * @throws NO EXCEPTION HANDLING
     **/
-    int count() const {
+    size_t count() const {
         return count;
     }
 
