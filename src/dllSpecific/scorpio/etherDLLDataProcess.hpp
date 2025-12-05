@@ -128,10 +128,10 @@ const unsigned char* parsedBinData(const unsigned char* binData, unsigned short 
  * Half span is calculated as (bin size * floor(numBins / 2)) / 1,000,000 to convert to MHz
  *
  * @param panResponse: Pointer to the SGetPanResp structure containing pan response data
- * @return SpectrumInfo: Structure containing start frequency, stop frequency and bin size
+ * @return FrequencyInfo: Structure containing start frequency, stop frequency and bin size
  * @throws NO EXCEPTION HANDLING
 **/
-SpectrumInfo calculateSpectrumInfo(const SEquipCtrlMsg::SGetPanResp* panResponse)
+FrequencyInfo panFrequencyInfo(const SEquipCtrlMsg::SGetPanResp* panResponse)
 {
     // Convert central frequency from internal units to MHz
     double centralFrequency = double(panResponse->freq.internal) / (FREQ_FACTOR * edll::MHZ_MULTIPLIER);
@@ -143,8 +143,11 @@ SpectrumInfo calculateSpectrumInfo(const SEquipCtrlMsg::SGetPanResp* panResponse
     double halfSpan = (binSize * double(floor(panResponse->numBins / double(2.0)))) / double(1000000.0);
 
     // Calculate start and stop frequencies
-    double startFrequency = centralFrequency - halfSpan;
-    double stopFrequency = centralFrequency + halfSpan;
+	FrequencyInfo freqInfo;
 
-    return { startFrequency, stopFrequency, binSize };
+    freqInfo.startFrequency = centralFrequency - halfSpan;
+    freqInfo.stopFrequency = centralFrequency + halfSpan;
+    freqInfo.binSize = binSize;
+
+    return freqInfo;
 }

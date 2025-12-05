@@ -479,15 +479,13 @@ json processPanResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody
     jsonObj["measure"]["powerDbm"] = PanResponse->powerDbm;
     jsonObj["setting"]["attenuation"] = PanResponse->rcvrAtten;
 
-    auto spectrumInfo = calculateSpectrumInfo(PanResponse);
+    auto frequeInfo = panFrequencyInfo(PanResponse);
     size_t sweepByteLen = static_cast<size_t>(PanResponse->numBins) * sizeof(float);
 
     jsonObj["spectrum"]["numBins"] = PanResponse->numBins;
-    jsonObj["spectrum"]["startFrequency"] = spectrumInfo.startFrequency;
-    jsonObj["spectrum"]["stopFrequency"] = spectrumInfo.stopFrequency;
-    jsonObj["spectrum"]["frequencyUnit"] = "MHz";
-    jsonObj["spectrum"]["binSize"] = spectrumInfo.binSize;
-    jsonObj["spectrum"]["binSizeUnit"] = "Hz";
+    jsonObj["spectrum"]["startFrequency"] = frequeInfo.startFrequency;
+    jsonObj["spectrum"]["stopFrequency"] = frequeInfo.stopFrequency;
+    jsonObj["spectrum"]["binSize"] = frequeInfo.binSize;
     jsonObj["spectrum"]["traceData"] = base64Encode(
         parsedBinData(PanResponse->binData, PanResponse->numBins, PAN_BYTE_POWER_OFFSET),
         static_cast<unsigned int>(sweepByteLen)
