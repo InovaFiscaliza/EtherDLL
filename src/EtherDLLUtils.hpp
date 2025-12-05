@@ -424,15 +424,15 @@ public:
 class Normal {
 private:
     // data fields
-    double mean_value;      // mean_value = ((count*mean_value)+ X )/(count+1);
+    double mean_value;      // mean_value = ((count_elements*mean_value)+ X )/(count_elements+1);
     double std_value;       // std_value = ( n-2 / n-1 ) std_value {n-1}+{1\over n}(X_n-\bar X_{n-1})^2.
-    size_t count;              // count = count + 1;
+    size_t count_elements;              // count_elements = count_elements + 1;
     double sum;             // to reduce computational effort and rounding error on average computation
     double sum_squares;     // to reduce computational effort and reduce error on standard deviation computation
 
     // ---------------------------------------------------------------
     /** @brief Validate arithmetic calculations for mean and standard deviation
-     * Ensures count is positive (prevents division by zero), validates that computed
+     * Ensures count_elements is positive (prevents division by zero), validates that computed
      * values are finite (not NaN or Inf), and ensures sum_squares is non-negative
      * @return void
      * @throws NO EXCEPTION HANDLING
@@ -491,7 +491,7 @@ private:
 
 public:
     // Default constructor
-    Normal() : mean_value(0.0), std_value(0.0), count(0), sum(0.0), sum_squares(0.0) {}
+    Normal() : mean_value(0.0), std_value(0.0), count_elements(0), sum(0.0), sum_squares(0.0) {}
 
 
     // ---------------------------------------------------------------
@@ -504,26 +504,26 @@ public:
         double previous_mean_value;
         double delta;
 
-        if (count > 1) {
+        if (count_elements > 1) {
             previous_mean_value = mean_value;
 
             sum = sum + new_element;
-            count++;
-            mean_value = sum / (double)count;
+            count_elements++;
+            mean_value = sum / (double)count_elements;
 
             sum_squares = sum_squares + ((new_element - previous_mean_value) * (new_element - mean_value));
 
-            std_value = sqrt(sum_squares / (double)count);
+            std_value = sqrt(sum_squares / (double)count_elements);
         }
         else {
-            if (count < 1) {
+            if (count_elements < 1) {
                 mean_value = new_element;
-                count = 1;
+                count_elements = 1;
                 sum = new_element;
             }
             else {
-                count = 2;
-                mean_value = (mean_value + new_element) / (double)count;
+                count_elements = 2;
+                mean_value = (mean_value + new_element) / (double)count_elements;
                 sum = sum + new_element;
                 delta = new_element - mean_value;
                 sum_squares = delta * delta;
@@ -552,13 +552,13 @@ public:
     }
 
     // ---------------------------------------------------------------
-    /** @brief Get the count of elements
+    /** @brief Get the count_elements of elements
      * @param None
      * @return int The number of elements added
      * @throws NO EXCEPTION HANDLING
     **/
     size_t count() const {
-        return count;
+        return count_elements;
     }
 
     // ---------------------------------------------------------------
@@ -570,7 +570,7 @@ public:
     void reset() {
         mean_value = 0.0;
         std_value = 0.0;
-        count = 0;
+        count_elements = 0;
         sum = 0.0;
         sum_squares = 0.0;
     }
@@ -591,7 +591,7 @@ public:
 
         mean_value = newMean;
         std_value = newStd;
-        count = newCount;
+        count_elements = newCount;
         sum = newSum;
         sum_squares = newSumSquares;
     }
@@ -605,7 +605,7 @@ private:
     // basic fields
     double maximum_value;
     double minimum_value;
-    size_t count;
+    size_t count_elements;
 
 	// windowed data fields
 	bool windowed;
@@ -659,7 +659,7 @@ public:
 	 * @throws std::invalid_argument if histogram parameters are invalid
     **/
     explicit NonNormal(size_t window_size, size_t histogram_bins = 0, double histogram_min = 0.0, double histogram_max = 0.0) 
-        : maximum_value(std::numeric_limits<double>::lowest()), minimum_value(std::numeric_limits<double>::max()), count(0), 
+        : maximum_value(std::numeric_limits<double>::lowest()), minimum_value(std::numeric_limits<double>::max()), count_elements(0), 
           window_data(), window_size(window_size), write_index(0), current_size(0),
           histogram(), num_bins(histogram_bins), hist_min(histogram_min), hist_max(histogram_max), bin_width(0.0) {
 
@@ -688,7 +688,7 @@ public:
 			windowed = false;
         }
 
-		count = 0;
+		count_elements = 0;
     }
 
     // ----------------------------------------------------------------------
@@ -697,7 +697,7 @@ public:
     **/
     NonNormal() :   maximum_value(std::numeric_limits<double>::lowest()),
                     minimum_value(std::numeric_limits<double>::max()),
-                    count(0),
+                    count_elements(0),
 
 		            windowed(false),
                     window_size(1000),
@@ -768,8 +768,8 @@ public:
             minimum_value = new_element;
         }
 
-        // update count
-        count++;
+        // update count_elements
+        count_elements++;
     }
 
     // ----------------------------------------------------------------------
@@ -796,7 +796,7 @@ public:
 	 * @throws NO EXCEPTION HANDLING
     **/
     size_t count() const {
-        return count;
+        return count_elements;
     }
 
     // ----------------------------------------------------------------------
@@ -822,7 +822,7 @@ public:
 	 * @return const std::vector<double>& Reference to the window data ordered from newest to oldest
      * @throws NO EXCEPTION HANDLING
     **/
-    const std::vector<double>& window() const {
+    const std::vector<double>& windowData() const {
 		// create a copy from the initial segment of the circular buffer
         if (!windowed) {
             throw std::runtime_error("Windowed data not enabled");
@@ -847,7 +847,7 @@ public:
      * @return const std::vector<size_t>& Reference to the histogram data
      * @throws NO EXCEPTION HANDLING
     **/
-    const std::vector<size_t>& histogram() const {
+    const std::vector<size_t>& histogramData() const {
         return histogram;
     }
 
@@ -879,6 +879,20 @@ public:
     }
 
     // ----------------------------------------------------------------------
+    /** @brief Get the histogram maximum count
+     * @return size_t The highest count in any histogram bin
+	 * @throws NO EXCEPTION HANDLING
+    **/
+    size_t histogramMaxCount() const {
+        if (num_bins == 0) {
+            throw std::runtime_error("Histogram is not enabled");
+        }
+        // Find the maximum count in the histogram
+        auto max_it = std::max_element(histogram.begin(), histogram.end());
+        return *max_it;
+	}
+
+    // ----------------------------------------------------------------------
     /** @brief Reset all values to initial state
      * @return void
      * @throws NO EXCEPTION HANDLING
@@ -888,7 +902,7 @@ public:
         minimum_value = std::numeric_limits<double>::max();
         write_index = 0;
         current_size = 0;
-        count = 0;
+        count_elements = 0;
         // Note: No need to clear window_data - elements will be overwritten
         if (num_bins > 0) {
             std::fill(histogram.begin(), histogram.end(), 0);
