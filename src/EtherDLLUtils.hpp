@@ -622,6 +622,9 @@ private:
     double hist_max;
     double bin_width;
 
+	// category fields
+	bool has_categories;
+    json categories;
 
     // ----------------------------------------------------------------------
     /** @brief Calculate the bin index for a given value
@@ -651,47 +654,6 @@ private:
 
 public:
     // ----------------------------------------------------------------------
-    /** @brief Constructor with defined window size and histogram parameters
-	 * @param windowSize The maximum number of elements to store in the buffer. 0 for no buffer, min and max will track all elements submitted
-     * @param histogramBins The number of bins for the histogram (0 to disable)
-     * @param histogramMin The minimum value for histogram range
-     * @param histogramMax The maximum value for histogram range
-	 * @throws std::invalid_argument if histogram parameters are invalid
-    **/
-    explicit NonNormal(size_t window_size, size_t histogram_bins = 0, double histogram_min = 0.0, double histogram_max = 0.0) 
-        : maximum_value(std::numeric_limits<double>::lowest()), minimum_value(std::numeric_limits<double>::max()), count_elements(0), 
-          window_data(), window_size(window_size), write_index(0), current_size(0),
-          histogram(), num_bins(histogram_bins), hist_min(histogram_min), hist_max(histogram_max), bin_width(0.0) {
-
-		// Initialize histogram if requested
-        if (num_bins > 0) {
-            if (hist_max > hist_min) {
-                histogram.resize(num_bins, 0);
-                bin_width = (hist_max - hist_min) / static_cast<double>(num_bins);
-                has_histogram = true;
-            }
-            else {
-                throw std::invalid_argument("Histogram max must be greater than min when histogram is enabled");
-            }
-        }
-        else {
-            num_bins = 0;
-			has_histogram = false;
-        }
-
-		// Initialize windowed data if requested
-        if (window_size > 0) {
-            windowed = true;
-            window_data.resize(window_size, 0.0);
-        }
-        else {
-			windowed = false;
-        }
-
-		count_elements = 0;
-    }
-
-    // ----------------------------------------------------------------------
     /** @brief Default constructor with default sample size of 1000 and no histogram
      * @throws NO EXCEPTION HANDLING
     **/
@@ -700,7 +662,7 @@ public:
                     count_elements(0),
 
 		            windowed(false),
-                    window_size(1000),
+                    window_size(0),
                     window_data(),
                     write_index(0),
                     current_size(0),
@@ -710,7 +672,62 @@ public:
                     hist_max(0.0),
                     num_bins(0),
                     bin_width(0.0),
-                    histogram() {}
+                    histogram(),
+
+                    has_categories(false),
+		            categories()
+                    {}
+
+
+    // ----------------------------------------------------------------------
+    /** @brief Constructor for windowed data tracking
+     * @param window_size The maximum number of elements to store in the circular buffer
+     * @throws std::invalid_argument if window_size is 0
+    **/
+    static NonNormal addWindowed(size_t window_size) {
+        if (window_size == 0) {
+            throw std::invalid_argument("Window size must be greater than 0 for windowed mode");
+        }
+        NonNormal instance;
+        instance.windowed = true;
+        instance.window_size = window_size;
+        instance.window_data.resize(window_size, 0.0);
+        return instance;
+    }
+
+    // ----------------------------------------------------------------------
+    /** @brief Constructor for histogram tracking
+     * @param histogram_bins The number of bins for the histogram
+     * @param histogram_min The minimum value for histogram range
+     * @param histogram_max The maximum value for histogram range
+     * @throws std::invalid_argument if histogram parameters are invalid
+    **/
+    static NonNormal addHistogram(size_t histogram_bins, double histogram_min, double histogram_max) {
+        if (histogram_bins == 0) {
+            throw std::invalid_argument("Number of histogram bins must be greater than 0");
+        }
+        if (histogram_max <= histogram_min) {
+            throw std::invalid_argument("Histogram max must be greater than min");
+        }
+        NonNormal instance;
+        instance.has_histogram = true;
+        instance.num_bins = histogram_bins;
+        instance.hist_min = histogram_min;
+        instance.hist_max = histogram_max;
+        instance.bin_width = (histogram_max - histogram_min) / static_cast<double>(histogram_bins);
+        instance.histogram.resize(histogram_bins, 0);
+        return instance;
+    }
+
+    // ----------------------------------------------------------------------
+    /** @brief Constructor for categorical data tracking
+     * @throws NO EXCEPTION HANDLING
+    **/
+    static NonNormal addCategorical() {
+        NonNormal instance;
+        instance.has_categories = true;
+        return instance;
+    }
 
     // ----------------------------------------------------------------------
     /** @brief Add element to the distribution statistics
@@ -758,6 +775,17 @@ public:
             size_t binIndex = getBinIndex(new_element);
             histogram[binIndex]++;
         }
+
+        // Update categories if enabled
+        if (has_categories) {
+            std::string key = std::to_string(new_element);
+            if (categories.contains(key)) {
+                categories[key] = categories[key].get<size_t>() + 1;
+            }
+            else {
+                categories[key] = 1;
+            }
+		}
 
         // Update min/max values
         if (new_element > maximum_value) {
@@ -820,7 +848,7 @@ public:
     // ----------------------------------------------------------------------
 	/** @brief Get the available window data vector
 	 * @return const std::vector<double>& Reference to the window data ordered from newest to oldest
-     * @throws NO EXCEPTION HANDLING
+	 * @throws runtime_error if windowed data is not enabled
     **/
     const std::vector<double>& windowData() const {
 		// create a copy from the initial segment of the circular buffer
@@ -845,68 +873,153 @@ public:
     // ----------------------------------------------------------------------
     /** @brief Get the histogram vector
      * @return const std::vector<size_t>& Reference to the histogram data
-     * @throws NO EXCEPTION HANDLING
+     * @throws runtime_error if histogram is not enabled
     **/
     const std::vector<size_t>& histogramData() const {
+        if (!has_histogram) {
+            throw std::runtime_error("Histogram is not enabled");
+        }
         return histogram;
     }
 
     // ----------------------------------------------------------------------
     /** @brief Get the number of histogram bins
      * @return size_t The number of bins (0 if histogram disabled)
-     * @throws NO EXCEPTION HANDLING
+	 * @throws runtime_error if histogram is not enabled
     **/
     size_t n_bins() const {
+        if (!has_histogram) {
+            throw std::runtime_error("Histogram is not enabled");
+		}
         return num_bins;
     }
 
-    // ----------------------------------------------------------------------
-	/** @brief Get the mode from the histogram data
-	 * @return double The center value of the bin with the highest count
-     * @throws NO EXCEPTION HANDLING
-    **/
-    double mode() const {
-        if (num_bins == 0) {
-            throw std::runtime_error("Histogram is not enabled");
-        }
-
-        // Find the bin with the highest count
-        auto max_it = std::max_element(histogram.begin(), histogram.end());
-        size_t max_bin = std::distance(histogram.begin(), max_it);
-
-        // Calculate the center value of the bin
-        return hist_min + (max_bin + 0.5) * bin_width;
-    }
 
     // ----------------------------------------------------------------------
     /** @brief Get the histogram maximum count
      * @return size_t The highest count in any histogram bin
-	 * @throws NO EXCEPTION HANDLING
+     * @throws runtime_error if histogram is not enabled
     **/
     size_t histogramMaxCount() const {
-        if (num_bins == 0) {
+        if (!has_histogram) {
             throw std::runtime_error("Histogram is not enabled");
         }
         // Find the maximum count in the histogram
         auto max_it = std::max_element(histogram.begin(), histogram.end());
         return *max_it;
-	}
+    }
+
 
     // ----------------------------------------------------------------------
-    /** @brief Reset all values to initial state
+	/** @brief Get the mode from the histogram data
+	 * @return double The center value of the bin with the highest count
+     * @throws runtime_error if histogram is not enabled
+    **/
+    double mode() const {
+        double mode_value = NAN;
+
+		// preferable method using categorical data if available
+        if (has_categories) {
+            size_t max_count = 0;
+            std::string mode_key;
+            for (auto& [key, value] : categories.items()) {
+                size_t count = value.get<size_t>();
+                if (count > max_count) {
+                    max_count = count;
+                    mode_key = key;
+                }
+            }
+            if (!mode_key.empty()) {
+                return std::stod(mode_key);
+            }
+            else {
+				throw std::runtime_error("No categories available to determine mode.");
+            }
+		}
+
+        if (has_histogram) {
+            auto max_it = std::max_element(histogram.begin(), histogram.end());
+            size_t max_bin = std::distance(histogram.begin(), max_it);
+
+            // Calculate the center value of the bin
+            return hist_min + (max_bin * bin_width);
+        }
+
+		throw std::runtime_error("Categories or histogram must be enabled to determine mode.");
+
+    }
+
+    // ----------------------------------------------------------------------
+	/** @brief Get the categories JSON object
+     * @return json The categories JSON object
+     * @throws NO EXCEPTION HANDLING
+    **/
+    json getCategories() const {
+        if (!has_categories) {
+            throw std::runtime_error("Categories are not enabled");
+        }
+        return categories;
+    }
+
+
+    // ----------------------------------------------------------------------
+	/** @brief Get the count of unique categories
+	 * @return size_t The number of unique categories
+     * @throws NO EXCEPTION HANDLING
+    **/
+    size_t getUniqueCategoryCount() const {
+        if (!has_categories) {
+            throw std::runtime_error("Categories are not enabled");
+        }
+        return categories.size();
+    }
+
+    // ----------------------------------------------------------------------
+	/** @brief Get the number of occurrences of a specific category
+	 * @return size_t The count of the specified category
+     * @throws NO EXCEPTION HANDLING
+    **/
+    size_t getCategoryCount(const double& category) const {
+        if (!has_categories) {
+            throw std::runtime_error("Categories are not enabled");
+        }
+        if (categories.contains(std::to_string(category))) {
+            return categories[std::to_string(category)].get<size_t>();
+        }
+        return 0;
+	}
+        
+
+    // ----------------------------------------------------------------------
+	/** @brief Reset windowed data, histogram, min/max, and count
      * @return void
      * @throws NO EXCEPTION HANDLING
     **/
     void reset() {
-        maximum_value = std::numeric_limits<double>::lowest();
+        // Reset min/max
         minimum_value = std::numeric_limits<double>::max();
-        write_index = 0;
-        current_size = 0;
+        maximum_value = std::numeric_limits<double>::lowest();
+
+        // Reset count
         count_elements = 0;
-        // Note: No need to clear window_data - elements will be overwritten
-        if (num_bins > 0) {
+
+        // Reset windowed data
+        if (windowed) {
+            std::fill(window_data.begin(), window_data.end(), 0.0);
+            write_index = 0;
+            current_size = 0;
+        }
+
+        // Reset histogram
+        if (has_histogram) {
             std::fill(histogram.begin(), histogram.end(), 0);
         }
+
+		// Reset categories
+        if (has_categories) {
+            categories.clear();
+		}
+
     }
 };
 
