@@ -134,10 +134,10 @@ const unsigned char* parsedBinData(const unsigned char* binData, unsigned short 
 Frequency panFrequencyInfo(const SEquipCtrlMsg::SGetPanResp* panResponse)
 {
     // Convert central frequency from internal units to MHz
-    double centralFrequency = double(panResponse->freq.internal) / FREQ_FACTOR;
+    double centralFrequency = Units::Frequency(panResponse->freq.internal).Hz<double>();
 
     // Convert bin size from internal units to Hz
-    double binSize = double(panResponse->binSize.internal) / FREQ_FACTOR;
+    double binSize = Units::Frequency(panResponse->binSize.internal).Hz<double>();
 
     // Calculate half span in MHz  
     double halfSpan = (binSize * double(floor(panResponse->numBins / double(2.0)))) / double(1000000.0);
