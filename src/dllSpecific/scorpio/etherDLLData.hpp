@@ -60,10 +60,7 @@ constexpr float OCC_BYTE_POWER_OFFSET = 200.0;
 struct Site {
     Normal latitude;    // Average coordinate in decimal degrees
     Normal longitude;   // Average coordinate in decimal degrees
-    NonNormal satelliteCount{/*sampleSize=*/0,
-                            /*histogramBins=*/8,
-                            /*histogramMin=*/0.0,
-                            /*histogramMax=*/7.0 };
+	NonNormal satelliteCount; // Number of satellites used in measurements
     std::string firstUpdateTime; // datetime in ISO 8601 format "YYYY-MM-DDThh:mm:ss.ssssZ"
     std::string lastUpdateTime; // datetime in ISO 8601 format "YYYY-MM-DDThh:mm:ss.ssssZ"
 };
