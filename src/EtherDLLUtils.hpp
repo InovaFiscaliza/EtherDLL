@@ -608,7 +608,7 @@ private:
     size_t count_elements;
 
 	// windowed data fields
-	bool windowed;
+	bool has_window;
     size_t window_size;
     std::vector<double> window_data;
     size_t write_index;      // Current write position in circular buffer
@@ -661,7 +661,7 @@ public:
                     minimum_value(std::numeric_limits<double>::max()),
                     count_elements(0),
 
-		            windowed(false),
+		            has_window(false),
                     window_size(0),
                     window_data(),
                     write_index(0),
@@ -684,12 +684,12 @@ public:
      * @param window_size The maximum number of elements to store in the circular buffer
      * @throws std::invalid_argument if window_size is 0
     **/
-    static NonNormal addWindowed(size_t window_size) {
+    static NonNormal add_windowed(size_t window_size) {
         if (window_size == 0) {
             throw std::invalid_argument("Window size must be greater than 0 for windowed mode");
         }
         NonNormal instance;
-        instance.windowed = true;
+        instance.has_window = true;
         instance.window_size = window_size;
         instance.window_data.resize(window_size, 0.0);
         return instance;
@@ -702,7 +702,7 @@ public:
      * @param histogram_max The maximum value for histogram range
      * @throws std::invalid_argument if histogram parameters are invalid
     **/
-    static NonNormal addHistogram(size_t histogram_bins, double histogram_min, double histogram_max) {
+    static NonNormal add_histogram(size_t histogram_bins, double histogram_min, double histogram_max) {
         if (histogram_bins == 0) {
             throw std::invalid_argument("Number of histogram bins must be greater than 0");
         }
@@ -723,7 +723,7 @@ public:
     /** @brief Constructor for categorical data tracking
      * @throws NO EXCEPTION HANDLING
     **/
-    static NonNormal addCategorical() {
+    static NonNormal add_categorical() {
         NonNormal instance;
         instance.has_categories = true;
         return instance;
@@ -741,8 +741,8 @@ public:
         double removedValue = 0.0;
         bool elementRemoved = false;
 
-        // Handle windowed data
-        if (windowed) {
+        // Handle has_window data
+        if (has_window) {
             // Check if we're overwriting an existing element
             if (current_size >= window_size) {
                 removedValue = window_data[write_index];
@@ -850,9 +850,9 @@ public:
 	 * @return const std::vector<double>& Reference to the window data ordered from newest to oldest
 	 * @throws runtime_error if windowed data is not enabled
     **/
-    const std::vector<double>& windowData() const {
+    const std::vector<double>& window_data() const {
 		// create a copy from the initial segment of the circular buffer
-        if (!windowed) {
+        if (!has_window) {
             throw std::runtime_error("Windowed data not enabled");
 		}
 
@@ -1004,7 +1004,7 @@ public:
         count_elements = 0;
 
         // Reset windowed data
-        if (windowed) {
+        if (has_window) {
             std::fill(window_data.begin(), window_data.end(), 0.0);
             write_index = 0;
             current_size = 0;
