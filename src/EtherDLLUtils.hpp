@@ -875,7 +875,7 @@ public:
      * @return const std::vector<size_t>& Reference to the histogram data
      * @throws runtime_error if histogram is not enabled
     **/
-    const std::vector<size_t>& histogramData() const {
+    const std::vector<size_t>& histogram_data() const {
         if (!has_histogram) {
             throw std::runtime_error("Histogram is not enabled");
         }
@@ -900,7 +900,7 @@ public:
      * @return size_t The highest count in any histogram bin
      * @throws runtime_error if histogram is not enabled
     **/
-    size_t histogramMaxCount() const {
+    size_t histogram_max() const {
         if (!has_histogram) {
             throw std::runtime_error("Histogram is not enabled");
         }
@@ -954,7 +954,7 @@ public:
      * @return json The categories JSON object
      * @throws NO EXCEPTION HANDLING
     **/
-    json getCategories() const {
+    json get_categories() const {
         if (!has_categories) {
             throw std::runtime_error("Categories are not enabled");
         }
@@ -967,7 +967,7 @@ public:
 	 * @return size_t The number of unique categories
      * @throws NO EXCEPTION HANDLING
     **/
-    size_t getUniqueCategoryCount() const {
+    size_t unique_categories() const {
         if (!has_categories) {
             throw std::runtime_error("Categories are not enabled");
         }
@@ -979,7 +979,7 @@ public:
 	 * @return size_t The count of the specified category
      * @throws NO EXCEPTION HANDLING
     **/
-    size_t getCategoryCount(const double& category) const {
+    size_t category_count(const double& category) const {
         if (!has_categories) {
             throw std::runtime_error("Categories are not enabled");
         }
