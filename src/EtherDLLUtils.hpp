@@ -598,33 +598,33 @@ public:
 };
 
 /** Class to store and perform online computation of basic descriptive indexes for a variable that do not follow a normal probability distribution
- *  May work with windowed data, histogram computation or only min/max tracking
+ *  May work with windowed data, histogram computation, categories or only min/max tracking
 **/
 class NonNormal {
 private:
     // basic fields
-    double maximum_value;
-    double minimum_value;
-    size_t count_elements;
+	double maximum_value;           // maximum value observed
+    double minimum_value;           // minimum value observed
+	size_t count_elements;          // total number of elements observed
 
 	// windowed data fields
-	bool has_window;
-    size_t window_size;
-    std::vector<double> window_data;
-    size_t write_index;      // Current write position in circular buffer
-    size_t current_size;     // Number of valid elements in buffer
+	bool has_window;                // Flag to indicate if windowed data is enabled
+	size_t window_size;             // Maximum size of the circular buffer
+	std::vector<double> window;     // Circular buffer for windowed data
+    size_t write_index;             // Current write position in circular buffer
+    size_t current_size;            // Number of valid elements in buffer
 
     // histogram fields
-	bool has_histogram;
-    std::vector<size_t> histogram;
-    size_t num_bins;
-    double hist_min;
-    double hist_max;
-    double bin_width;
+	bool has_histogram;             // Flag to indicate if histogram is enabled
+	std::vector<size_t> histogram;  // Histogram bin counts
+	size_t num_bins;                // Number of histogram bins
+	double hist_min;                // Minimum value for histogram range
+    double hist_max;                // Maximum value for histogram range
+	double bin_width;               // Width of each histogram bin
 
 	// category fields
-	bool has_categories;
-    json categories;
+	bool has_categories;            // Flag to indicate if categories are enabled
+    json categories;                // JSON object to hold category information
 
     // ----------------------------------------------------------------------
     /** @brief Calculate the bin index for a given value
@@ -663,7 +663,7 @@ public:
 
 		            has_window(false),
                     window_size(0),
-                    window_data(),
+                    window(),
                     write_index(0),
                     current_size(0),
 
@@ -691,7 +691,7 @@ public:
         NonNormal instance;
         instance.has_window = true;
         instance.window_size = window_size;
-        instance.window_data.resize(window_size, 0.0);
+        instance.window.resize(window_size, 0.0);
         return instance;
     }
 
@@ -745,12 +745,12 @@ public:
         if (has_window) {
             // Check if we're overwriting an existing element
             if (current_size >= window_size) {
-                removedValue = window_data[write_index];
+                removedValue = window[write_index];
                 elementRemoved = true;
             }
 
             // Write new element at current position
-            window_data[write_index] = new_element;
+            window[write_index] = new_element;
             
             // Advance write index (circular)
             write_index = (write_index + 1) % window_size;
@@ -763,7 +763,7 @@ public:
             // Recalculate min/max if removed element was an extreme value
             if (elementRemoved) {
                 if (removedValue >= maximum_value || removedValue <= minimum_value) {
-                    auto [minIt, maxIt] = std::minmax_element(window_data.begin(), window_data.begin() + current_size);
+                    auto [minIt, maxIt] = std::minmax_element(window.begin(), window.begin() + current_size);
                     minimum_value = *minIt;
                     maximum_value = *maxIt;
                 }
@@ -850,18 +850,16 @@ public:
 	 * @return const std::vector<double>& Reference to the window data ordered from newest to oldest
 	 * @throws runtime_error if windowed data is not enabled
     **/
-    const std::vector<double>& window_data() const {
+    const std::vector<double>& window_data() {
 		// create a copy from the initial segment of the circular buffer
-        if (!has_window) {
-            throw std::runtime_error("Windowed data not enabled");
-		}
+        if (!has_window) throw std::runtime_error("Window data not enabled");
 
 		// create a vector with the same size as current_size
 		std::vector<double> available_data(current_size);
 
         size_t index = write_index;
         for(int i = 0; i < current_size; i++) {
-            available_data[i] = window_data[index];
+            available_data[i] = window[index];
 			index--;
             if (index == static_cast<size_t>(-1)) {
                 index = window_size - 1;
@@ -1005,7 +1003,7 @@ public:
 
         // Reset windowed data
         if (has_window) {
-            std::fill(window_data.begin(), window_data.end(), 0.0);
+            std::fill(window.begin(), window.end(), 0.0);
             write_index = 0;
             current_size = 0;
         }
