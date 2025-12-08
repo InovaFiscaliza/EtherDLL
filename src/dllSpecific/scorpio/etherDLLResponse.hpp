@@ -914,10 +914,10 @@ json ProcessRealTimeData(_In_ ECSMSDllMsgType respType, _In_ SSmsRealtimeMsg::UB
         
         jsonObj["spectrum"]["numBins"] = RTResponse->numChan;
         jsonObj["spectrum"]["bandIndex"] = RTResponse->bandIndex;
-        jsonObj["spectrum"]["startFreq"]["internal"] = startFreq / edll::MHZ_MULTIPLIER;
-		jsonObj["spectrum"]["stopFrequency"] = stopFreq / edll::MHZ_MULTIPLIER;
-        jsonObj["spectrum"]["frequencyUnit"] = "MHz";
+        jsonObj["spectrum"]["startFreq"]["internal"] = startFreq;
+		jsonObj["spectrum"]["stopFrequency"] = stopFreq;
         jsonObj["spectrum"]["binSize"] = double(RTResponse->chanSize.internal) / FREQ_FACTOR;
+        jsonObj["spectrum"]["frequencyUnit"] = "Hz";
 
         size_t sweepByteLen = static_cast<size_t>(RTResponse->numChan) * sizeof(float);
         jsonObj["spectrum"]["traceData"] = base64Encode(
