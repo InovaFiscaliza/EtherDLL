@@ -684,7 +684,7 @@ public:
      * @param window_size The maximum number of elements to store in the circular buffer
      * @throws std::invalid_argument if window_size is 0
     **/
-    static NonNormal add_windowed(size_t window_size) {
+    static NonNormal new_window(size_t window_size) {
         if (window_size == 0) {
             throw std::invalid_argument("Window size must be greater than 0 for windowed mode");
         }
@@ -692,6 +692,7 @@ public:
         instance.has_window = true;
         instance.window_size = window_size;
         instance.window.resize(window_size, 0.0);
+
         return instance;
     }
 
@@ -702,7 +703,7 @@ public:
      * @param histogram_max The maximum value for histogram range
      * @throws std::invalid_argument if histogram parameters are invalid
     **/
-    static NonNormal add_histogram(size_t histogram_bins, double histogram_min, double histogram_max) {
+    static NonNormal new_histogram(size_t histogram_bins, double histogram_min, double histogram_max) {
         if (histogram_bins == 0) {
             throw std::invalid_argument("Number of histogram bins must be greater than 0");
         }
@@ -720,14 +721,57 @@ public:
     }
 
     // ----------------------------------------------------------------------
-    /** @brief Constructor for categorical data tracking
+    /** @brief Static factory for categorical data tracking 
+     * @return NonNormal A new instance with categorical tracking enabled
      * @throws NO EXCEPTION HANDLING
     **/
-    static NonNormal add_categorical() {
+    static NonNormal new_categorical() {
         NonNormal instance;
         instance.has_categories = true;
         return instance;
     }
+
+    // ----------------------------------------------------------------------
+    /** @brief Enable histogram data tracking on this instance
+     * @param histogram_bins The number of bins for the histogram
+     * @param histogram_min The minimum value for histogram range
+     * @param histogram_max The maximum value for histogram range
+     * @return NonNormal& Reference to this instance for method chaining
+     * @throws NO EXCEPTION HANDLING
+    **/
+    NonNormal& enable_histogram(size_t histogram_bins, double histogram_min, double histogram_max) {
+        has_histogram = true;
+        num_bins = histogram_bins;
+        hist_min = histogram_min;
+        hist_max = histogram_max;
+        bin_width = (histogram_max - histogram_min) / static_cast<double>(histogram_bins);
+        histogram.resize(histogram_bins, 0);
+        return *this;
+    }
+
+    // ----------------------------------------------------------------------
+    /** @brief Enable windowed data tracking on this instance
+     * @param window_size The maximum number of elements to store in the circular buffer
+     * @return NonNormal& Reference to this instance for method chaining
+     * @throws NO EXCEPTION HANDLING
+     */
+    NonNormal& enable_window(size_t window_size) {
+        has_window = true;
+        this->window_size = window_size;
+        window.resize(window_size, 0.0);
+        return *this;
+    }
+
+    // ----------------------------------------------------------------------
+    /** @brief Enable categorical data tracking on this instance
+     * @return NonNormal& Reference to this instance for method chaining
+     * @throws NO EXCEPTION HANDLING
+    **/
+    NonNormal& enable_categorical() {
+        has_categories = true;
+        return *this;
+    }
+
 
     // ----------------------------------------------------------------------
     /** @brief Add element to the distribution statistics
