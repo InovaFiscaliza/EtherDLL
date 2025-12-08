@@ -719,7 +719,7 @@ json processOccupancyDFResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMs
         //SEquipCtrlMsg::SStateResp* OCCDFResponse = (SEquipCtrlMsg::SStateResp*)data;
         SEquipCtrlMsg::SStateResp* OCCDFResponse = reinterpret_cast<SEquipCtrlMsg::SStateResp*>(data);
 
-        jsonObj["task"]["completionTime"] = OCCDFResponse->completionTime;
+        jsonObj["task"]["completionTime"] = COleTimeToIsoStr(OCCDFResponse->completionTime);
         jsonObj["task"]["state"] = eStateRespToString(OCCDFResponse->state);
     }
     break;
@@ -729,7 +729,7 @@ json processOccupancyDFResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMs
         // SEquipCtrlMsg::SEquipTaskStatusResp* OCCDFResponse = (SEquipCtrlMsg::SEquipTaskStatusResp*)data;
         SEquipCtrlMsg::SEquipTaskStatusResp* OCCDFResponse = reinterpret_cast<SEquipCtrlMsg::SEquipTaskStatusResp*>(data);
 
-        jsonObj["SEquipTaskStatusResp"]["dateTime"] = OCCDFResponse->dateTime;
+        jsonObj["SEquipTaskStatusResp"]["dateTime"] = COleTimeToIsoStr(OCCDFResponse->dateTime);
         jsonObj["SEquipTaskStatusResp"]["key"] = OCCDFResponse->key;
         jsonObj["SEquipTaskStatusResp"]["status"] = eStatusToString(OCCDFResponse->status);
         jsonObj["SEquipTaskStatusResp"]["taskId"] = OCCDFResponse->taskId;
@@ -741,7 +741,9 @@ json processOccupancyDFResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMs
         //SEquipCtrlMsg::SFrequencyVsChannelResp* OCCDFResponse = (SEquipCtrlMsg::SFrequencyVsChannelResp*)data;
         SEquipCtrlMsg::SFrequencyVsChannelResp* OCCDFResponse = reinterpret_cast<SEquipCtrlMsg::SFrequencyVsChannelResp*>(data);
 
-        std::vector<float> freqVsChanData(OCCDFResponse->occHdr.numTotalChannels);
+		size_t numBins = static_cast<size_t>(OCCDFResponse->occHdr.numChannels);
+
+        std::vector<float> freqVsChanData(numBins);
 
         freqVsChanData[0] = static_cast<float>(Units::Frequency(OCCDFResponse->frequencies[0]).Hz<double>());
         freqVsChanData[1] = static_cast<float>(Units::Frequency(OCCDFResponse->frequencies[1]).Hz<double>());
@@ -757,13 +759,12 @@ json processOccupancyDFResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMs
             maxFrequency = freqVsChanData[0];
         }
 
-		NonNormal frequeDelta;
-        frequeDelta.add_categorical();
-		frequeDelta.add_element(freqVsChanData[1] - freqVsChanData[0]);
+		NonNormal frequeDelta = NonNormal::new_categorical();
+        frequeDelta.add_element(freqVsChanData[1] - freqVsChanData[0]);
 
         size_t j = 2;
         double binFrequency;
-        for (size_t i = 2; i < static_cast<size_t>(OCCDFResponse->occHdr.numChannels); i++)
+        for (size_t i = 2; i < numBins; i++)
         {
 			binFrequency = static_cast<float>(Units::Frequency(OCCDFResponse->frequencies[i]).Hz<double>());
             if (binFrequency > 0.0) {
@@ -779,7 +780,6 @@ json processOccupancyDFResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMs
         }
 
         binFrequency = frequeDelta.mode();
-
 
 
         if ((double)frequeDelta.category_count(binFrequency) / (double)(frequeDelta.count()) > 0.99)
@@ -801,16 +801,15 @@ json processOccupancyDFResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMs
             jsonObj["spectrum"]["frequencyUnit"] = "MHz";
 		}
 
+        jsonObj["spectrum"]["numTotalBins"] = OCCDFResponse->occHdr.numTotalChannels;
+        jsonObj["spectrum"]["firstBin"] = OCCDFResponse->occHdr.firstChannel;
+        jsonObj["spectrum"]["numTimeOfDays"] = OCCDFResponse->occHdr.numTimeOfDays;
+        jsonObj["spectrum"]["numBands"] = OCCDFResponse->numBands;
+
         jsonObj["site"] = ProcessGpsData(&(OCCDFResponse->occHdr.gpsResponse));
+        jsonObj["task"]["status"] = eErrorCodeToString(OCCDFResponse->occHdr.status);
         jsonObj["equipment"]["hostName"] = OCCDFResponse->hostName;
         jsonObj["equipment"]["selectedAntenna"] = eAntToString(OCCDFResponse->selectedAntenna);
-
-        jsonObj["band"]["Spectrum"]["status"] = eErrorCodeToString(OCCDFResponse->occHdr.status);
-        jsonObj["band"]["Spectrum"]["firstChannel"] = OCCDFResponse->occHdr.firstChannel;
-        jsonObj["band"]["Spectrum"]["numChannels"] = OCCDFResponse->occHdr.numChannels;
-        jsonObj["band"]["Spectrum"]["numTotalChannels"] = OCCDFResponse->occHdr.numTotalChannels;
-        jsonObj["band"]["Spectrum"]["numTimeOfDays"] = OCCDFResponse->occHdr.numTimeOfDays;
-        jsonObj["band"]["Spectrum"]["numBands"] = OCCDFResponse->numBands;
 
         jsonObj["settings"]["primaryThreshold"]["dBuV/m absolute"] = static_cast<int>(OCCDFResponse->occPrimaryThreshold[0]); // dBuV/m
         jsonObj["settings"]["primaryThreshold"]["dB aboveNoise"] = static_cast<int>(OCCDFResponse->occPrimaryThreshold[1]); // dB
@@ -826,37 +825,47 @@ json processOccupancyDFResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMs
         // SEquipCtrlMsg::SScanDfVsChannelResp* OCCDFResponse = (SEquipCtrlMsg::SScanDfVsChannelResp*)data;
         SEquipCtrlMsg::SScanDfVsChannelResp* OCCDFResponse = reinterpret_cast<SEquipCtrlMsg::SScanDfVsChannelResp*>(data);
 
-        jsonObj["channel"]["Occupancy"]["status"] = eErrorCodeToString(OCCDFResponse->occHdr.status);
-
         jsonObj["site"] = ProcessGpsData(&(OCCDFResponse->occHdr.gpsResponse));
 
-        jsonObj["channel"]["Occupancy"]["numTotalChannels"] = OCCDFResponse->occHdr.numTotalChannels;
-        jsonObj["channel"]["Occupancy"]["firstChannel"] = OCCDFResponse->occHdr.firstChannel;
+        jsonObj["task"]["status"] = eErrorCodeToString(OCCDFResponse->occHdr.status);
 
-        jsonObj["channel"]["Occupancy"]["numTimeOfDays"] = OCCDFResponse->occHdr.numTimeOfDays;
+        jsonObj["spectrum"]["numTotalBins"] = OCCDFResponse->occHdr.numTotalChannels;
+        jsonObj["spectrum"]["firstBin"] = OCCDFResponse->occHdr.firstChannel;
+        jsonObj["spectrum"]["numTimeOfDays"] = OCCDFResponse->occHdr.numTimeOfDays;
 
-        int numChannels = OCCDFResponse->occHdr.numTotalChannels;
+        int numChannels = OCCDFResponse->occHdr.numChannels;
+        jsonObj["spectrum"]["numBins"] = numChannels;
 
-        jsonObj["channel"]["Occupancy"]["numAzimuths"] = OCCDFResponse->numAzimuths;
-        jsonObj["channel"]["Occupancy"]["numChannels"] = numChannels;
+        jsonObj["AOA"]["numAzimuths"] = OCCDFResponse->numAzimuths;
 
+		unsigned long firstChannel = OCCDFResponse->occHdr.firstChannel;
+		unsigned long lastChannel = firstChannel + OCCDFResponse->occHdr.numChannels;
         std::vector<int> chanData(numChannels);
-        std::copy(OCCDFResponse->scanDfData,
-            OCCDFResponse->scanDfData + OCCDFResponse->occHdr.numChannels,
-            chanData.begin() + OCCDFResponse->occHdr.firstChannel);
-        jsonObj["channel"]["Occupancy"]["chanData"] = chanData;
+        std::copy(OCCDFResponse->scanDfData + firstChannel,
+            OCCDFResponse->scanDfData + lastChannel,
+            chanData.begin());
+        jsonObj["Occupancy"]["chanData"] = base64Encode(
+            reinterpret_cast<const unsigned char*>(chanData.data()),
+            static_cast<unsigned int>(chanData.size() * sizeof(int))
+        );
 
         std::vector<int> aveRange(numChannels);
-        std::copy(OCCDFResponse->aveRange,
-            OCCDFResponse->aveRange + OCCDFResponse->occHdr.numChannels,
-			aveRange.begin() + OCCDFResponse->occHdr.firstChannel);
-        jsonObj["channel"]["Occupancy"]["aveRange"] = aveRange;
+        std::copy(OCCDFResponse->aveRange + firstChannel,
+            OCCDFResponse->aveRange + lastChannel,
+			aveRange.begin());
+        jsonObj["Occupancy"]["aveRange"] = base64Encode(
+            reinterpret_cast<const unsigned char*>(aveRange.data()),
+            static_cast<unsigned int>(aveRange.size() * sizeof(int))
+		);
 
         std::vector<int> aveFldStr(numChannels);
-        std::copy(OCCDFResponse->aveFldStr,
-            OCCDFResponse->aveFldStr + OCCDFResponse->occHdr.numChannels,
-            aveFldStr.begin() + OCCDFResponse->occHdr.firstChannel);
-        jsonObj["channel"]["Occupancy"]["aveFldStr"] = aveFldStr;
+        std::copy(OCCDFResponse->aveFldStr + firstChannel,
+			OCCDFResponse->aveFldStr + lastChannel,
+            aveFldStr.begin());
+        jsonObj["Occupancy"]["aveFldStr"] = base64Encode(
+            reinterpret_cast<const unsigned char*>(aveFldStr.data()),
+            static_cast<unsigned int>(aveFldStr.size() * sizeof(int))
+        );
     }
     break;
 
@@ -890,9 +899,14 @@ json ProcessRealTimeData(_In_ ECSMSDllMsgType respType, _In_ SSmsRealtimeMsg::UB
         jsonObj["SStart"]["numBands"] = RTResponse->numBands;
         for (i = 0; i < RTResponse->numBands; i++)
         {
+            double startFreq = Units::Frequency(RTResponse->band[i].firstChanFreq).Hz<double>();
+            double binSize = Units::Frequency(RTResponse->band[i].chanSize).Hz<double>();
+            double stopFreq = startFreq + (binSize * (double)(RTResponse->band[i].numChan - 1));
+
             json bandObj;
-            bandObj["binSize"] = RTResponse->band[i].chanSize.internal;
-            bandObj["startFreq"] = RTResponse->band[i].firstChanFreq.internal;
+            bandObj["binSize"] = binSize;
+            bandObj["startFreq"] = startFreq;
+			bandObj["stopFreq"] = stopFreq;
             bandObj["numChan"] = RTResponse->band[i].numChan;
             jsonObj["SStart"]["band"].push_back(bandObj);
         }
@@ -910,27 +924,36 @@ json ProcessRealTimeData(_In_ ECSMSDllMsgType respType, _In_ SSmsRealtimeMsg::UB
     {
         const SSmsRealtimeMsg::SSpectrum* RTResponse = (SSmsRealtimeMsg::SSpectrum*)data;
 
+        double startFreq = Units::Frequency(RTResponse->firstChanFreq).Hz<double>();
+        double binSize = Units::Frequency(RTResponse->chanSize).Hz<double>();
+        double stopFreq = startFreq + (binSize * (double)(RTResponse->numChan - 1));
+
         jsonObj["Spectrum"]["taskId"] = RTResponse->taskId;
         jsonObj["Spectrum"]["bandIndex"] = RTResponse->bandIndex;
-        jsonObj["Spectrum"]["startFreq"] = RTResponse->firstChanFreq;
-        jsonObj["Spectrum"]["binSize"] = RTResponse->chanSize;
+        jsonObj["Spectrum"]["startFreq"] = startFreq;
+        jsonObj["Spectrum"]["binSize"] = binSize;
+		jsonObj["Spectrum"]["stopFreq"] = stopFreq;
         jsonObj["Spectrum"]["numChan"] = RTResponse->numChan;
-        jsonObj["Spectrum"]["noiseFloor"] = RTResponse->noiseFloor;
-        jsonObj["Spectrum"]["levelData"] = std::string(reinterpret_cast<const char*>(RTResponse->chanData), RTResponse->numChan);
+        jsonObj["Spectrum"]["noiseFloor"] = RTResponse->noiseFloor - OCC_BYTE_POWER_OFFSET;
+
+        size_t sweepByteLen = static_cast<size_t>(RTResponse->numChan) * sizeof(float);
+        jsonObj["Spectrum"]["levelData"] = base64Encode(
+            parsedBinData(RTResponse->chanData, RTResponse->numChan, OCC_BYTE_POWER_OFFSET),
+            static_cast<unsigned int>(sweepByteLen));
     }
     break;
 
-    case ECSMSDllMsgType::RT_SPECTRUM_V2RESPONSE:
+    case ECSMSDllMsgType::RT_SPECTRUM_V2RESPONSE: //64
     {
         const SSmsRealtimeMsg::SSpectrumV2* RTResponse = (SSmsRealtimeMsg::SSpectrumV2*)data;
 
-        double startFreq = Units::Frequency(RTResponse->firstChanFreq.internal).Hz<double>();
-		double binSize = Units::Frequency(RTResponse->chanSize.internal).Hz<double>();
-		double stopFreq = startFreq + (binSize * RTResponse->numChan);
+        double startFreq = Units::Frequency(RTResponse->firstChanFreq).Hz<double>();
+		double binSize = Units::Frequency(RTResponse->chanSize).Hz<double>();
+		double stopFreq = startFreq + (binSize * (double)(RTResponse->numChan-1));
 
         jsonObj["measure"]["taskId"] = RTResponse->taskId;
-        jsonObj["measure"]["noiseFloor"] = RTResponse->noiseFloor;
-        
+        jsonObj["measure"]["noiseFloor"] = RTResponse->noiseFloor - OCC_BYTE_POWER_OFFSET;
+
         jsonObj["spectrum"]["numBins"] = RTResponse->numChan;
         jsonObj["spectrum"]["bandIndex"] = RTResponse->bandIndex;
         jsonObj["spectrum"]["startFrequency"] = startFreq;
@@ -940,7 +963,8 @@ json ProcessRealTimeData(_In_ ECSMSDllMsgType respType, _In_ SSmsRealtimeMsg::UB
 
         size_t sweepByteLen = static_cast<size_t>(RTResponse->numChan) * sizeof(float);
         jsonObj["spectrum"]["traceData"] = base64Encode(
-            parsedBinData(RTResponse->chanData, RTResponse->numChan, OCC_BYTE_POWER_OFFSET), static_cast<unsigned int>(sweepByteLen));
+            parsedBinData(RTResponse->chanData, RTResponse->numChan, OCC_BYTE_POWER_OFFSET),
+            static_cast<unsigned int>(sweepByteLen));
     }
     break;
     case ECSMSDllMsgType::RT_SPECTRUM_RESPONSE:
@@ -1033,7 +1057,7 @@ json ProcessRealTimeData(_In_ ECSMSDllMsgType respType, _In_ SSmsRealtimeMsg::UB
     }
     break;
 
-    case ECSMSDllMsgType::RT_DF_DATA:
+    case ECSMSDllMsgType::RT_DF_DATA: // 74
     {
         const SSmsRealtimeMsg::SDfDataV3* RTResponse = (SSmsRealtimeMsg::SDfDataV3*)data;
         jsonObj["SDfDataV3"]["bandIndex"] = RTResponse->bandIndex;
