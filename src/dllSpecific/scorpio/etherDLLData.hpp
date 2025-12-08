@@ -77,14 +77,14 @@ struct Equipment {
 };
 
 
-struct Frequency {
+struct FrequencyRange {
     double startFrequency;      // in Hz
     double stopFrequency;       // in Hz
     double binSize;             // in Hz
 };
 
 struct Configuration {
-    Frequency frequencyInfo;
+    FrequencyRange frequencyInfo;
     double receiverAttenuation; // in dB
     double referenceLevel;      // in dBm
     double preselectorAttenuation; // in dB
@@ -93,7 +93,7 @@ struct Configuration {
 
 struct Spectrum {
     unsigned long taskId;
-	Frequency frequencyInfo;
+    FrequencyRange frequencyInfo;
     std::vector<double> trace;      // Power Amplitude Normalized data in dBm
 	std::string unit;               // e.g., "dBm"; "dBuV/m", "%", "degrees"
     std::string firstUpdateTime;    // datetime in ISO 8601 format "YYYY-MM-DDThh:mm:ss.ssssZ"
