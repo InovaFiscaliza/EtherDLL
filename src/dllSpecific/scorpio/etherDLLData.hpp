@@ -43,7 +43,6 @@
 
 
 // Constants
-constexpr double FREQ_FACTOR = 1920.0;
 constexpr float PAN_BYTE_POWER_OFFSET = 192.0;
 constexpr float OCC_BYTE_POWER_OFFSET = 200.0;
 
