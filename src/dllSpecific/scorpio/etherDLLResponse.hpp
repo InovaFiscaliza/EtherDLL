@@ -713,8 +713,8 @@ json processOccupancyDFResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMs
 
     switch (respType)
     {
-    case ECSMSDllMsgType::OCCDF_STATE_RESPONSE: /* Fall through to apply the same processing to both cases */
-    case ECSMSDllMsgType::OCCDF_SOLICIT_STATE_RESPONSE:
+    case ECSMSDllMsgType::OCCDF_STATE_RESPONSE: // 36 /* Fall through to apply the same processing to both cases */
+    case ECSMSDllMsgType::OCCDF_SOLICIT_STATE_RESPONSE: //37
     {
         //SEquipCtrlMsg::SStateResp* OCCDFResponse = (SEquipCtrlMsg::SStateResp*)data;
         SEquipCtrlMsg::SStateResp* OCCDFResponse = reinterpret_cast<SEquipCtrlMsg::SStateResp*>(data);
@@ -724,7 +724,19 @@ json processOccupancyDFResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMs
     }
     break;
 
-    case ECSMSDllMsgType::OCCDF_FREQ_VS_CHANNEL:
+    case ECSMSDllMsgType::OCCDF_STATUS: //38
+    {
+        // SEquipCtrlMsg::SEquipTaskStatusResp* OCCDFResponse = (SEquipCtrlMsg::SEquipTaskStatusResp*)data;
+        SEquipCtrlMsg::SEquipTaskStatusResp* OCCDFResponse = reinterpret_cast<SEquipCtrlMsg::SEquipTaskStatusResp*>(data);
+
+        jsonObj["SEquipTaskStatusResp"]["dateTime"] = OCCDFResponse->dateTime;
+        jsonObj["SEquipTaskStatusResp"]["key"] = OCCDFResponse->key;
+        jsonObj["SEquipTaskStatusResp"]["status"] = eStatusToString(OCCDFResponse->status);
+        jsonObj["SEquipTaskStatusResp"]["taskId"] = OCCDFResponse->taskId;
+    }
+    break;
+
+    case ECSMSDllMsgType::OCCDF_FREQ_VS_CHANNEL: //39
     {
         //SEquipCtrlMsg::SFrequencyVsChannelResp* OCCDFResponse = (SEquipCtrlMsg::SFrequencyVsChannelResp*)data;
         SEquipCtrlMsg::SFrequencyVsChannelResp* OCCDFResponse = reinterpret_cast<SEquipCtrlMsg::SFrequencyVsChannelResp*>(data);
@@ -732,31 +744,50 @@ json processOccupancyDFResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMs
         std::vector<float> freqVsChanData(OCCDFResponse->occHdr.numTotalChannels);
 
         freqVsChanData[0] = static_cast<float>(Units::Frequency(OCCDFResponse->frequencies[0]).Hz<double>());
-        float maxFrequency = freqVsChanData[0];
-        float minFrequency = maxFrequency;
+        freqVsChanData[1] = static_cast<float>(Units::Frequency(OCCDFResponse->frequencies[1]).Hz<double>());
 
-		// Take the distance between the first two frequency values as the expected delta, using one hertz precision for representation, up to twice the estimated size
-        float minDelta = static_cast<float>(std::round((freqVsChanData[1] - freqVsChanData[0]) * 1e6)) / 1e6f;
-        float maxDelta = minDelta;
-		size_t histoSize = size_t((freqVsChanData[1] - freqVsChanData[0])*2);
-
-		NonNormal frequeDelta(0, histoSize, 0, histoSize - 1);
-
-        for (int i = 1; i < int(OCCDFResponse->occHdr.numChannels); i++) // j++
-        {
-            freqVsChanData[i] = static_cast<float>(Units::Frequency(OCCDFResponse->frequencies[i]).Hz<double>()); // freqVsChanData[j]
-            if (freqVsChanData[i] < minFrequency) minFrequency = freqVsChanData[i]; // freqVsChanData[j]
-            if (freqVsChanData[i] > maxFrequency) maxFrequency = freqVsChanData[i]; // freqVsChanData[j]
-
-            frequeDelta.add_element(freqVsChanData[i] - freqVsChanData[i - 1]);
+        float maxFrequency;
+        float minFrequency;
+        if (freqVsChanData[1] > freqVsChanData[0]) {
+            minFrequency = freqVsChanData[0];
+			maxFrequency = freqVsChanData[1];
+        }
+        else {
+            minFrequency = freqVsChanData[1];
+            maxFrequency = freqVsChanData[0];
         }
 
-        if ((double)frequeDelta.histogramMaxCount() / (double)(frequeDelta.count()) > 0.99)
+		NonNormal frequeDelta;
+        frequeDelta.add_categorical();
+		frequeDelta.add_element(freqVsChanData[1] - freqVsChanData[0]);
+
+        size_t j = 2;
+        double binFrequency;
+        for (size_t i = 2; i < static_cast<size_t>(OCCDFResponse->occHdr.numChannels); i++)
         {
-            jsonObj["spectrum"]["numBins"] = OCCDFResponse->occHdr.numChannels;
+			binFrequency = static_cast<float>(Units::Frequency(OCCDFResponse->frequencies[i]).Hz<double>());
+            if (binFrequency > 0.0) {
+                freqVsChanData[j] = binFrequency;
+                frequeDelta.add_element(binFrequency - freqVsChanData[j - 1]);
+                j++;
+            }
+            if (binFrequency > maxFrequency) {
+                maxFrequency = binFrequency;
+				continue;
+            }
+            if (binFrequency < minFrequency) minFrequency = binFrequency;
+        }
+
+        binFrequency = frequeDelta.mode();
+
+
+
+        if ((double)frequeDelta.category_count(binFrequency) / (double)(frequeDelta.count()) > 0.99)
+        {
+            jsonObj["spectrum"]["numBins"] = freqVsChanData.size();
             jsonObj["spectrum"]["startFrequency"] = minFrequency;
             jsonObj["spectrum"]["stopFrequency"] = maxFrequency;
-            jsonObj["spectrum"]["binSize"] = ( maxFrequency - minFrequency ) / static_cast<float>(OCCDFResponse->occHdr.numChannels);
+            jsonObj["spectrum"]["binSize"] = binFrequency;
             jsonObj["spectrum"]["unit"] = "Hz";
 		}
         else
@@ -790,7 +821,7 @@ json processOccupancyDFResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMs
     }
     break;
 
-    case ECSMSDllMsgType::OCCDF_SCANDF_VS_CHANNEL:
+    case ECSMSDllMsgType::OCCDF_SCANDF_VS_CHANNEL: //40
     {
         // SEquipCtrlMsg::SScanDfVsChannelResp* OCCDFResponse = (SEquipCtrlMsg::SScanDfVsChannelResp*)data;
         SEquipCtrlMsg::SScanDfVsChannelResp* OCCDFResponse = reinterpret_cast<SEquipCtrlMsg::SScanDfVsChannelResp*>(data);
@@ -826,18 +857,6 @@ json processOccupancyDFResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMs
             OCCDFResponse->aveFldStr + OCCDFResponse->occHdr.numChannels,
             aveFldStr.begin() + OCCDFResponse->occHdr.firstChannel);
         jsonObj["channel"]["Occupancy"]["aveFldStr"] = aveFldStr;
-    }
-    break;
-
-    case ECSMSDllMsgType::OCCDF_STATUS:
-    {
-        // SEquipCtrlMsg::SEquipTaskStatusResp* OCCDFResponse = (SEquipCtrlMsg::SEquipTaskStatusResp*)data;
-        SEquipCtrlMsg::SEquipTaskStatusResp* OCCDFResponse = reinterpret_cast<SEquipCtrlMsg::SEquipTaskStatusResp*>(data);
-
-        jsonObj["SEquipTaskStatusResp"]["dateTime"] = OCCDFResponse->dateTime;
-        jsonObj["SEquipTaskStatusResp"]["key"] = OCCDFResponse->key;
-        jsonObj["SEquipTaskStatusResp"]["status"] = eStatusToString(OCCDFResponse->status);
-        jsonObj["SEquipTaskStatusResp"]["taskId"] = OCCDFResponse->taskId;
     }
     break;
 
@@ -905,8 +924,8 @@ json ProcessRealTimeData(_In_ ECSMSDllMsgType respType, _In_ SSmsRealtimeMsg::UB
     {
         const SSmsRealtimeMsg::SSpectrumV2* RTResponse = (SSmsRealtimeMsg::SSpectrumV2*)data;
 
-        double startFreq = double(RTResponse->firstChanFreq.internal) / FREQ_FACTOR;
-		double binSize = double(RTResponse->chanSize.internal) / FREQ_FACTOR;
+        double startFreq = Units::Frequency(RTResponse->firstChanFreq.internal).Hz<double>();
+		double binSize = Units::Frequency(RTResponse->chanSize.internal).Hz<double>();
 		double stopFreq = startFreq + (binSize * RTResponse->numChan);
 
         jsonObj["measure"]["taskId"] = RTResponse->taskId;
@@ -914,9 +933,9 @@ json ProcessRealTimeData(_In_ ECSMSDllMsgType respType, _In_ SSmsRealtimeMsg::UB
         
         jsonObj["spectrum"]["numBins"] = RTResponse->numChan;
         jsonObj["spectrum"]["bandIndex"] = RTResponse->bandIndex;
-        jsonObj["spectrum"]["startFreq"]["internal"] = startFreq;
+        jsonObj["spectrum"]["startFrequency"] = startFreq;
 		jsonObj["spectrum"]["stopFrequency"] = stopFreq;
-        jsonObj["spectrum"]["binSize"] = double(RTResponse->chanSize.internal) / FREQ_FACTOR;
+        jsonObj["spectrum"]["binSize"] = binSize;
         jsonObj["spectrum"]["frequencyUnit"] = "Hz";
 
         size_t sweepByteLen = static_cast<size_t>(RTResponse->numChan) * sizeof(float);
