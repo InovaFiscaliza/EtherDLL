@@ -131,7 +131,7 @@ const unsigned char* parsedBinData(const unsigned char* binData, unsigned short 
  * @return FrequencyInfo: Structure containing start frequency, stop frequency and bin size
  * @throws NO EXCEPTION HANDLING
 **/
-Frequency panFrequencyInfo(const SEquipCtrlMsg::SGetPanResp* panResponse)
+FrequencyRange panFrequencyInfo(const SEquipCtrlMsg::SGetPanResp* panResponse)
 {
     // Convert central frequency from internal units to MHz
     double centralFrequency = Units::Frequency(panResponse->freq.internal).Hz<double>();
@@ -143,7 +143,7 @@ Frequency panFrequencyInfo(const SEquipCtrlMsg::SGetPanResp* panResponse)
     double halfSpan = (binSize * double(floor(panResponse->numBins / double(2.0)))) / double(1000000.0);
 
     // Calculate start and stop frequencies
-    Frequency freqInfo{};
+    FrequencyRange freqInfo{};
 
     freqInfo.startFrequency = centralFrequency - halfSpan;
     freqInfo.stopFrequency = centralFrequency + halfSpan;
