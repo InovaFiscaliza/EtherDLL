@@ -57,6 +57,12 @@
         "string": "cpp"
     },
     "cSpell.words": [
+        "fileparts",
+        "fileread",
+        "fullpath",
+        "jsondecode",
+        "LOADCONF",
+        "mfilename",
         "uiaxes",
         "uidropdown",
         "uigridlayout",

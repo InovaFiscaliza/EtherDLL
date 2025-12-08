@@ -476,9 +476,9 @@ public:
 
 				bool dataToProcess = true;
 
-				json jsonObj = json::parse(buffer, nullptr, false);
+				std::string_view received(buffer.data(), bytesRead);
+				json jsonObj = json::parse(received, nullptr, false);
 
-				
 				if (jsonObj == json::value_t::discarded) {
 					accumulatedData.append(buffer.data(), bytesRead);
 
