@@ -947,19 +947,19 @@ json ProcessRealTimeData(_In_ ECSMSDllMsgType respType, _In_ SSmsRealtimeMsg::UB
     {
         const SSmsRealtimeMsg::SSpectrumV2* RTResponse = (SSmsRealtimeMsg::SSpectrumV2*)data;
 
-        double startFreq = Units::Frequency(RTResponse->firstChanFreq).Hz<double>();
-		double binSize = Units::Frequency(RTResponse->chanSize).Hz<double>();
-		double stopFreq = startFreq + (binSize * (double)(RTResponse->numChan-1));
-
         jsonObj["measure"]["taskId"] = RTResponse->taskId;
         jsonObj["measure"]["noiseFloor"] = RTResponse->noiseFloor - OCC_BYTE_POWER_OFFSET;
 
+        double startFreq = Units::Frequency(RTResponse->firstChanFreq).Hz<double>();
+        double binSize = Units::Frequency(RTResponse->chanSize).Hz<double>();
+        double stopFreq = startFreq + (binSize * (double)(RTResponse->numChan - 1));
+
+        jsonObj["spectrum"]["frequencyUnit"] = "Hz";
         jsonObj["spectrum"]["numBins"] = RTResponse->numChan;
         jsonObj["spectrum"]["bandIndex"] = RTResponse->bandIndex;
         jsonObj["spectrum"]["startFrequency"] = startFreq;
 		jsonObj["spectrum"]["stopFrequency"] = stopFreq;
         jsonObj["spectrum"]["binSize"] = binSize;
-        jsonObj["spectrum"]["frequencyUnit"] = "Hz";
 
         size_t sweepByteLen = static_cast<size_t>(RTResponse->numChan) * sizeof(float);
         jsonObj["spectrum"]["traceData"] = base64Encode(
@@ -1060,15 +1060,40 @@ json ProcessRealTimeData(_In_ ECSMSDllMsgType respType, _In_ SSmsRealtimeMsg::UB
     case ECSMSDllMsgType::RT_DF_DATA: // 74
     {
         const SSmsRealtimeMsg::SDfDataV3* RTResponse = (SSmsRealtimeMsg::SDfDataV3*)data;
-        jsonObj["SDfDataV3"]["bandIndex"] = RTResponse->bandIndex;
-        jsonObj["SDfDataV3"]["chanData"]["azimData"] = RTResponse->chanData->azimData;
-        jsonObj["SDfDataV3"]["chanData"]["specData"] = RTResponse->chanData->specData;
-        jsonObj["SDfDataV3"]["chanSize"]["internal"] = RTResponse->chanSize.internal;
-        jsonObj["SDfDataV3"]["firstChanFreq"]["internal"] = RTResponse->firstChanFreq.internal;
-        jsonObj["SDfDataV3"]["noiseFloor"] = RTResponse->noiseFloor;
-        jsonObj["SDfDataV3"]["numChan"] = RTResponse->numChan;
-        jsonObj["SDfDataV3"]["taskId"] = RTResponse->taskId;
-        jsonObj["SDfDataV3"]["horizPol"] = RTResponse->horizPol;
+
+        jsonObj["task"]["taskId"] = RTResponse->taskId;
+
+        jsonObj["settings"]["horizPol"] = RTResponse->horizPol;
+
+        jsonObj["measure"]["noiseFloor"] = RTResponse->noiseFloor;
+
+        double startFreq = Units::Frequency(RTResponse->firstChanFreq).Hz<double>();
+        double binSize = Units::Frequency(RTResponse->chanSize).Hz<double>();
+        double stopFreq = startFreq + (binSize * (double)(RTResponse->numChan - 1));
+
+        jsonObj["spectrum"]["frequencyUnit"] = "Hz";
+        jsonObj["spectrum"]["numBins"] = RTResponse->numChan;
+        jsonObj["spectrum"]["bandIndex"] = RTResponse->bandIndex;
+        jsonObj["spectrum"]["startFrequency"] = startFreq;
+		jsonObj["spectrum"]["stopFrequency"] = stopFreq;
+		jsonObj["spectrum"]["binSize"] = binSize;
+
+        size_t memoryByteLen = static_cast<size_t>(RTResponse->numChan) * sizeof(float); 
+
+		const DFDataRawResult parsedResult = parsedDFData(RTResponse->chanData, RTResponse->numChan);
+
+        jsonObj["spectrum"]["traceData"] = base64Encode(
+            parsedResult.spectrum.data(),
+            static_cast<unsigned int>(memoryByteLen));
+		jsonObj["spectrum"]["traceDataDF"] = base64Encode(
+			parsedResult.dfSpectrum.data(),
+			static_cast<unsigned int>(memoryByteLen));
+        jsonObj["aoa"]["traceData"] = base64Encode(
+            parsedResult.azimuth.data(),
+            static_cast<unsigned int>(memoryByteLen));
+        jsonObj["aoa"]["confidence"] = base64Encode(
+            parsedResult.confidence.data(),
+            static_cast<unsigned int>(memoryByteLen));
     }
     break;
 
