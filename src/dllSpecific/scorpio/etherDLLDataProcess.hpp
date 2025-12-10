@@ -110,11 +110,60 @@ const unsigned char* parsedBinData(const unsigned char* binData, unsigned short 
 
     float* outFloats = reinterpret_cast<float*>(parsedData.data());
 
-    for (size_t i = 0; i < nRequested; ++i) {
-        outFloats[i] = static_cast<float>(binData[i]) - offset;
-    }
+    std::transform(binData, binData + nRequested, outFloats,
+        [offset](unsigned char val) { return static_cast<float>(val) - offset; });
 
     return parsedData.data();
+}
+
+
+// ----------------------------------------------------------------------
+/** @brief Convert SSmsRealtimeMsg::SDfDataV3::SChanData data into multiple
+ *  float32 vectors with scalling and offset applied.
+ *  Vectors returned are: azimuth, confidence, spectrum, dfSpectrum
+ *     struct SChanData
+		    {
+			    unsigned short	chan;		// Channel number (zero-based)
+			    unsigned short	azimData;	// Channel lob data (1/100 degree; 0 to 35999)
+			    unsigned short	conf;		// DF confidence (1/10th %, 0 - 1000)
+			    unsigned char	specData;	// Channel spectrum data (dBm + 200)
+			    unsigned char	dfSpecData;	// DF antenna spectrum data (dBm + 200)
+		    }
+ * Float vectors are returned as uint8 vector with size numBins * 4 (32bits)
+ *
+ * @param binData: Pointer to the input binary data array (uint8)
+ * @param numBins: Number of elements in the input binary data array
+ * @return const unsigned char*: Pointer to the output data array (uint8) containing float32 values
+ * @throws NO EXCEPTION HANDLING
+**/
+DFDataRawResult parsedDFData(const SSmsRealtimeMsg::SDfDataV3::SChanData* chanData,
+    unsigned short numElements)
+{
+    static_assert(sizeof(float) == 4, "Expected float32");
+
+    const size_t nRequested = static_cast<size_t>(numElements);
+    const size_t byteSize = nRequested * sizeof(float);
+
+    DFDataRawResult result(byteSize);
+
+    float* azimFloats = reinterpret_cast<float*>(result.azimuth.data());
+    float* confFloats = reinterpret_cast<float*>(result.confidence.data());
+    float* specFloats = reinterpret_cast<float*>(result.spectrum.data());
+    float* dfSpecFloats = reinterpret_cast<float*>(result.dfSpectrum.data());
+
+    std::transform(chanData, chanData + nRequested, azimFloats,
+        [](const auto& ch) { return static_cast<float>(ch.azimData) / AZIMUTH_SCALE; });
+    
+    std::transform(chanData, chanData + nRequested, confFloats,
+        [](const auto& ch) { return static_cast<float>(ch.conf) / CONFIDENCE_SCALE; });
+    
+    std::transform(chanData, chanData + nRequested, specFloats,
+        [](const auto& ch) { return static_cast<float>(ch.specData) - OCC_BYTE_POWER_OFFSET; });
+    
+    std::transform(chanData, chanData + nRequested, dfSpecFloats,
+        [](const auto& ch) { return static_cast<float>(ch.dfSpecData) - OCC_BYTE_POWER_OFFSET; });
+
+    return result;
 }
 
 
