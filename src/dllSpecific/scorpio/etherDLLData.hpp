@@ -43,8 +43,10 @@
 
 
 // Constants
-constexpr float PAN_BYTE_POWER_OFFSET = 192.0;
-constexpr float OCC_BYTE_POWER_OFFSET = 200.0;
+constexpr float PAN_BYTE_POWER_OFFSET = 192.0f;
+constexpr float OCC_BYTE_POWER_OFFSET = 200.0f;
+constexpr float CONFIDENCE_SCALE = 10.0f; // Confidence is given in tenths of percent (0 - 1000)
+constexpr float AZIMUTH_SCALE = 100.0f;   // Azimuth is given in hundredths of degree (0 - 35999)
 
 
 // Data structures
@@ -85,21 +87,39 @@ struct FrequencyRange {
 
 struct Configuration {
     FrequencyRange frequencyInfo;
-    double receiverAttenuation; // in dB
-    double referenceLevel;      // in dBm
-    double preselectorAttenuation; // in dB
+    float receiverAttenuation; // in dB
+    float referenceLevel;      // in dBm
+    float preselectorAttenuation; // in dB
     std::string lastUpdateTime; // datetime in ISO 8601 format "YYYY-MM-DDThh:mm:ss.ssssZ"
 };
 
 struct Spectrum {
     unsigned long taskId;
     FrequencyRange frequencyInfo;
-    std::vector<double> trace;      // Power Amplitude Normalized data in dBm
+    std::vector<float> trace;      // Power Amplitude Normalized data in dBm
 	std::string unit;               // e.g., "dBm"; "dBuV/m", "%", "degrees"
     std::string firstUpdateTime;    // datetime in ISO 8601 format "YYYY-MM-DDThh:mm:ss.ssssZ"
     std::string lastUpdateTime;     // datetime in ISO 8601 format "YYYY-MM-DDThh:mm:ss.ssssZ"
 };
 
+// Define the result structure (add to etherDLLData.hpp or at the top of this file)
+struct DFDataRawResult {
+    std::vector<unsigned char> azimuth;      // numBins * sizeof(float) bytes
+    std::vector<unsigned char> confidence;
+    std::vector<unsigned char> spectrum;
+    std::vector<unsigned char> dfSpectrum;
+
+    // Default constructor
+    DFDataRawResult() = default;
+
+    // Constructor with size and optional default value
+    explicit DFDataRawResult(size_t size, unsigned char defaultValue = 0)
+        : azimuth(size, defaultValue)
+        , confidence(size, defaultValue)
+        , spectrum(size, defaultValue)
+        , dfSpectrum(size, defaultValue)
+    {}
+};
 
 
 
