@@ -376,3 +376,4 @@ resources/
 src/log.txt
 src/log.txt
 /src/log.txt
+/src/dllSpecific/vicom/inc
