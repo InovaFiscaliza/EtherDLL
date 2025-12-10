@@ -18,7 +18,7 @@
 
 // ----------------------------------------------------------------------
 // Include to DLL specific headers
-#include "etherDLLInit.hpp"
+#include "dllSpecific/vicom/etherDLLInit.hpp"
 #include "etherDLLRequest.hpp"
 
 // Include core EtherDLL headers
@@ -273,7 +273,8 @@ int main(int argc, char* argv[]) {
 	std::atomic<bool> anyThreadCompleted = false;
 
 
-	DLLConnectionData DLLConnID = DEFAULT_DLL_CONNECTION_DATA;
+	//DLLConnectionData DLLConnID(DEFAULT_DLL_CONNECTION_DATA);
+	DLLConnectionData DLLConnID{};
 
 	if (!connectAPI(DLLConnID, config)) {
 		logger_ptr->error("Error establishing DLL connection.");
@@ -336,7 +337,7 @@ int main(int argc, char* argv[]) {
 		auto pingComFuture = std::async(std::launch::async, [&]() {
 			logger_ptr->debug("Starting thread that send ping messages to test client connection");
 			clientConn.pingClient(response);
-			signalCompletion();
+		 signalCompletion();
 			logger_ptr->debug("Finished thread that send ping messages to test client connection");
 			return true;
 			});

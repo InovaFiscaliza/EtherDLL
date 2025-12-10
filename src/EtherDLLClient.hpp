@@ -397,13 +397,13 @@ private:
 
 		int addrLen = sizeof(clientAddr);
 		if (getpeername(clientSocket, (struct sockaddr*)&clientAddr, &addrLen) == 0) {
-			clientIP = std::string(inet_ntoa(clientAddr.sin_addr));
-			if (!clientIP.empty()) {
+			char ipStringBuffer[INET_ADDRSTRLEN];
+			if (inet_ntop(AF_INET, &clientAddr.sin_addr, ipStringBuffer, INET_ADDRSTRLEN) != nullptr) {
+				clientIP = std::string(ipStringBuffer);
 				loggerPtr->debug("Waiting message from client IP: " + clientIP);
-			}
-			else {
+			} else {
 				clientIP = taskKeys::ClientIp::INIT_VALUE;
-				loggerPtr->debug("IP address from connected client could not be determined.");
+				loggerPtr->debug("Error converting IP address using inet_ntop. EC:" + std::to_string(WSAGetLastError()));
 			}
 
 		}

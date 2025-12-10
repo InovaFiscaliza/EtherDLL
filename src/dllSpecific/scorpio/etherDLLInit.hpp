@@ -21,7 +21,7 @@
 /**
  * Conditional library linking for ScorpioAPI based on build configuration
 **/
-#ifdef _X86_
+#ifdef _WIN32
 	#pragma comment (lib, "ScorpioAPIDll.lib") //RELEASE/DEBUG 32Bits
 #else
 	#ifdef NDEBUG

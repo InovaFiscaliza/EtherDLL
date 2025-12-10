@@ -20,15 +20,6 @@
     <ClInclude Include="EtherDLLUtils.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="dllSpecific\scorpio\MoreEquipCtrlMsg.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="dllSpecific\scorpio\OccupSpectConnect.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="dllSpecific\scorpio\stdafx.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="nlohmann\json.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -344,33 +335,33 @@
     <ClInclude Include="spdlog\version.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="dllSpecific\scorpio\etherDLLInit.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="dllSpecific\scorpio\etherDLLRequest.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="dllSpecific\scorpio\etherDLLResponse.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="dllSpecific\scorpio\etherDLLCodes.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="dllSpecific\scorpio\etherDLLDataProcess.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="EtherDLLClient.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="dllSpecific\scorpio\etherDLLValidation.hpp">
+    <ClInclude Include="dllSpecific\vicom\etherDLLInit.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="dllSpecific\vicom\etherDLLDataProcess.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="dllSpecific\vicom\etherDLLRequest.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="dllSpecific\vicom\etherDLLResponse.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="dllSpecific\vicom\etherDLLCodes.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="dllSpecific\vicom\etherDLLValidation.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="EtherDLL.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="EtherDLL.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="dllSpecific\scorpio\stdafx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="EtherDLLUtils.cpp">
