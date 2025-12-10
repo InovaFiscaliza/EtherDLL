@@ -2,19 +2,20 @@ classdef EtherDLLTestClient_exported < matlab.apps.AppBase
 
     % Properties that correspond to app components
     properties (Access = public)
-        EtherDLLTest        matlab.ui.Figure
-        mainGrid            matlab.ui.container.GridLayout
-        connectButton       matlab.ui.control.StateButton
-        bandSelectDropDown  matlab.ui.control.DropDown
-        cleanAreaIcon       matlab.ui.control.Image
-        receivedMsg         matlab.ui.control.TextArea
-        Label               matlab.ui.control.Label
-        repeatCmdIcon       matlab.ui.control.Image
-        CommandDropDown     matlab.ui.control.DropDown
-        sentMsg             matlab.ui.control.TextArea
-        AOAAxes             matlab.ui.control.UIAxes
-        OCCAxes             matlab.ui.control.UIAxes
-        SPTAxes             matlab.ui.control.UIAxes
+        EtherDLLTest           matlab.ui.Figure
+        mainGrid               matlab.ui.container.GridLayout
+        cleanParsedAreaIcon    matlab.ui.control.Image
+        connectButton          matlab.ui.control.StateButton
+        bandSelectDropDown     matlab.ui.control.DropDown
+        cleanReceivedAreaIcon  matlab.ui.control.Image
+        receivedMsg            matlab.ui.control.TextArea
+        repeatCmdIcon          matlab.ui.control.Image
+        CommandDropDown        matlab.ui.control.DropDown
+        sentMsg                matlab.ui.control.TextArea
+        parsedMsg              matlab.ui.control.TextArea
+        SPTAxes                matlab.ui.control.UIAxes
+        OCCAxes                matlab.ui.control.UIAxes
+        AOAAxes                matlab.ui.control.UIAxes
     end
 
     
@@ -221,75 +222,188 @@ classdef EtherDLLTestClient_exported < matlab.apps.AppBase
         end
 
         %-----------------------------------------------------------------%
-            function processStationData(app,data)
-            % Process diferent kinds of data from the received data into
-            % adjusted structure
+        function processStationData(app, data)
+            % Process different kinds of data from the received data into
+            % adjusted structures. Dynamically identifies and processes keys
+            % such as "spectrum", "occupancy", "measurement", "equipment", "settings".
+            % Response may include none, one, many or all keys.
             
-                switch data.CODE
-                    case app.AVD
-                        warning("No processing defined")
-                    case app.MEASURE
-                        warning("No processing defined")
-                    case app.OCC
-                        warning("No processing defined")
-                    case app.OCC_DF
-                        warning("No processing defined")
-                    case app.PAN
-                        
-                        app.data = data;
+            % Define supported data keys and their corresponding handler methods
+            supportedKeys = {'spectrum', 'occupancy', 'measure', 'equipment', 'setting'};
+            
+            % Get all fields in the incoming data structure
+            dataFields = fieldnames(data);
+            
+            % Process each field that matches a supported key
+            for i = 1:length(dataFields)
+                fieldName = dataFields{i};
+                
+                % Check if this field is in our supported keys
+                if ismember(fieldName, supportedKeys)
+                    try
+                        % Call the appropriate handler function based on field name
+                        switch fieldName
+                            case 'spectrum'
+                                if isfield(data.(fieldName), 'traceDataDF')                                    
+                                    data.spectrum = app.buildAxis(data.spectrum, 'traceDataDF', 'measureAxis2');
+                                end
+                                data.spectrum = app.buildAxis(data.spectrum, 'traceData');
 
-                        for k = 1:numel(app.data.band)
-                            s = data.band(k).spectrum;
+                                app.plotData(app.SPTAxes, data.spectrum);
+                            case 'occupancy'
+                                data.occupancy = app.buildAxis(data.occupancy, 'traceData');
 
-                            s.powerLevel = app.base64ToFloat32(s.sweepData);
-                            s.frequencyAxis = linspace(s.startFrequency, s.stopFrequency, s.numBins);
-
-                            app.data.band(k).spectrum = s;
+                                app.plotData(app.OCCAxes, data.occupancy);
+                            case 'aoa'
+                                data.aoa = app.buildAxis(data.aoa, 'traceData');
+                                data.aoa = app.buildAxis(data.aoa, 'confidence','measureValue');
+                                app.plotData(app.AOAAxes, data.aoa);
+                            case 'measure'
+                                app.presentData(data.measure);
+                            case 'equipment'
+                                app.presentData(data.equipment);
+                            case 'settings'
+                                app.presentData(data.settings);
                         end
-
-                        % Update band dropdown options (1..N)
-                        nBands = numel(app.data.band);
-                        if (nBands > 1)
-                            app.bandSelectDropDown.Enable = "on";
-                            app.bandSelectDropDown.Items = arrayfun(@(k) sprintf('Band %d', k-1), 1:nBands, 'UniformOutput', false);
-                            app.bandSelectDropDown.ItemsData = 1:nBands;
-                            app.bandSelectDropDown.Value =  "Band 0";
-                        else
-                            app.bandSelectDropDown.Items = {"Band 0"};
-                            app.bandSelectDropDown.Value = "Band 0";
-                            app.bandSelectDropDown.ItemsData = 0;
-                            app.bandSelectDropDown.Enable = "off";
-                        end
-
-                        app.plotSpectrum(app.data.band(0));
-
-                    case app.SET_AUDIO
-                        warning("No processing defined")
-                    otherwise
-                        warning("Received " + data);
-                        warning("No processing defined for received data type");
+                    catch ME
+                        warning(ME.identifier, 'Error processing field "%s": %s', fieldName, ME.message);
+                    end
                 end
             end
-
-        %-----------------------------------------------------------------%
-        function plotSpectrum(app, data)
-            % plot spectrum data
-            if app.refresh
-                hold(app.SPTAxes,"off");
-                app.refresh = false;
-            else
-                hold(app.SPTAxes,"on");
-            end
-            
-            xlim(app.SPTAxes,[data.spectrum.startFrequency data.spectrum.stopFrequency]);
-            xlabel(app.SPTAxes,{"Frequency",data.spectrum.frequencyUnit});
-            plot(app.SPTAxes,data.spectrum.frequencyAxis,data.spectrum.powerLevel,'-', 'Color',[0.2 0.5 0.9 0.1], 'LineWidth',2.5);
-
-            % fields = {'frequencyAxis', 'powerLevel','sweepData'};
-            % data.spectrum = rmfield(data.spectrum, fields);
-
         end
 
+        %-----------------------------------------------------------------%
+        function data = buildAxis(app, data, axisType, measureAxisName)
+            % build x and y axis for different data types
+            % axisType: 'traceData', 'AOA', 'occ'.
+            % measureAxisName: (optional) name for the measurement axis output field (default: 'measureAxis')
+            % Returns: modified data structure with measureAxis (or custom name) and frequencyAxis
+            
+            if nargin < 4
+                measureAxisName = 'measureAxis';
+            end
+            
+            if isfield(data, axisType)
+                data.(measureAxisName) = app.base64ToFloat32(data.(axisType));
+                data.frequencyAxis = linspace(data.startFrequency, data.stopFrequency, data.numBins);
+            end    
+            
+        end
+
+        %-----------------------------------------------------------------%
+        function plotData(app, axesHandle, data)
+            % plot spectrum data on specified axes
+            % axesHandle: UIAxes object (app.SPTAxes, app.AOAAxes, app.OCCAxes, etc.)
+            % data: structure containing spectrum information
+            
+            if app.refresh
+                hold(axesHandle, "off");
+                app.refresh = false;
+            else
+                hold(axesHandle, "on");
+            end
+            
+            xlim(axesHandle, [data.startFrequency data.stopFrequency]);
+
+            % Set 10 ticks on horizontal axis (frequency)
+            xTicks = linspace(data.startFrequency, data.stopFrequency, 10);
+            axesHandle.XTick = xTicks;
+            axesHandle.XTickLabel = app.formatEngineeringNotation(xTicks);
+            
+            % Set 10 ticks on vertical axis (measurement values)
+            yMin = min(data.measureAxis);
+            yMax = max(data.measureAxis);
+            yTicks = linspace(yMin, yMax, 10);
+            axesHandle.YTick = yTicks;
+            axesHandle.YTickLabel = app.formatEngineeringNotation(yTicks);
+
+            % Check if measureValue exists for transparency-based plotting
+            if isfield(data, 'measureValue')
+                % Convert measureValue (0-100) to alpha values (0-1, inverted)
+                alphaValues = data.measureValue / 100;
+                
+                % Plot as scatter with variable transparency
+                scatter(axesHandle, data.frequencyAxis, data.measureAxis, 36, ...
+                    [0.2 0.5 0.9], 'filled', 'MarkerFaceAlpha', 'flat', ...
+                    'AlphaData', alphaValues);
+            else
+                % Original line plot
+                plot(axesHandle, data.frequencyAxis, data.measureAxis, '-', 'Color', [0.2 0.5 0.9 0.1], 'LineWidth', 2.5);
+
+                % Plot spectrum data from the DF antenna if available
+                if isfield(data, 'measureAxis2')
+                    plot(axesHandle, data.frequencyAxis, data.measureAxis2, '-', 'Color', [0.9 0.5 0.2 0.1], 'LineWidth', 2.5);
+                    legend(axesHandle, {'Measurement Antenna Sweep', 'DF Antenna Sweep'}, 'Location', 'northeast');
+                end
+
+            end
+        end
+
+        %-----------------------------------------------------------------%
+        function data = presentData(app, data, fieldsToPresent)
+            % Present textual data
+            % data: 'traceData', 'AOA', 'occ'.
+            % measureAxisName: (optional) name for the measurement axis output field (default: 'measureAxis')
+            % Returns: modified data structure with measureAxis (or custom name) and frequencyAxis
+            
+            for i = 1:length(fieldsToPresent)
+                field = fieldsToPresent{i};
+                if isfield(data, field)
+                    message = sprintf('%s: %s', field, num2str(data.(field)));
+                    app.receivedMsg.Value = [message; app.receivedMsg.Value];
+                end
+            end
+            
+        end
+
+
+        %-----------------------------------------------------------------%
+        function tickLabels = formatEngineeringNotation(~, values)
+            % Format numeric values using engineering notation
+            % Engineering notation uses multiples of 10^3, 10^6, 10^9, etc.
+            % Returns cell array of formatted strings
+            
+            tickLabels = cell(size(values));
+            
+            for i = 1:length(values)
+                val = values(i);
+                absVal = abs(val);
+                
+                % Determine the engineering unit
+                if absVal >= 1e9
+                    exponent = 9;
+                    suffix = 'G';
+                elseif absVal >= 1e6
+                    exponent = 6;
+                    suffix = 'M';
+                elseif absVal >= 1e3
+                    exponent = 3;
+                    suffix = 'k';
+                elseif absVal < 1e-9
+                    exponent = -12;
+                    suffix = 'p';
+                elseif absVal < 1e-6
+                    exponent = -9;
+                    suffix = 'n';
+                elseif absVal < 1e-3
+                    exponent = -6;
+                    suffix = 'μ';
+                else
+                    exponent = 0;
+                    suffix = '';
+                end
+                
+                % Scale value and format
+                if exponent == 0
+                    scaledVal = val;
+                    tickLabels{i} = sprintf('%.1f', scaledVal);
+                else
+                    scaledVal = val / (10^exponent);
+                    tickLabels{i} = sprintf('%.1f%s', scaledVal, suffix);
+                end
+            end
+        end
+        
         %-----------------------------------------------------------------%
         function float32Array = base64ToFloat32(~, base64String)
             % Convert base64 string to float32 array
@@ -341,7 +455,7 @@ classdef EtherDLLTestClient_exported < matlab.apps.AppBase
             app.refresh = true;
         end
 
-        % Image clicked function: cleanAreaIcon
+        % Image clicked function: cleanReceivedAreaIcon
         function cleanAreaClicked(app, event)
             app.receivedMsg.Value = "";
         end
@@ -351,7 +465,7 @@ classdef EtherDLLTestClient_exported < matlab.apps.AppBase
             
             band = app.bandSelectDropDown.Value;
 
-            app.plotSpectrum(app.data.band(band));
+            app.plotSpectrum(app.SPTAxes, app.data.band(band));
 
         end
 
@@ -411,31 +525,45 @@ classdef EtherDLLTestClient_exported < matlab.apps.AppBase
             % Create mainGrid
             app.mainGrid = uigridlayout(app.EtherDLLTest);
             app.mainGrid.ColumnWidth = {'fit', 'fit', '3x', '10x'};
-            app.mainGrid.RowHeight = {'fit', 'fit', '1x', '3x', 'fit', 'fit', '8x', '6x', 'fit'};
+            app.mainGrid.RowHeight = {'fit', 'fit', '1x', '3x', 'fit', 'fit', '6x', 'fit', '6x', 'fit'};
             app.mainGrid.BackgroundColor = [1 1 1];
-
-            % Create SPTAxes
-            app.SPTAxes = uiaxes(app.mainGrid);
-            xlabel(app.SPTAxes, {'Frequency'; '(MHz)'})
-            ylabel(app.SPTAxes, {'Level'; '(dBm)'})
-            zlabel(app.SPTAxes, 'Z')
-            app.SPTAxes.Layout.Row = [1 6];
-            app.SPTAxes.Layout.Column = 4;
-
-            % Create OCCAxes
-            app.OCCAxes = uiaxes(app.mainGrid);
-            xlabel(app.OCCAxes, {'Frequency'; '(MHz)'})
-            ylabel(app.OCCAxes, {'Occupancy'; '(%)'})
-            app.OCCAxes.Layout.Row = [8 9];
-            app.OCCAxes.Layout.Column = 4;
 
             % Create AOAAxes
             app.AOAAxes = uiaxes(app.mainGrid);
-            xlabel(app.AOAAxes, {'Frequency'; '(MHz)'})
+            xlabel(app.AOAAxes, {'Frequency'; '(Hz)'})
             ylabel(app.AOAAxes, {'Angle'; '(degrees from north)'})
             zlabel(app.AOAAxes, 'Z')
-            app.AOAAxes.Layout.Row = 7;
+            app.AOAAxes.XTick = [];
+            app.AOAAxes.YTick = [];
+            app.AOAAxes.Layout.Row = [7 8];
             app.AOAAxes.Layout.Column = 4;
+
+            % Create OCCAxes
+            app.OCCAxes = uiaxes(app.mainGrid);
+            xlabel(app.OCCAxes, {'Frequency'; '(Hz)'})
+            ylabel(app.OCCAxes, {'Occupancy'; '(%)'})
+            app.OCCAxes.XTick = [];
+            app.OCCAxes.YTick = [];
+            app.OCCAxes.Layout.Row = [9 10];
+            app.OCCAxes.Layout.Column = 4;
+
+            % Create SPTAxes
+            app.SPTAxes = uiaxes(app.mainGrid);
+            xlabel(app.SPTAxes, {'Frequency'; '(Hz)'})
+            ylabel(app.SPTAxes, {'Level'; '(dBm)'})
+            zlabel(app.SPTAxes, 'Z')
+            app.SPTAxes.XTick = [];
+            app.SPTAxes.XTickLabel = '';
+            app.SPTAxes.YTick = [];
+            app.SPTAxes.Layout.Row = [1 6];
+            app.SPTAxes.Layout.Column = 4;
+
+            % Create parsedMsg
+            app.parsedMsg = uitextarea(app.mainGrid);
+            app.parsedMsg.Tooltip = {'Messages received from EtherDLL'};
+            app.parsedMsg.Placeholder = '< will display raw messages parsed by the app>';
+            app.parsedMsg.Layout.Row = [9 10];
+            app.parsedMsg.Layout.Column = [1 3];
 
             % Create sentMsg
             app.sentMsg = uitextarea(app.mainGrid);
@@ -466,29 +594,22 @@ classdef EtherDLLTestClient_exported < matlab.apps.AppBase
             app.repeatCmdIcon.HorizontalAlignment = 'left';
             app.repeatCmdIcon.ImageSource = fullfile(pathToMLAPP, 'redo.svg');
 
-            % Create Label
-            app.Label = uilabel(app.mainGrid);
-            app.Label.HorizontalAlignment = 'right';
-            app.Label.Layout.Row = [6 9];
-            app.Label.Layout.Column = [1 3];
-            app.Label.Text = '';
-
             % Create receivedMsg
             app.receivedMsg = uitextarea(app.mainGrid);
             app.receivedMsg.Tooltip = {'Messages received from EtherDLL'};
             app.receivedMsg.Placeholder = '< will display raw messages received from EtherDLL >';
-            app.receivedMsg.Layout.Row = [7 9];
+            app.receivedMsg.Layout.Row = [7 8];
             app.receivedMsg.Layout.Column = [1 3];
 
-            % Create cleanAreaIcon
-            app.cleanAreaIcon = uiimage(app.mainGrid);
-            app.cleanAreaIcon.ImageClickedFcn = createCallbackFcn(app, @cleanAreaClicked, true);
-            app.cleanAreaIcon.Tooltip = {'Clean the output area'};
-            app.cleanAreaIcon.Layout.Row = 9;
-            app.cleanAreaIcon.Layout.Column = 1;
-            app.cleanAreaIcon.HorizontalAlignment = 'left';
-            app.cleanAreaIcon.VerticalAlignment = 'bottom';
-            app.cleanAreaIcon.ImageSource = fullfile(pathToMLAPP, 'sweep.svg');
+            % Create cleanReceivedAreaIcon
+            app.cleanReceivedAreaIcon = uiimage(app.mainGrid);
+            app.cleanReceivedAreaIcon.ImageClickedFcn = createCallbackFcn(app, @cleanAreaClicked, true);
+            app.cleanReceivedAreaIcon.Tooltip = {'Clean the output area'};
+            app.cleanReceivedAreaIcon.Layout.Row = 8;
+            app.cleanReceivedAreaIcon.Layout.Column = 1;
+            app.cleanReceivedAreaIcon.HorizontalAlignment = 'left';
+            app.cleanReceivedAreaIcon.VerticalAlignment = 'bottom';
+            app.cleanReceivedAreaIcon.ImageSource = fullfile(pathToMLAPP, 'sweep.svg');
 
             % Create bandSelectDropDown
             app.bandSelectDropDown = uidropdown(app.mainGrid);
@@ -507,6 +628,15 @@ classdef EtherDLLTestClient_exported < matlab.apps.AppBase
             app.connectButton.Text = 'Connect';
             app.connectButton.Layout.Row = 1;
             app.connectButton.Layout.Column = [1 3];
+
+            % Create cleanParsedAreaIcon
+            app.cleanParsedAreaIcon = uiimage(app.mainGrid);
+            app.cleanParsedAreaIcon.Tooltip = {'Clean the output area'};
+            app.cleanParsedAreaIcon.Layout.Row = 10;
+            app.cleanParsedAreaIcon.Layout.Column = 1;
+            app.cleanParsedAreaIcon.HorizontalAlignment = 'left';
+            app.cleanParsedAreaIcon.VerticalAlignment = 'bottom';
+            app.cleanParsedAreaIcon.ImageSource = fullfile(pathToMLAPP, 'sweep.svg');
 
             % Show the figure after all components are created
             app.EtherDLLTest.Visible = 'on';
