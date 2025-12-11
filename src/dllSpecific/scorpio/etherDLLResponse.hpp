@@ -70,7 +70,7 @@ json processGpsData(SEquipCtrlMsg::SGpsResponse* gpsResponse)
     jsonObj["dateTime"] = COleTimeToIsoStr(gpsResponse->dateTime); // using COleTime format
     jsonObj["latitude"] = double(gpsResponse->latitude); // degrees (+ North, - South)
     jsonObj["longitude"] = double(gpsResponse->longitude); // degrees (+ East, - West)
-    jsonObj["status"]["numSats"] = int(gpsResponse->status.numSats); // >7 stored as 7
+    jsonObj["numSats"] = int(gpsResponse->status.numSats); // >7 stored as 7
 	/* Data which use is unclear at the moment
     jsonObj["status"]["accuracy"] = int(gpsResponse->status.accuracy); // = A,B,C,D
     jsonObj["status"]["antenna"] = int(gpsResponse->status.antenna);  //  = -,O,S
@@ -367,13 +367,13 @@ json processMeasResponse(_In_ ECSMSDllMsgType respType, _In_ unsigned long sourc
     case ECSMSDllMsgType::VALIDATE_MEAS:
     {
         SEquipCtrlMsg::SValidateMeasurementResp* MeasResponse = (SEquipCtrlMsg::SValidateMeasurementResp*)data;
-        jsonObj["SValidateMeasurementResp"]["bwDwellTime"] = MeasResponse->bwDwellTime;
-        jsonObj["SValidateMeasurementResp"]["dfDwellTime"] = MeasResponse->dfDwellTime;
-        jsonObj["SValidateMeasurementResp"]["fieldStrengthDwellTime"] = MeasResponse->fieldStrengthDwellTime;
-        jsonObj["SValidateMeasurementResp"]["freqDwellTime"] = MeasResponse->freqDwellTime;
-        jsonObj["SValidateMeasurementResp"]["modulationDwellTime"] = MeasResponse->modulationDwellTime;
-        jsonObj["SValidateMeasurementResp"]["status"] = MeasResponse->status;
-        jsonObj["SValidateMeasurementResp"]["totalTime"] = MeasResponse->totalTime;
+        jsonObj["measure"]["bwDwellTime"] = MeasResponse->bwDwellTime;
+        jsonObj["measure"]["dfDwellTime"] = MeasResponse->dfDwellTime;
+        jsonObj["measure"]["fieldStrengthDwellTime"] = MeasResponse->fieldStrengthDwellTime;
+        jsonObj["measure"]["freqDwellTime"] = MeasResponse->freqDwellTime;
+        jsonObj["measure"]["modulationDwellTime"] = MeasResponse->modulationDwellTime;
+        jsonObj["measure"]["status"] = MeasResponse->status;
+        jsonObj["measure"]["totalTime"] = MeasResponse->totalTime;
     }
     break;
     case ECSMSDllMsgType::GET_MEAS:
@@ -474,8 +474,8 @@ json processPanResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg::UBody
 
     SEquipCtrlMsg::SGetPanResp* PanResponse = (SEquipCtrlMsg::SGetPanResp*)data;
 
-    jsonObj["measure"]["status"] = PanResponse->status;
-    jsonObj["measure"]["dateTime"] = COleTimeToIsoStr(PanResponse->dateTime);
+    jsonObj["task"]["status"] = PanResponse->status;
+    jsonObj["spectrum"]["dateTime"] = COleTimeToIsoStr(PanResponse->dateTime);
     jsonObj["measure"]["powerDbm"] = PanResponse->powerDbm;
     jsonObj["setting"]["attenuation"] = PanResponse->rcvrAtten;
 
@@ -811,10 +811,10 @@ json processOccupancyDFResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMs
         jsonObj["equipment"]["hostName"] = OCCDFResponse->hostName;
         jsonObj["equipment"]["selectedAntenna"] = eAntToString(OCCDFResponse->selectedAntenna);
 
-        jsonObj["setting"]["primaryThreshold"]["dBuV/m absolute"] = static_cast<int>(OCCDFResponse->occPrimaryThreshold[0]); // dBuV/m
-        jsonObj["setting"]["primaryThreshold"]["dB aboveNoise"] = static_cast<int>(OCCDFResponse->occPrimaryThreshold[1]); // dB
-        jsonObj["setting"]["secondaryThreshold"]["dBuV/m absolute"] = static_cast<int>(OCCDFResponse->occSecondaryThreshold[0]); // dBuV/m
-        jsonObj["setting"]["secondaryThreshold"]["dB aboveNoise"] = static_cast<int>(OCCDFResponse->occSecondaryThreshold[1]); // dB
+        jsonObj["setting"]["primaryThresholdAbsolute"] = static_cast<int>(OCCDFResponse->occPrimaryThreshold[0]); // dBuV/m
+        jsonObj["setting"]["primaryThresholdAboveNoise"] = static_cast<int>(OCCDFResponse->occPrimaryThreshold[1]); // dB
+        jsonObj["setting"]["secondaryThresholdAbsolute"] = static_cast<int>(OCCDFResponse->occSecondaryThreshold[0]); // dBuV/m
+        jsonObj["setting"]["secondaryThresholdAboveNoise"] = static_cast<int>(OCCDFResponse->occSecondaryThreshold[1]); // dB
         jsonObj["setting"]["saveIntermediateData"] = bool(OCCDFResponse->saveIntermediateData);
         jsonObj["setting"]["useSecondaryThreshold"] = bool(OCCDFResponse->useSecondaryThreshold);
     }
