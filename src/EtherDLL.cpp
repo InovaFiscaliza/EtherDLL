@@ -381,8 +381,10 @@ int main(int argc, char* argv[]) {
 		}
 	}
 
-	if (!disconnectAPI(DLLConnID)) {
-		logger_ptr->error("Failed to disconnect from station.");
+	if (interruptionCode != edll::Code::STATION_ERROR) {
+		if (!disconnectAPI(DLLConnID)) {
+			logger_ptr->error("Failed to disconnect from station.");
+		}
 	}
 
 	logger_ptr->info("Service stopped.");
