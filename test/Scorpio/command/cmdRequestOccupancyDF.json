@@ -5,10 +5,10 @@
         "ant": 1,
         "numBands": 2,
         "storageTime": 15,
-        "measurementTime": 300,
-        "numAzimuths": 360,
-        "confidence": 75,
-        "recordHoldoff": 5,
+        "measurementTime": 100,
+        "numAzimuths": 720,
+        "confidence": 10,
+        "recordHoldoff": 1,
         "scanDfThreshold": 10,
         "recordAudioDf": false,
         "band": [
@@ -19,7 +19,7 @@
                 "stopFrequency": 108000000
             },
             {
-                "channelBandwidth": 25000,
+                "channelBandwidth": 6250,
                 "exclude": false,
                 "startFrequency": 108000000,
                 "stopFrequency": 136000000
