@@ -63,7 +63,7 @@ extern spdlog::logger* loggerPtr;
  * @return json JSON object representing the GPS data
  * @throws NO EXCEPTION HANDLING
 **/
-json ProcessGpsData(SEquipCtrlMsg::SGpsResponse* gpsResponse)
+json processGpsData(SEquipCtrlMsg::SGpsResponse* gpsResponse)
 {
     json jsonObj;
 
@@ -304,7 +304,7 @@ json processAutoViolateResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMs
         jsonObj["SEquipTaskStatusResp"]["dateTime"] = AVDResponse->dateTime;
         jsonObj["SEquipTaskStatusResp"]["key"] = AVDResponse->key;
         jsonObj["SEquipTaskStatusResp"]["status"] = AVDResponse->status;
-        jsonObj["SEquipTaskStatusResp"]["taskId"] = AVDResponse->taskId;
+        jsonObj["task"]["taskId"] = AVDResponse->taskId;
     }
     break;
 
@@ -522,7 +522,7 @@ json processOccupancyResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg:
         jsonObj["SMsgLengthDistributionResp"]["histData"]["channel"] = OCCResponse->histData->channel;
         jsonObj["SMsgLengthDistributionResp"]["histData"]["length"] = OCCResponse->histData->length;
         jsonObj["SMsgLengthDistributionResp"]["occHdr"]["firstChannel"] = OCCResponse->occHdr.firstChannel;
-        jsonObj["site"] = ProcessGpsData(&(OCCResponse->occHdr.gpsResponse));
+        jsonObj["site"] = processGpsData(&(OCCResponse->occHdr.gpsResponse));
     }
     break;
 
@@ -530,7 +530,7 @@ json processOccupancyResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg:
     {
         SEquipCtrlMsg::SOccResult* OCCResponse = (SEquipCtrlMsg::SOccResult*)data;
 
-        jsonObj["site"] = ProcessGpsData(&(OCCResponse->occHdr.gpsResponse));
+        jsonObj["site"] = processGpsData(&(OCCResponse->occHdr.gpsResponse));
         jsonObj["SOccResult"]["occHdr"]["firstChannel"] = OCCResponse->occHdr.firstChannel;
         jsonObj["SOccResult"]["occHdr"]["numChannels"] = (unsigned long)OCCResponse->occHdr.numChannels;
         jsonObj["SOccResult"]["occHdr"]["numTimeOfDays"] = (unsigned long)OCCResponse->occHdr.numTimeOfDays;
@@ -555,7 +555,7 @@ json processOccupancyResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg:
 
         jsonObj["SFrequencyVsChannelResp"]["frequencies"]["internal"] = OCCResponse->frequencies->internal;
         jsonObj["SFrequencyVsChannelResp"]["hostName"] = OCCResponse->hostName;
-        jsonObj["site"] = ProcessGpsData(&(OCCResponse->occHdr.gpsResponse));
+        jsonObj["site"] = processGpsData(&(OCCResponse->occHdr.gpsResponse));
         jsonObj["SFrequencyVsChannelResp"]["numBands"] = OCCResponse->numBands;
         jsonObj["SFrequencyVsChannelResp"]["numChannels"] = OCCResponse->numChannels;
         jsonObj["SFrequencyVsChannelResp"]["occHdr"]["firstChannel"] = OCCResponse->occHdr.firstChannel;
@@ -575,7 +575,7 @@ json processOccupancyResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg:
     {
         SEquipCtrlMsg::SOccResult* OCCResponse = (SEquipCtrlMsg::SOccResult*)data;
 
-        jsonObj["site"] = ProcessGpsData(&(OCCResponse->occHdr.gpsResponse));
+        jsonObj["site"] = processGpsData(&(OCCResponse->occHdr.gpsResponse));
         jsonObj["SOccResult"]["occHdr"]["firstChannel"] = OCCResponse->occHdr.firstChannel;
         jsonObj["SOccResult"]["occHdr"]["numChannels"] = (unsigned long)OCCResponse->occHdr.numChannels;
         jsonObj["SOccResult"]["occHdr"]["numTimeOfDays"] = (unsigned long)OCCResponse->occHdr.numTimeOfDays;
@@ -589,7 +589,7 @@ json processOccupancyResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg:
     {
         SEquipCtrlMsg::SOccResult* OCCResponse = (SEquipCtrlMsg::SOccResult*)data;
 
-        jsonObj["site"] = ProcessGpsData(&(OCCResponse->occHdr.gpsResponse));
+        jsonObj["site"] = processGpsData(&(OCCResponse->occHdr.gpsResponse));
         jsonObj["SOccResult"]["occHdr"]["firstChannel"] = OCCResponse->occHdr.firstChannel;
         jsonObj["SOccResult"]["occHdr"]["numChannels"] = (unsigned long)OCCResponse->occHdr.numChannels;
         jsonObj["SOccResult"]["occHdr"]["numTimeOfDays"] = (unsigned long)OCCResponse->occHdr.numTimeOfDays;
@@ -603,7 +603,7 @@ json processOccupancyResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg:
     {
         SEquipCtrlMsg::SOccResult* OCCResponse = (SEquipCtrlMsg::SOccResult*)data;
 
-        jsonObj["site"] = ProcessGpsData(&(OCCResponse->occHdr.gpsResponse));
+        jsonObj["site"] = processGpsData(&(OCCResponse->occHdr.gpsResponse));
         jsonObj["SOccResult"]["occHdr"]["firstChannel"] = OCCResponse->occHdr.firstChannel;
         jsonObj["SOccResult"]["occHdr"]["numChannels"] = (unsigned long)OCCResponse->occHdr.numChannels;
         jsonObj["SOccResult"]["occHdr"]["numTimeOfDays"] = (unsigned long)OCCResponse->occHdr.numTimeOfDays;
@@ -617,7 +617,7 @@ json processOccupancyResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg:
     {
         SEquipCtrlMsg::SOccResult* OCCResponse = (SEquipCtrlMsg::SOccResult*)data;
 
-        jsonObj["site"] = ProcessGpsData(&(OCCResponse->occHdr.gpsResponse));
+        jsonObj["site"] = processGpsData(&(OCCResponse->occHdr.gpsResponse));
         jsonObj["SOccResult"]["occHdr"]["firstChannel"] = OCCResponse->occHdr.firstChannel;
         jsonObj["SOccResult"]["occHdr"]["numChannels"] = (unsigned long)OCCResponse->occHdr.numChannels;
         jsonObj["SOccResult"]["occHdr"]["numTimeOfDays"] = (unsigned long)OCCResponse->occHdr.numTimeOfDays;
@@ -631,7 +631,7 @@ json processOccupancyResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg:
     {
         SEquipCtrlMsg::SOccResult* OCCResponse = (SEquipCtrlMsg::SOccResult*)data;
 
-        jsonObj["site"] = ProcessGpsData(&(OCCResponse->occHdr.gpsResponse));
+        jsonObj["site"] = processGpsData(&(OCCResponse->occHdr.gpsResponse));
         jsonObj["SOccResult"]["occHdr"]["firstChannel"] = OCCResponse->occHdr.firstChannel;
         jsonObj["SOccResult"]["occHdr"]["numChannels"] = (unsigned long)OCCResponse->occHdr.numChannels;
         jsonObj["SOccResult"]["occHdr"]["numTimeOfDays"] = (unsigned long)OCCResponse->occHdr.numTimeOfDays;
@@ -647,7 +647,7 @@ json processOccupancyResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMsg:
         jsonObj["SEquipTaskStatusResp"]["dateTime"] = OCCResponse->dateTime;
         jsonObj["SEquipTaskStatusResp"]["key"] = OCCResponse->key;
         jsonObj["SEquipTaskStatusResp"]["status"] = OCCResponse->status;
-        jsonObj["SEquipTaskStatusResp"]["taskId"] = OCCResponse->taskId;
+        jsonObj["task"]["taskId"] = OCCResponse->taskId;
     }
     break;
 
@@ -713,8 +713,8 @@ json processOccupancyDFResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMs
 
     switch (respType)
     {
-    case ECSMSDllMsgType::OCCDF_STATE_RESPONSE: // 36 /* Fall through to apply the same processing to both cases */
-    case ECSMSDllMsgType::OCCDF_SOLICIT_STATE_RESPONSE: //37
+    case ECSMSDllMsgType::OCCDF_STATE_RESPONSE: // 36 /* Fall through to apply the same processing to both cases */ - Response to cmdRequestOccupancyDF, CODE 40
+    case ECSMSDllMsgType::OCCDF_SOLICIT_STATE_RESPONSE: //37 
     {
         //SEquipCtrlMsg::SStateResp* OCCDFResponse = (SEquipCtrlMsg::SStateResp*)data;
         SEquipCtrlMsg::SStateResp* OCCDFResponse = reinterpret_cast<SEquipCtrlMsg::SStateResp*>(data);
@@ -724,19 +724,19 @@ json processOccupancyDFResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMs
     }
     break;
 
-    case ECSMSDllMsgType::OCCDF_STATUS: //38
+    case ECSMSDllMsgType::OCCDF_STATUS: //38 - Response to cmdRequestOccupancyDF, CODE 40
     {
         // SEquipCtrlMsg::SEquipTaskStatusResp* OCCDFResponse = (SEquipCtrlMsg::SEquipTaskStatusResp*)data;
         SEquipCtrlMsg::SEquipTaskStatusResp* OCCDFResponse = reinterpret_cast<SEquipCtrlMsg::SEquipTaskStatusResp*>(data);
 
-        jsonObj["SEquipTaskStatusResp"]["dateTime"] = COleTimeToIsoStr(OCCDFResponse->dateTime);
-        jsonObj["SEquipTaskStatusResp"]["key"] = OCCDFResponse->key;
-        jsonObj["SEquipTaskStatusResp"]["status"] = eStatusToString(OCCDFResponse->status);
-        jsonObj["SEquipTaskStatusResp"]["taskId"] = OCCDFResponse->taskId;
+        jsonObj["task"]["dateTime"] = COleTimeToIsoStr(OCCDFResponse->dateTime);
+        jsonObj["task"]["key"] = OCCDFResponse->key;
+        jsonObj["task"]["status"] = eStatusToString(OCCDFResponse->status);
+        jsonObj["task"]["taskId"] = OCCDFResponse->taskId;
     }
     break;
 
-    case ECSMSDllMsgType::OCCDF_FREQ_VS_CHANNEL: //39
+    case ECSMSDllMsgType::OCCDF_FREQ_VS_CHANNEL: //39 - Response to cmdRequestOccupancyDF, CODE 40
     {
         //SEquipCtrlMsg::SFrequencyVsChannelResp* OCCDFResponse = (SEquipCtrlMsg::SFrequencyVsChannelResp*)data;
         SEquipCtrlMsg::SFrequencyVsChannelResp* OCCDFResponse = reinterpret_cast<SEquipCtrlMsg::SFrequencyVsChannelResp*>(data);
@@ -806,37 +806,36 @@ json processOccupancyDFResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMs
         jsonObj["spectrum"]["numTimeOfDays"] = OCCDFResponse->occHdr.numTimeOfDays;
         jsonObj["spectrum"]["numBands"] = OCCDFResponse->numBands;
 
-        jsonObj["site"] = ProcessGpsData(&(OCCDFResponse->occHdr.gpsResponse));
+        jsonObj["site"] = processGpsData(&(OCCDFResponse->occHdr.gpsResponse));
         jsonObj["task"]["status"] = eErrorCodeToString(OCCDFResponse->occHdr.status);
         jsonObj["equipment"]["hostName"] = OCCDFResponse->hostName;
         jsonObj["equipment"]["selectedAntenna"] = eAntToString(OCCDFResponse->selectedAntenna);
 
-        jsonObj["settings"]["primaryThreshold"]["dBuV/m absolute"] = static_cast<int>(OCCDFResponse->occPrimaryThreshold[0]); // dBuV/m
-        jsonObj["settings"]["primaryThreshold"]["dB aboveNoise"] = static_cast<int>(OCCDFResponse->occPrimaryThreshold[1]); // dB
-        jsonObj["settings"]["secondaryThreshold"]["dBuV/m absolute"] = static_cast<int>(OCCDFResponse->occSecondaryThreshold[0]); // dBuV/m
-        jsonObj["settings"]["secondaryThreshold"]["dB aboveNoise"] = static_cast<int>(OCCDFResponse->occSecondaryThreshold[1]); // dB
-        jsonObj["settings"]["saveIntermediateData"] = bool(OCCDFResponse->saveIntermediateData);
-        jsonObj["settings"]["useSecondaryThreshold"] = bool(OCCDFResponse->useSecondaryThreshold);
+        jsonObj["setting"]["primaryThreshold"]["dBuV/m absolute"] = static_cast<int>(OCCDFResponse->occPrimaryThreshold[0]); // dBuV/m
+        jsonObj["setting"]["primaryThreshold"]["dB aboveNoise"] = static_cast<int>(OCCDFResponse->occPrimaryThreshold[1]); // dB
+        jsonObj["setting"]["secondaryThreshold"]["dBuV/m absolute"] = static_cast<int>(OCCDFResponse->occSecondaryThreshold[0]); // dBuV/m
+        jsonObj["setting"]["secondaryThreshold"]["dB aboveNoise"] = static_cast<int>(OCCDFResponse->occSecondaryThreshold[1]); // dB
+        jsonObj["setting"]["saveIntermediateData"] = bool(OCCDFResponse->saveIntermediateData);
+        jsonObj["setting"]["useSecondaryThreshold"] = bool(OCCDFResponse->useSecondaryThreshold);
     }
     break;
 
-    case ECSMSDllMsgType::OCCDF_SCANDF_VS_CHANNEL: //40
+    case ECSMSDllMsgType::OCCDF_SCANDF_VS_CHANNEL: //40 - Response to cmdRequestOccupancyDF, CODE 40
     {
-        // SEquipCtrlMsg::SScanDfVsChannelResp* OCCDFResponse = (SEquipCtrlMsg::SScanDfVsChannelResp*)data;
         SEquipCtrlMsg::SScanDfVsChannelResp* OCCDFResponse = reinterpret_cast<SEquipCtrlMsg::SScanDfVsChannelResp*>(data);
 
-        jsonObj["site"] = ProcessGpsData(&(OCCDFResponse->occHdr.gpsResponse));
+        jsonObj["site"] = processGpsData(&(OCCDFResponse->occHdr.gpsResponse));
 
         jsonObj["task"]["status"] = eErrorCodeToString(OCCDFResponse->occHdr.status);
 
         jsonObj["spectrum"]["numTotalBins"] = OCCDFResponse->occHdr.numTotalChannels;
         jsonObj["spectrum"]["firstBin"] = OCCDFResponse->occHdr.firstChannel;
-        jsonObj["spectrum"]["numTimeOfDays"] = OCCDFResponse->occHdr.numTimeOfDays;
+        jsonObj["task"]["numTimeOfDays"] = OCCDFResponse->occHdr.numTimeOfDays;
 
         int numChannels = OCCDFResponse->occHdr.numChannels;
         jsonObj["spectrum"]["numBins"] = numChannels;
 
-        jsonObj["AOA"]["numAzimuths"] = OCCDFResponse->numAzimuths;
+        jsonObj["setting"]["numAzimuths"] = OCCDFResponse->numAzimuths;
 
 		unsigned long firstChannel = OCCDFResponse->occHdr.firstChannel;
 		unsigned long lastChannel = firstChannel + OCCDFResponse->occHdr.numChannels;
@@ -844,7 +843,7 @@ json processOccupancyDFResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMs
         std::copy(OCCDFResponse->scanDfData + firstChannel,
             OCCDFResponse->scanDfData + lastChannel,
             chanData.begin());
-        jsonObj["Occupancy"]["chanData"] = base64Encode(
+        jsonObj["occupancy"]["chanData"] = base64Encode(
             reinterpret_cast<const unsigned char*>(chanData.data()),
             static_cast<unsigned int>(chanData.size() * sizeof(int))
         );
@@ -853,7 +852,7 @@ json processOccupancyDFResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMs
         std::copy(OCCDFResponse->aveRange + firstChannel,
             OCCDFResponse->aveRange + lastChannel,
 			aveRange.begin());
-        jsonObj["Occupancy"]["aveRange"] = base64Encode(
+        jsonObj["occupancy"]["aveRange"] = base64Encode(
             reinterpret_cast<const unsigned char*>(aveRange.data()),
             static_cast<unsigned int>(aveRange.size() * sizeof(int))
 		);
@@ -862,7 +861,7 @@ json processOccupancyDFResponse(_In_ ECSMSDllMsgType respType, _In_ SEquipCtrlMs
         std::copy(OCCDFResponse->aveFldStr + firstChannel,
 			OCCDFResponse->aveFldStr + lastChannel,
             aveFldStr.begin());
-        jsonObj["Occupancy"]["aveFldStr"] = base64Encode(
+        jsonObj["occupancy"]["aveFldStr"] = base64Encode(
             reinterpret_cast<const unsigned char*>(aveFldStr.data()),
             static_cast<unsigned int>(aveFldStr.size() * sizeof(int))
         );
@@ -895,7 +894,7 @@ json ProcessRealTimeData(_In_ ECSMSDllMsgType respType, _In_ SSmsRealtimeMsg::UB
         const SSmsRealtimeMsg::SStartV2* RTResponse = (SSmsRealtimeMsg::SStartV2*)data;
         unsigned int i;
 
-        jsonObj["SStart"]["taskId"] = RTResponse->taskId;
+        jsonObj["task"]["taskId"] = RTResponse->taskId;
         jsonObj["SStart"]["numBands"] = RTResponse->numBands;
         for (i = 0; i < RTResponse->numBands; i++)
         {
@@ -916,7 +915,7 @@ json ProcessRealTimeData(_In_ ECSMSDllMsgType respType, _In_ SSmsRealtimeMsg::UB
     case ECSMSDllMsgType::RT_SPECTRUM_STOP:
     {
         const SSmsRealtimeMsg::SStop* RTResponse = (const SSmsRealtimeMsg::SStop*)data;
-        jsonObj["SStop"]["taskId"] = RTResponse->taskId;
+        jsonObj["task"]["taskId"] = RTResponse->taskId;
     }
     break;
 
@@ -928,26 +927,26 @@ json ProcessRealTimeData(_In_ ECSMSDllMsgType respType, _In_ SSmsRealtimeMsg::UB
         double binSize = Units::Frequency(RTResponse->chanSize).Hz<double>();
         double stopFreq = startFreq + (binSize * (double)(RTResponse->numChan - 1));
 
-        jsonObj["Spectrum"]["taskId"] = RTResponse->taskId;
-        jsonObj["Spectrum"]["bandIndex"] = RTResponse->bandIndex;
-        jsonObj["Spectrum"]["startFreq"] = startFreq;
-        jsonObj["Spectrum"]["binSize"] = binSize;
-		jsonObj["Spectrum"]["stopFreq"] = stopFreq;
-        jsonObj["Spectrum"]["numChan"] = RTResponse->numChan;
-        jsonObj["Spectrum"]["noiseFloor"] = RTResponse->noiseFloor - OCC_BYTE_POWER_OFFSET;
+        jsonObj["task"]["taskId"] = RTResponse->taskId;
+        jsonObj["spectrum"]["bandIndex"] = RTResponse->bandIndex;
+        jsonObj["spectrum"]["startFreq"] = startFreq;
+        jsonObj["spectrum"]["binSize"] = binSize;
+		jsonObj["spectrum"]["stopFreq"] = stopFreq;
+        jsonObj["spectrum"]["numChan"] = RTResponse->numChan;
+        jsonObj["measure"]["noiseFloor"] = RTResponse->noiseFloor - OCC_BYTE_POWER_OFFSET;
 
         size_t sweepByteLen = static_cast<size_t>(RTResponse->numChan) * sizeof(float);
-        jsonObj["Spectrum"]["levelData"] = base64Encode(
+        jsonObj["spectrum"]["levelData"] = base64Encode(
             parsedBinData(RTResponse->chanData, RTResponse->numChan, OCC_BYTE_POWER_OFFSET),
             static_cast<unsigned int>(sweepByteLen));
     }
     break;
 
-    case ECSMSDllMsgType::RT_SPECTRUM_V2RESPONSE: //64
+    case ECSMSDllMsgType::RT_SPECTRUM_V2RESPONSE: //64 - Response to cmdRequestOccupancyDF, CODE 40 with RT data active
     {
         const SSmsRealtimeMsg::SSpectrumV2* RTResponse = (SSmsRealtimeMsg::SSpectrumV2*)data;
 
-        jsonObj["measure"]["taskId"] = RTResponse->taskId;
+        jsonObj["task"]["taskId"] = RTResponse->taskId;
         jsonObj["measure"]["noiseFloor"] = RTResponse->noiseFloor - OCC_BYTE_POWER_OFFSET;
 
         double startFreq = Units::Frequency(RTResponse->firstChanFreq).Hz<double>();
@@ -971,15 +970,15 @@ json ProcessRealTimeData(_In_ ECSMSDllMsgType respType, _In_ SSmsRealtimeMsg::UB
     {
         const SSmsRealtimeMsg::SSpectrumV3* RTResponse = (SSmsRealtimeMsg::SSpectrumV3*)data;
 
-        jsonObj["Spectrum"]["taskId"] = RTResponse->taskId;
-        jsonObj["Spectrum"]["bandIndex"] = RTResponse->bandIndex;
-        jsonObj["Spectrum"]["startFreq"]["internal"] = RTResponse->firstChanFreq.internal;
-        jsonObj["Spectrum"]["binSize"]["internal"] = RTResponse->chanSize.internal;
-        jsonObj["Spectrum"]["numChan"] = RTResponse->numChan;
-        jsonObj["Spectrum"]["noiseFloor"] = RTResponse->noiseFloor;
-        jsonObj["Spectrum"]["efield"] = RTResponse->efield;
-        jsonObj["Spectrum"]["zeroVal"] = RTResponse->zeroVal;
-        jsonObj["Spectrum"]["levelData"] = std::string(reinterpret_cast<const char*>(RTResponse->chanData), RTResponse->numChan);
+        jsonObj["task"]["taskId"] = RTResponse->taskId;
+        jsonObj["spectrum"]["bandIndex"] = RTResponse->bandIndex;
+        jsonObj["spectrum"]["startFreq"]["internal"] = RTResponse->firstChanFreq.internal;
+        jsonObj["spectrum"]["binSize"]["internal"] = RTResponse->chanSize.internal;
+        jsonObj["spectrum"]["numChan"] = RTResponse->numChan;
+        jsonObj["measure"]["noiseFloor"] = RTResponse->noiseFloor;
+        jsonObj["spectrum"]["efield"] = RTResponse->efield;
+        jsonObj["spectrum"]["zeroVal"] = RTResponse->zeroVal;
+        jsonObj["spectrum"]["levelData"] = std::string(reinterpret_cast<const char*>(RTResponse->chanData), RTResponse->numChan);
     }
     break;
 
@@ -988,7 +987,7 @@ json ProcessRealTimeData(_In_ ECSMSDllMsgType respType, _In_ SSmsRealtimeMsg::UB
         const SSmsRealtimeMsg::SStartV2* RTResponse = (SSmsRealtimeMsg::SStartV2*)data;
         unsigned int i;
 
-        jsonObj["RTDFStart"]["taskId"] = RTResponse->taskId;
+        jsonObj["task"]["taskId"] = RTResponse->taskId;
         jsonObj["RTDFStart"]["numBands"] = RTResponse->numBands;
 
         for (i = 0; i < RTResponse->numBands; i++)
@@ -1007,7 +1006,7 @@ json ProcessRealTimeData(_In_ ECSMSDllMsgType respType, _In_ SSmsRealtimeMsg::UB
         const SSmsRealtimeMsg::SStart* RTResponse = (SSmsRealtimeMsg::SStart*)data;
         unsigned int i;
 
-        jsonObj["RTDFStart"]["taskId"] = RTResponse->taskId;
+        jsonObj["task"]["taskId"] = RTResponse->taskId;
         jsonObj["RTDFStart"]["numBands"] = RTResponse->numBands;
         jsonObj["RTDFStart"]["MAX_OCCBANDS"] = RTResponse->MAX_OCCBANDS;
         for (i = 0; i < RTResponse->numBands; i++)
@@ -1024,46 +1023,53 @@ json ProcessRealTimeData(_In_ ECSMSDllMsgType respType, _In_ SSmsRealtimeMsg::UB
     case ECSMSDllMsgType::RT_DF_STOP:
     {
         const SSmsRealtimeMsg::SStop* RTResponse = (SSmsRealtimeMsg::SStop*)data;
-        jsonObj["SStop"]["taskId"] = RTResponse->taskId;
+        jsonObj["task"]["taskId"] = RTResponse->taskId;
     }
     break;
 
     case ECSMSDllMsgType::RT_DF_DATAV1:
     {
         const SSmsRealtimeMsg::SDfData* RTResponse = (SSmsRealtimeMsg::SDfData*)data;
+
+        jsonObj["task"]["taskId"] = RTResponse->taskId;
+
+        jsonObj["measure"]["noiseFloor"] = RTResponse->noiseFloor;
+
         jsonObj["SDfData"]["bandIndex"] = RTResponse->bandIndex;
         jsonObj["SDfData"]["chanData"]["azimData"] = RTResponse->chanData->azimData;
         jsonObj["SDfData"]["chanData"]["specData"] = RTResponse->chanData->specData;
         jsonObj["SDfData"]["chanSize"] = RTResponse->chanSize;
         jsonObj["SDfData"]["firstChanFreq"] = RTResponse->firstChanFreq;
-        jsonObj["SDfData"]["noiseFloor"] = RTResponse->noiseFloor;
+        
         jsonObj["SDfData"]["numChan"] = RTResponse->numChan;
-        jsonObj["SDfData"]["taskId"] = RTResponse->taskId;
+        
     }
     break;
 
     case ECSMSDllMsgType::RT_DF_DATAV2:
     {
         const SSmsRealtimeMsg::SDfDataV2* RTResponse = (SSmsRealtimeMsg::SDfDataV2*)data;
+        jsonObj["task"]["taskId"] = RTResponse->taskId;
+
         jsonObj["SDfDataV2"]["bandIndex"] = RTResponse->bandIndex;
         jsonObj["SDfDataV2"]["chanData"]["azimData"] = RTResponse->chanData->azimData;
         jsonObj["SDfDataV2"]["chanData"]["specData"] = RTResponse->chanData->specData;
         jsonObj["SDfDataV2"]["chanSize"] = RTResponse->chanSize;
         jsonObj["SDfDataV2"]["firstChanFreq"] = RTResponse->firstChanFreq;
-        jsonObj["SDfDataV2"]["noiseFloor"] = RTResponse->noiseFloor;
+        jsonObj["measure"]["noiseFloor"] = RTResponse->noiseFloor;
         jsonObj["SDfDataV2"]["numChan"] = RTResponse->numChan;
-        jsonObj["SDfDataV2"]["taskId"] = RTResponse->taskId;
+        
         jsonObj["SDfDataV2"]["horizPol"] = RTResponse->horizPol;
     }
     break;
 
-    case ECSMSDllMsgType::RT_DF_DATA: // 74
+    case ECSMSDllMsgType::RT_DF_DATA: // 74 - Response to cmdRequestOccupancyDF, CODE 40 with RT data active
     {
         const SSmsRealtimeMsg::SDfDataV3* RTResponse = (SSmsRealtimeMsg::SDfDataV3*)data;
 
         jsonObj["task"]["taskId"] = RTResponse->taskId;
 
-        jsonObj["settings"]["horizPol"] = RTResponse->horizPol;
+        jsonObj["setting"]["horizPol"] = RTResponse->horizPol;
 
         jsonObj["measure"]["noiseFloor"] = RTResponse->noiseFloor;
 
