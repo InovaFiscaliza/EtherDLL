@@ -182,14 +182,11 @@ DFDataRawResult parsedDFData(const SSmsRealtimeMsg::SDfDataV3::SChanData* chanDa
 **/
 FrequencyRange panFrequencyInfo(const SEquipCtrlMsg::SGetPanResp* panResponse)
 {
-    // Convert central frequency from internal units to MHz
-    double centralFrequency = Units::Frequency(panResponse->freq.internal).Hz<double>();
+    double centralFrequency = Units::Frequency(panResponse->freq).Hz<double>();
 
-    // Convert bin size from internal units to Hz
-    double binSize = Units::Frequency(panResponse->binSize.internal).Hz<double>();
+    double binSize = Units::Frequency(panResponse->binSize).Hz<double>();
 
-    // Calculate half span in MHz  
-    double halfSpan = (binSize * double(floor(panResponse->numBins / double(2.0)))) / double(1000000.0);
+    double halfSpan = binSize * double(floor(panResponse->numBins / 2.0));
 
     // Calculate start and stop frequencies
     FrequencyRange freqInfo{};
