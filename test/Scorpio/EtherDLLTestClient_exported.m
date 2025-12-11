@@ -4,11 +4,12 @@ classdef EtherDLLTestClient_exported < matlab.apps.AppBase
     properties (Access = public)
         EtherDLLTest           matlab.ui.Figure
         mainGrid               matlab.ui.container.GridLayout
+        parsedData             matlab.ui.container.Tree
         cleanParsedAreaIcon    matlab.ui.control.Image
+        receivedMsg            matlab.ui.control.TextArea
         connectButton          matlab.ui.control.StateButton
         bandSelectDropDown     matlab.ui.control.DropDown
         cleanReceivedAreaIcon  matlab.ui.control.Image
-        receivedMsg            matlab.ui.control.TextArea
         repeatCmdIcon          matlab.ui.control.Image
         CommandDropDown        matlab.ui.control.DropDown
         sentMsg                matlab.ui.control.TextArea
@@ -164,7 +165,7 @@ classdef EtherDLLTestClient_exported < matlab.apps.AppBase
                 delete(app.connection);
                 app.cleanSentMsg;
             catch
-                warning('Failed to disconnect from EtheDLL.');
+                warning('Failed to disconnect from EtherDLL.');
             end
         end
 
@@ -229,7 +230,7 @@ classdef EtherDLLTestClient_exported < matlab.apps.AppBase
             % Response may include none, one, many or all keys.
             
             % Define supported data keys and their corresponding handler methods
-            supportedKeys = {'spectrum', 'occupancy', 'measure', 'equipment', 'setting'};
+            supportedKeys = {'spectrum', 'aoa', 'occupancy', 'measure', 'equipment', 'setting', 'site'};
             
             % Get all fields in the incoming data structure
             dataFields = fieldnames(data);
@@ -245,25 +246,32 @@ classdef EtherDLLTestClient_exported < matlab.apps.AppBase
                         switch fieldName
                             case 'spectrum'
                                 if isfield(data.(fieldName), 'traceDataDF')                                    
-                                    data.spectrum = app.buildAxis(data.spectrum, 'traceDataDF', 'measureAxis2');
+                                    data.spectrum = app.buildAxis(data.spectrum, 'traceDataDF', 'DF Antenna Field Strength', false);
                                 end
-                                data.spectrum = app.buildAxis(data.spectrum, 'traceData');
+                                data.spectrum = app.buildAxis(data.spectrum, 'traceData', 'Field Strength', false);
 
                                 app.plotData(app.SPTAxes, data.spectrum);
+                                app.presentData('spectrum',data.spectrum,["numBands","numTotalBins","numBins","firstBin","numTimeOfDays"])
                             case 'occupancy'
-                                data.occupancy = app.buildAxis(data.occupancy, 'traceData');
+                                data.occupancy = app.buildAxis(data.occupancy, 'chanData', "Channel Data", false);
+                                data.occupancy = app.buildAxis(data.occupancy, 'aveRange', "Average Range", false);
+                                data.occupancy = app.buildAxis(data.occupancy, 'aveFldStr', "Average Field Strength", false);
 
                                 app.plotData(app.OCCAxes, data.occupancy);
                             case 'aoa'
-                                data.aoa = app.buildAxis(data.aoa, 'traceData');
-                                data.aoa = app.buildAxis(data.aoa, 'confidence','measureValue');
+                                data.aoa = app.buildAxis(data.aoa, 'traceData', 'Azimuth', false);
+                                data.aoa = app.buildAxis(data.aoa, 'confidence','Confidence', true);
                                 app.plotData(app.AOAAxes, data.aoa);
                             case 'measure'
-                                app.presentData(data.measure);
+                                app.presentData('measure',data.measure, ["noiseFloor", "powerDbm"]);
                             case 'equipment'
-                                app.presentData(data.equipment);
-                            case 'settings'
-                                app.presentData(data.settings);
+                                app.presentData('equipment',data.equipment,["hostName","selectedAntenna"],false);
+                            case 'setting'
+                                app.presentData('setting',data.setting,["primaryThresholdAbsolute","primaryThresholdAboveNoise","secondaryThresholdAbsolute","secondaryThresholdAboveNoise","saveIntermediateData","useSecondaryThreshold","numAzimuths","attenuation"],false);
+                            case 'site'
+                                app.presentData('site',data.site,["dateTime","latitude","longitude","numSats"],false);
+                            case 'task'
+                                app.presentData('task',data.task,["dateTime","taskId","key","state","status","completionTime"],true)
                         end
                     catch ME
                         warning(ME.identifier, 'Error processing field "%s": %s', fieldName, ME.message);
@@ -273,20 +281,37 @@ classdef EtherDLLTestClient_exported < matlab.apps.AppBase
         end
 
         %-----------------------------------------------------------------%
-        function data = buildAxis(app, data, axisType, measureAxisName)
+        function data = buildAxis(app, data, arrayName, measureAxisName, isAlpha)
             % build x and y axis for different data types
-            % axisType: 'traceData', 'AOA', 'occ'.
-            % measureAxisName: (optional) name for the measurement axis output field (default: 'measureAxis')
+            % data: structure containing data to be plotted
+            % arrayName: Name of the data filed, e.g. 'traceData', 'aoa', 'occupancy'.
+            % measureAxisName: Name to be used as lable for the measurement axis
+            % isAlpha: if true, store data in alphaAxis instead of measureAxis
             % Returns: modified data structure with measureAxis (or custom name) and frequencyAxis
             
-            if nargin < 4
-                measureAxisName = 'measureAxis';
+            % Convert base64 data to float32 array
+            newTrace = app.base64ToFloat32(data.(arrayName));
+            
+            if isAlpha
+                data.alphaAxis = newTrace;
+                return;
+            end
+
+            % Initialize or append to measureAxis array
+            if ~isfield(data, 'measureAxis')
+                % First trace - initialize as cell array
+                data.measureAxis = {newTrace};
+                data.measureAxisNames = {measureAxisName};
+            else
+                % Append new trace
+                data.measureAxis{end+1} = newTrace;
+                data.measureAxisNames{end+1} = measureAxisName;
             end
             
-            if isfield(data, axisType)
-                data.(measureAxisName) = app.base64ToFloat32(data.(axisType));
+            % Create frequency axis if it doesn't exist
+            if ~isfield(data, 'frequencyAxis')
                 data.frequencyAxis = linspace(data.startFrequency, data.stopFrequency, data.numBins);
-            end    
+            end
             
         end
 
@@ -294,7 +319,7 @@ classdef EtherDLLTestClient_exported < matlab.apps.AppBase
         function plotData(app, axesHandle, data)
             % plot spectrum data on specified axes
             % axesHandle: UIAxes object (app.SPTAxes, app.AOAAxes, app.OCCAxes, etc.)
-            % data: structure containing spectrum information
+            % data: structure containing spectrum information with measureAxis (cell array)
             
             if app.refresh
                 hold(axesHandle, "off");
@@ -310,52 +335,95 @@ classdef EtherDLLTestClient_exported < matlab.apps.AppBase
             axesHandle.XTick = xTicks;
             axesHandle.XTickLabel = app.formatEngineeringNotation(xTicks);
             
+            % Determine Y-axis limits from all traces
+            numTraces = length(data.measureAxis);
+            allValues = [];
+            for i = 1:numTraces
+                allValues = [allValues; data.measureAxis{i}(:)];
+            end
+            yMin = min(allValues);
+            yMax = max(allValues);
+            
             % Set 10 ticks on vertical axis (measurement values)
-            yMin = min(data.measureAxis);
-            yMax = max(data.measureAxis);
             yTicks = linspace(yMin, yMax, 10);
             axesHandle.YTick = yTicks;
             axesHandle.YTickLabel = app.formatEngineeringNotation(yTicks);
 
-            % Check if measureValue exists for transparency-based plotting
-            if isfield(data, 'measureValue')
-                % Convert measureValue (0-100) to alpha values (0-1, inverted)
-                alphaValues = data.measureValue / 100;
+            % Plot each trace
+            legendLabels = cell(numTraces, 1);
+            for i = 1:numTraces
+                currentTrace = data.measureAxis{i};
                 
-                % Plot as scatter with variable transparency
-                scatter(axesHandle, data.frequencyAxis, data.measureAxis, 36, ...
-                    [0.2 0.5 0.9], 'filled', 'MarkerFaceAlpha', 'flat', ...
-                    'AlphaData', alphaValues);
-            else
-                % Original line plot
-                plot(axesHandle, data.frequencyAxis, data.measureAxis, '-', 'Color', [0.2 0.5 0.9 0.1], 'LineWidth', 2.5);
-
-                % Plot spectrum data from the DF antenna if available
-                if isfield(data, 'measureAxis2')
-                    plot(axesHandle, data.frequencyAxis, data.measureAxis2, '-', 'Color', [0.9 0.5 0.2 0.1], 'LineWidth', 2.5);
-                    legend(axesHandle, {'Measurement Antenna Sweep', 'DF Antenna Sweep'}, 'Location', 'northeast');
+                % Check if this is confidence data (for transparency-based plotting)
+                if isfield(data, 'alphaAxis')
+                    % Convert measureValue (0-100) to alpha values (0-1)
+                    alphaValues = data.alphaAxis / 100;
+                    scatter(axesHandle, data.frequencyAxis, currentTrace, 36, ...
+                        [0.2 0.5 0.9], 'filled', 'MarkerFaceAlpha', 'flat', ...
+                        'AlphaData', alphaValues);
+                else
+                    % Standard line plot
+                    plot(axesHandle, data.frequencyAxis, currentTrace, '-', 'LineWidth', 2.5);
                 end
-
+            end
+            
+            % Add legend if multiple traces
+            if length(data.measureAxis) > 1
+                legend(axesHandle, legendLabels, 'Location', 'northeast');
             end
         end
 
         %-----------------------------------------------------------------%
-        function data = presentData(app, data, fieldsToPresent)
-            % Present textual data
-            % data: 'traceData', 'AOA', 'occ'.
-            % measureAxisName: (optional) name for the measurement axis output field (default: 'measureAxis')
-            % Returns: modified data structure with measureAxis (or custom name) and frequencyAxis
+        function presentData(app, parentNodeName, data, fieldsToPresent)
+            % Present textual data by dynamically creating/updating parent and child nodes
+            % parentNodeName: Name of the parent node (e.g., 'site', 'equipment', 'measure', etc.)
+            % data: Structure containing field data
+            % fieldsToPresent: Cell array of field names to display as child nodes
+            %
+            % This function creates parent and child nodes dynamically if they don't exist,
+            % or updates them if they do. Each child node displays "fieldName: value".
             
-            for i = 1:length(fieldsToPresent)
-                field = fieldsToPresent{i};
-                if isfield(data, field)
-                    message = sprintf('%s: %s', field, num2str(data.(field)));
-                    app.receivedMsg.Value = [message; app.receivedMsg.Value];
-                end
+            % Get or create the parent node
+            if isprop(app, parentNodeName)
+                parentNode = app.(parentNodeName);
+            else
+                % Create parent node dynamically
+                parentNode = uitreenode(app.parsedData, 'Text', parentNodeName);
+                app.(parentNodeName) = parentNode;
             end
             
+            % Process each field to present
+            for i = 1:length(fieldsToPresent)
+                fieldName = fieldsToPresent{i};
+                
+                if isfield(data, fieldName)
+                    % Convert field value to string (handle numeric, logical, string types)
+                    if isnumeric(data.(fieldName))
+                        valueStr = num2str(data.(fieldName));
+                    elseif islogical(data.(fieldName))
+                        valueStr = string(data.(fieldName));
+                    else
+                        valueStr = char(data.(fieldName));
+                    end
+                    
+                    message = sprintf('%s: %s', fieldName, valueStr);
+                    
+                    % Check if child node already exists
+                    childNodeName = [parentNodeName, fieldName];  % Create unique property name
+                    
+                    if isprop(app, childNodeName)
+                        % Update existing child node
+                        childNode = app.(childNodeName);
+                        childNode.Text = message;
+                    else
+                        % Create new child node
+                        childNode = uitreenode(parentNode, 'Text', message);
+                        app.addprop(childNodeName);  % Add dynamic property to app
+                        app.(childNodeName) = childNode;
+                    end
+                end
+            end
         end
-
 
         %-----------------------------------------------------------------%
         function tickLabels = formatEngineeringNotation(~, values)
@@ -415,6 +483,7 @@ classdef EtherDLLTestClient_exported < matlab.apps.AppBase
             
             float32Array = typecast(bytes, 'single');
         end
+
     end
 
     % Callbacks that handle component events
@@ -428,7 +497,7 @@ classdef EtherDLLTestClient_exported < matlab.apps.AppBase
         end
 
         % Value changed function: CommandDropDown
-        function CommandDropDownValueChanged(app, event)
+        function commandDropDownValueChanged(app, event)
             if app.CommandDropDown.ValueIndex > 1
                 
                 app.sentMsg.Value = app.CommandDropDown.Value;
@@ -446,7 +515,7 @@ classdef EtherDLLTestClient_exported < matlab.apps.AppBase
         end
 
         % Close request function: EtherDLLTest
-        function EtherDLLTestCloseRequest(app, event)
+        function etherDLLTestCloseRequest(app, event)
             delete(app);
         end
 
@@ -456,7 +525,7 @@ classdef EtherDLLTestClient_exported < matlab.apps.AppBase
         end
 
         % Image clicked function: cleanReceivedAreaIcon
-        function cleanAreaClicked(app, event)
+        function cleanReceivedAreaClicked(app, event)
             app.receivedMsg.Value = "";
         end
 
@@ -470,7 +539,7 @@ classdef EtherDLLTestClient_exported < matlab.apps.AppBase
         end
 
         % Value changed function: connectButton
-        function ConnectConnectconnectButtonPushed(app, event)
+        function connectConnectconnectButtonPushed(app, event)
             app.connectButton.Enable = false;
             if app.connectButton.Value % True value is associated with Disconnected state, i.e. User required to connect
                 app.connectButton.Text = 'Connecting...';
@@ -497,11 +566,16 @@ classdef EtherDLLTestClient_exported < matlab.apps.AppBase
         end
 
         % Clicked callback: CommandDropDown
-        function CommandDropDownClicked(app, event)
+        function commandDropDownClicked(app, event)
             %  change color and first item value to indicate that options
             %  are active.
             app.CommandDropDown.FontColor = [0.0, 0.0, 0.0];
             app.CommandDropDown.Items{1} = '<none>';
+        end
+
+        % Image clicked function: cleanParsedAreaIcon
+        function cleanParsedAreaIClicked(app, event)
+            app.parsedMsg.Value = "";
         end
     end
 
@@ -519,7 +593,7 @@ classdef EtherDLLTestClient_exported < matlab.apps.AppBase
             app.EtherDLLTest.Position = [92 92 854 836];
             app.EtherDLLTest.Name = 'EtherDLL Test';
             app.EtherDLLTest.Icon = fullfile(pathToMLAPP, 'EtherDLL_Icon.png');
-            app.EtherDLLTest.CloseRequestFcn = createCallbackFcn(app, @EtherDLLTestCloseRequest, true);
+            app.EtherDLLTest.CloseRequestFcn = createCallbackFcn(app, @etherDLLTestCloseRequest, true);
             app.EtherDLLTest.HandleVisibility = 'on';
 
             % Create mainGrid
@@ -576,12 +650,12 @@ classdef EtherDLLTestClient_exported < matlab.apps.AppBase
             % Create CommandDropDown
             app.CommandDropDown = uidropdown(app.mainGrid);
             app.CommandDropDown.Items = {'<select a command>'};
-            app.CommandDropDown.ValueChangedFcn = createCallbackFcn(app, @CommandDropDownValueChanged, true);
+            app.CommandDropDown.ValueChangedFcn = createCallbackFcn(app, @commandDropDownValueChanged, true);
             app.CommandDropDown.Tooltip = {'Select a command and send it to the station through EtherDLL'};
             app.CommandDropDown.FontColor = [0.8 0.8 0.8];
             app.CommandDropDown.Layout.Row = 2;
             app.CommandDropDown.Layout.Column = [1 3];
-            app.CommandDropDown.ClickedFcn = createCallbackFcn(app, @CommandDropDownClicked, true);
+            app.CommandDropDown.ClickedFcn = createCallbackFcn(app, @commandDropDownClicked, true);
             app.CommandDropDown.Value = '<select a command>';
 
             % Create repeatCmdIcon
@@ -594,16 +668,9 @@ classdef EtherDLLTestClient_exported < matlab.apps.AppBase
             app.repeatCmdIcon.HorizontalAlignment = 'left';
             app.repeatCmdIcon.ImageSource = fullfile(pathToMLAPP, 'redo.svg');
 
-            % Create receivedMsg
-            app.receivedMsg = uitextarea(app.mainGrid);
-            app.receivedMsg.Tooltip = {'Messages received from EtherDLL'};
-            app.receivedMsg.Placeholder = '< will display raw messages received from EtherDLL >';
-            app.receivedMsg.Layout.Row = [7 8];
-            app.receivedMsg.Layout.Column = [1 3];
-
             % Create cleanReceivedAreaIcon
             app.cleanReceivedAreaIcon = uiimage(app.mainGrid);
-            app.cleanReceivedAreaIcon.ImageClickedFcn = createCallbackFcn(app, @cleanAreaClicked, true);
+            app.cleanReceivedAreaIcon.ImageClickedFcn = createCallbackFcn(app, @cleanReceivedAreaClicked, true);
             app.cleanReceivedAreaIcon.Tooltip = {'Clean the output area'};
             app.cleanReceivedAreaIcon.Layout.Row = 8;
             app.cleanReceivedAreaIcon.Layout.Column = 1;
@@ -623,20 +690,33 @@ classdef EtherDLLTestClient_exported < matlab.apps.AppBase
 
             % Create connectButton
             app.connectButton = uibutton(app.mainGrid, 'state');
-            app.connectButton.ValueChangedFcn = createCallbackFcn(app, @ConnectConnectconnectButtonPushed, true);
+            app.connectButton.ValueChangedFcn = createCallbackFcn(app, @connectConnectconnectButtonPushed, true);
             app.connectButton.Tooltip = {'Press to connect to EtherDLL'};
             app.connectButton.Text = 'Connect';
             app.connectButton.Layout.Row = 1;
             app.connectButton.Layout.Column = [1 3];
 
+            % Create receivedMsg
+            app.receivedMsg = uitextarea(app.mainGrid);
+            app.receivedMsg.Tooltip = {'Messages received from EtherDLL'};
+            app.receivedMsg.Placeholder = '< will display raw messages received from EtherDLL >';
+            app.receivedMsg.Layout.Row = [7 8];
+            app.receivedMsg.Layout.Column = [1 3];
+
             % Create cleanParsedAreaIcon
             app.cleanParsedAreaIcon = uiimage(app.mainGrid);
+            app.cleanParsedAreaIcon.ImageClickedFcn = createCallbackFcn(app, @cleanParsedAreaIClicked, true);
             app.cleanParsedAreaIcon.Tooltip = {'Clean the output area'};
             app.cleanParsedAreaIcon.Layout.Row = 10;
             app.cleanParsedAreaIcon.Layout.Column = 1;
             app.cleanParsedAreaIcon.HorizontalAlignment = 'left';
             app.cleanParsedAreaIcon.VerticalAlignment = 'bottom';
             app.cleanParsedAreaIcon.ImageSource = fullfile(pathToMLAPP, 'sweep.svg');
+
+            % Create parsedData
+            app.parsedData = uitree(app.mainGrid);
+            app.parsedData.Layout.Row = [9 10];
+            app.parsedData.Layout.Column = [1 3];
 
             % Show the figure after all components are created
             app.EtherDLLTest.Visible = 'on';
