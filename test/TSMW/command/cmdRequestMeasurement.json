@@ -1,0 +1,10 @@
+{
+    "CODE": 1,
+    "COMMAND": "power_scan",
+    "ARGS": {
+        "frontEndMask": 1,
+        "startFrequencyHz": 90000000,
+        "stopFrequencyHz": 107000000,
+        "requestRawData": false
+    }
+}

@@ -1,23 +1,61 @@
 {
-    // See https://go.microsoft.com/fwlink/?LinkId=733558
-    // for the documentation about the tasks.json format
     "version": "2.0.0",
     "tasks": [
-        {
-            "label": "Wix Build Installer.wxs",
-            "type": "shell",
-            "command": "${workspaceFolder}/install/wix",
-            "args": [
-                "build",
-                "Installer.wxs",
-                "-o",
-                "MIAerConn.msi"
-            ],
-            "group": "build",
-            "presentation": {
-                // Reveal the output only if unrecognized errors occur.
-                "reveal": "silent"
-            },
-        }
+      {
+        "label": "Build Solution",
+        "type": "shell",
+        "command": "buildconsole ${workspaceFolder}\\src\\EtherDLL.sln /build /cfg='Release|Win32'",
+        "group": {
+          "kind": "build",
+          "isDefault": true
+        },
+        "presentation": {
+          "reveal": "always",
+          "panel": "new"
+        },
+        "problemMatcher": "$msCompile"
+      },
+      {
+        "label": "Rebuild Solution",
+        "type": "shell",
+        "command": "buildconsole ${workspaceFolder}\\src\\EtherDLL.sln /rebuild /cfg='Release|Win32'",
+        "group": {
+          "kind": "build",
+          "isDefault": true
+        },
+        "presentation": {
+          "reveal": "always",
+          "panel": "new"
+        },
+        "problemMatcher": "$msCompile"
+      },
+      {
+        "label": "Build Project",
+        "type": "shell",
+        "command": "buildconsole ${workspaceFolder}\\src\\EtherDLL.sln /prj=EtherDLL_base.vcxproj /build /cfg='Release|Win32'",
+        "group": {
+          "kind": "build",
+          "isDefault": true
+        },
+        "presentation": {
+          "reveal": "always",
+          "panel": "new"
+        },
+        "problemMatcher": "$msCompile"
+      },
+      {
+        "label": "Rebuild Project",
+        "type": "shell",
+        "command": "buildconsole ${workspaceFolder}\\src\\EtherDLL.sln /prj=EtherDLL_base.vcxproj /rebuild /cfg='Release|Win32'",
+        "group": {
+          "kind": "build",
+          "isDefault": true
+        },
+        "presentation": {
+          "reveal": "always",
+          "panel": "new"
+        },
+        "problemMatcher": "$msCompile"
+      }
     ]
-}
+  }
