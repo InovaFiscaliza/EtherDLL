@@ -80,36 +80,106 @@ void DLLFunctionCall(DLLConnectionData& DLLConn, json request, unsigned long msg
 			CViComError err;
 			SSweepSettings sweepSettings;
 
-			// Populate sweepSettings from JSON, with defaults from DefaultDLLParam
+			// Populate sweepSettings from JSON
 			using SweepConf = DefaultDLLParam::SweepSettings;
-			sweepSettings.dwFrontEndSelectionMask = reqArguments.value(SweepConf::FRONT_END_MASK, SweepConf::FRONT_END_MASK_V);
-			sweepSettings.dStartFrequencyInHz = reqArguments.value(SweepConf::START_FREQ_HZ, SweepConf::START_FREQ_HZ_V);
-			sweepSettings.dStopFrequencyInHz = reqArguments.value(SweepConf::STOP_FREQ_HZ, SweepConf::STOP_FREQ_HZ_V);
-			sweepSettings.bRequestRawData = reqArguments.value(SweepConf::REQ_RAW_DATA, SweepConf::REQ_RAW_DATA_V);
 
-			// These settings are taken from the TSMWPorwerScan example and can be exposed in the JSON API later
-			sweepSettings.sSpectrumSettings.fMaxReportingRateInHz = 10.0f;
-			sweepSettings.sSpectrumSettings.fMaxDeviceMeasRateInHz = 10.0f;
-			sweepSettings.sSpectrumSettings.eWindowType = SSpectrumSettings::RFPOWERSCAN_WINDOWTYPE_HANNING;
-			sweepSettings.sSpectrumSettings.eFFTSize = SSpectrumSettings::RFPOWERSCAN_FFTSIZE_1024;
-			sweepSettings.sSpectrumSettings.bAutoBandwidth = TRUE;
-			sweepSettings.sSpectrumSettings.dwBandwidthInHz = (DWORD)20e6;
-			sweepSettings.sSpectrumSettings.bLevelThreshold = FALSE;
-			sweepSettings.sSpectrumSettings.fThresholdInDbm = -100.0f;
-			sweepSettings.sSpectrumSettings.bPreamplifier = TRUE;
-			sweepSettings.sSpectrumSettings.bAutoAttenuation = TRUE;
-			sweepSettings.sSpectrumSettings.bAttenuationInDb = 0;
-			sweepSettings.sMeasurementTime.dwMeasTimeInNs = 1000000;
-			sweepSettings.sMeasurementTime.eDetectorType = SMeasurementTime::RFPOWERSCAN_DETECTOR_TYPE_RMS;
-			sweepSettings.sFrequencyDetector.dwCountOfLines = 890;
-			sweepSettings.sFrequencyDetector.eDetectorType = SFrequencyDetector::RFPOWERSCAN_FREQDET_TYPE_RMS;
-			sweepSettings.sTimeDetector.eDetectorType = STimeDetector::RFPOWERSCAN_TIMEDET_TYPE_RMS;
-			sweepSettings.sTimeDetector.eDetectorIntervalType = STimeDetector::RFPOWERSCAN_TIMEDET_INTERVAL_TIMERANGE;
-			sweepSettings.sTimeDetector.dwTimeParameterInMs = 1000;
-			sweepSettings.sMarker.bUseMarker = 0;
-			sweepSettings.sMarker.bReturnsPowerValues = 0;
+			// Helper Lambda for Missing Parameter Check
+			auto checkParam = [&](const char* key) -> bool {
+				if (!reqArguments.contains(key)) {
+					std::string errMsg = std::string("Missing required parameter: ") + key;
+					loggerPtr->error(errMsg);
+					responseJson["error"] = errMsg;
+					response.push(responseJson, logSource);
+					return false;
+				}
+				return true;
+			};
+
+			// --- Basic Sweep Settings ---
+			if (!checkParam(SweepConf::FRONT_END_MASK)) return;
+			sweepSettings.dwFrontEndSelectionMask = reqArguments[SweepConf::FRONT_END_MASK].get<unsigned long>();
+
+			if (!checkParam(SweepConf::START_FREQ_HZ)) return;
+			sweepSettings.dStartFrequencyInHz = reqArguments[SweepConf::START_FREQ_HZ].get<double>();
+
+			if (!checkParam(SweepConf::STOP_FREQ_HZ)) return;
+			sweepSettings.dStopFrequencyInHz = reqArguments[SweepConf::STOP_FREQ_HZ].get<double>();
+
+			if (!checkParam(SweepConf::REQ_RAW_DATA)) return;
+			sweepSettings.bRequestRawData = reqArguments[SweepConf::REQ_RAW_DATA].get<bool>() ? TRUE : FALSE;
 
 
+			// --- Spectrum Settings ---
+			if (!checkParam(SweepConf::MAX_REPORTING_RATE)) return;
+			sweepSettings.sSpectrumSettings.fMaxReportingRateInHz = reqArguments[SweepConf::MAX_REPORTING_RATE].get<float>();
+
+			if (!checkParam(SweepConf::MAX_DEVICE_MEAS_RATE)) return;
+			sweepSettings.sSpectrumSettings.fMaxDeviceMeasRateInHz = reqArguments[SweepConf::MAX_DEVICE_MEAS_RATE].get<float>();
+
+			if (!checkParam(SweepConf::WINDOW_TYPE)) return;
+			sweepSettings.sSpectrumSettings.eWindowType = (SSpectrumSettings::etWindowType)reqArguments[SweepConf::WINDOW_TYPE].get<int>();
+
+			if (!checkParam(SweepConf::FFT_SIZE)) return;
+			sweepSettings.sSpectrumSettings.eFFTSize = (SSpectrumSettings::etFFTSize)reqArguments[SweepConf::FFT_SIZE].get<int>();
+
+			if (!checkParam(SweepConf::AUTO_BANDWIDTH)) return;
+			sweepSettings.sSpectrumSettings.bAutoBandwidth = reqArguments[SweepConf::AUTO_BANDWIDTH].get<bool>() ? TRUE : FALSE;
+
+			if (!checkParam(SweepConf::BANDWIDTH_HZ)) return;
+			sweepSettings.sSpectrumSettings.dwBandwidthInHz = reqArguments[SweepConf::BANDWIDTH_HZ].get<DWORD>();
+
+			if (!checkParam(SweepConf::LEVEL_THRESHOLD)) return;
+			sweepSettings.sSpectrumSettings.bLevelThreshold = reqArguments[SweepConf::LEVEL_THRESHOLD].get<bool>() ? TRUE : FALSE;
+
+			if (!checkParam(SweepConf::THRESHOLD_DBM)) return;
+			sweepSettings.sSpectrumSettings.fThresholdInDbm = reqArguments[SweepConf::THRESHOLD_DBM].get<float>();
+
+			if (!checkParam(SweepConf::PREAMPLIFIER)) return;
+			sweepSettings.sSpectrumSettings.bPreamplifier = reqArguments[SweepConf::PREAMPLIFIER].get<bool>() ? TRUE : FALSE;
+
+			if (!checkParam(SweepConf::AUTO_ATTENUATION)) return;
+			sweepSettings.sSpectrumSettings.bAutoAttenuation = reqArguments[SweepConf::AUTO_ATTENUATION].get<bool>() ? TRUE : FALSE;
+
+			if (!checkParam(SweepConf::ATTENUATION_DB)) return;
+			sweepSettings.sSpectrumSettings.bAttenuationInDb = (BYTE)reqArguments[SweepConf::ATTENUATION_DB].get<int>();
+
+			
+			// --- Measurement Time Settings ---
+			if (!checkParam(SweepConf::MEAS_TIME_NS)) return;
+			sweepSettings.sMeasurementTime.dwMeasTimeInNs = reqArguments[SweepConf::MEAS_TIME_NS].get<DWORD>();
+
+			if (!checkParam(SweepConf::MEAS_DETECTOR_TYPE)) return;
+			sweepSettings.sMeasurementTime.eDetectorType = (SMeasurementTime::etDetectorType)reqArguments[SweepConf::MEAS_DETECTOR_TYPE].get<int>();
+
+
+			// --- Frequency Detector Settings ---
+			if (!checkParam(SweepConf::FREQ_DETECTOR_LINES)) return;
+			sweepSettings.sFrequencyDetector.dwCountOfLines = reqArguments[SweepConf::FREQ_DETECTOR_LINES].get<DWORD>();
+
+			if (!checkParam(SweepConf::FREQ_DETECTOR_TYPE)) return;
+			sweepSettings.sFrequencyDetector.eDetectorType = (SFrequencyDetector::etFrequencyDetectorType)reqArguments[SweepConf::FREQ_DETECTOR_TYPE].get<int>();
+
+
+			// --- Time Detector Settings ---
+			if (!checkParam(SweepConf::TIME_DETECTOR_TYPE)) return;
+			sweepSettings.sTimeDetector.eDetectorType = (STimeDetector::etTimeDetectorType)reqArguments[SweepConf::TIME_DETECTOR_TYPE].get<int>();
+
+			if (!checkParam(SweepConf::TIME_DETECTOR_INTERVAL_TYPE)) return;
+			sweepSettings.sTimeDetector.eDetectorIntervalType = (STimeDetector::etTimeDetectorIntervalType)reqArguments[SweepConf::TIME_DETECTOR_INTERVAL_TYPE].get<int>();
+
+			if (!checkParam(SweepConf::TIME_PARAMETER_MS)) return;
+			sweepSettings.sTimeDetector.dwTimeParameterInMs = reqArguments[SweepConf::TIME_PARAMETER_MS].get<DWORD>();
+
+
+			// --- Marker Settings ---
+			if (!checkParam(SweepConf::USE_MARKER)) return;
+			sweepSettings.sMarker.bUseMarker = reqArguments[SweepConf::USE_MARKER].get<bool>() ? 1 : 0;
+
+			if (!checkParam(SweepConf::RETURN_POWER_VALUES)) return;
+			sweepSettings.sMarker.bReturnsPowerValues = reqArguments[SweepConf::RETURN_POWER_VALUES].get<bool>() ? 1 : 0;
+
+
+			// Apply Settings
 			if (!DLLConn.pInterface->SetSweepSettings(err, sweepSettings)) {
 				CStringA ansiErrorString(err.GetErrorString());
 				loggerPtr->error("Error configuring SweepSettings: {}", ansiErrorString.GetString());

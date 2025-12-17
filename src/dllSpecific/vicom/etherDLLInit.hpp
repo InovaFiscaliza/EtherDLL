@@ -130,6 +130,27 @@ struct DefaultDLLParam {
 
 		static constexpr const char* REQ_RAW_DATA = "req_raw_data";
 		static constexpr bool REQ_RAW_DATA_V = false;
+
+		static constexpr const char* MAX_REPORTING_RATE = "max_reporting_rate_hz";
+		static constexpr const char* MAX_DEVICE_MEAS_RATE = "max_device_meas_rate_hz";
+		static constexpr const char* WINDOW_TYPE = "window_type";
+		static constexpr const char* FFT_SIZE = "fft_size";
+		static constexpr const char* AUTO_BANDWIDTH = "auto_bandwidth";
+		static constexpr const char* BANDWIDTH_HZ = "bandwidth_hz";
+		static constexpr const char* LEVEL_THRESHOLD = "level_threshold";
+		static constexpr const char* THRESHOLD_DBM = "threshold_dbm";
+		static constexpr const char* PREAMPLIFIER = "preamplifier";
+		static constexpr const char* AUTO_ATTENUATION = "auto_attenuation";
+		static constexpr const char* ATTENUATION_DB = "attenuation_db";
+		static constexpr const char* MEAS_TIME_NS = "meas_time_ns";
+		static constexpr const char* MEAS_DETECTOR_TYPE = "meas_detector_type";
+		static constexpr const char* FREQ_DETECTOR_LINES = "freq_detector_lines";
+		static constexpr const char* FREQ_DETECTOR_TYPE = "freq_detector_type";
+		static constexpr const char* TIME_DETECTOR_TYPE = "time_detector_type";
+		static constexpr const char* TIME_DETECTOR_INTERVAL_TYPE = "time_detector_interval_type";
+		static constexpr const char* TIME_PARAMETER_MS = "time_parameter_ms";
+		static constexpr const char* USE_MARKER = "use_marker";
+		static constexpr const char* RETURN_POWER_VALUES = "return_power_values";
 	};
 };
 
