@@ -95,7 +95,7 @@ void DLLFunctionCall(DLLConnectionData& DLLConn, json request, unsigned long msg
 				return true;
 			};
 
-			// --- Basic Sweep Settings ---
+			// --- Spectrum Settings ---
 			if (!checkParam(SweepConf::FRONT_END_MASK)) return;
 			sweepSettings.dwFrontEndSelectionMask = reqArguments[SweepConf::FRONT_END_MASK].get<unsigned long>();
 
@@ -107,9 +107,7 @@ void DLLFunctionCall(DLLConnectionData& DLLConn, json request, unsigned long msg
 
 			if (!checkParam(SweepConf::REQ_RAW_DATA)) return;
 			sweepSettings.bRequestRawData = reqArguments[SweepConf::REQ_RAW_DATA].get<bool>() ? TRUE : FALSE;
-
-
-			// --- Spectrum Settings ---
+					
 			if (!checkParam(SweepConf::MAX_REPORTING_RATE)) return;
 			sweepSettings.sSpectrumSettings.fMaxReportingRateInHz = reqArguments[SweepConf::MAX_REPORTING_RATE].get<float>();
 
@@ -194,7 +192,7 @@ void DLLFunctionCall(DLLConnectionData& DLLConn, json request, unsigned long msg
 			// Get result with a 5-second timeout
 			const SMeasResult* pResult = DLLConn.pInterface->GetResult(err, 5000); 
 			if (pResult) {
-				responseJson = processPowerScanResult(pResult);
+				responseJson = processPowerScanResult(&sweepSettings, pResult);
 				loggerPtr->info("Power scan successful.");
 			}
 			else {

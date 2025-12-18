@@ -119,38 +119,30 @@ struct DefaultDLLParam {
 	struct SweepSettings {
 		static constexpr const char* KEY = "sweep_settings";
 		
-		static constexpr const char* FRONT_END_MASK = "front_end_mask";
-		static constexpr unsigned long FRONT_END_MASK_V = 1;
-
-		static constexpr const char* START_FREQ_HZ = "start_freq_hz";
-		static constexpr double START_FREQ_HZ_V = 87.8e6;
-
-		static constexpr const char* STOP_FREQ_HZ = "stop_freq_hz";
-		static constexpr double STOP_FREQ_HZ_V = 107.8e6;
-
-		static constexpr const char* REQ_RAW_DATA = "req_raw_data";
-		static constexpr bool REQ_RAW_DATA_V = false;
-
-		static constexpr const char* MAX_REPORTING_RATE = "max_reporting_rate_hz";
-		static constexpr const char* MAX_DEVICE_MEAS_RATE = "max_device_meas_rate_hz";
-		static constexpr const char* WINDOW_TYPE = "window_type";
-		static constexpr const char* FFT_SIZE = "fft_size";
-		static constexpr const char* AUTO_BANDWIDTH = "auto_bandwidth";
-		static constexpr const char* BANDWIDTH_HZ = "bandwidth_hz";
-		static constexpr const char* LEVEL_THRESHOLD = "level_threshold";
-		static constexpr const char* THRESHOLD_DBM = "threshold_dbm";
+		static constexpr const char* FRONT_END_MASK = "frontEndMask";
+		static constexpr const char* START_FREQ_HZ = "startFrequency";
+		static constexpr const char* STOP_FREQ_HZ = "stopFrequency";
+		static constexpr const char* REQ_RAW_DATA = "requireRawData";
+		static constexpr const char* MAX_REPORTING_RATE = "maxReportingRate";
+		static constexpr const char* MAX_DEVICE_MEAS_RATE = "maxDeviceMeasurementRate";
+		static constexpr const char* WINDOW_TYPE = "windowType";
+		static constexpr const char* FFT_SIZE = "fftSize";
+		static constexpr const char* AUTO_BANDWIDTH = "autoBandwidth";
+		static constexpr const char* BANDWIDTH_HZ = "bandwidth";
+		static constexpr const char* LEVEL_THRESHOLD = "levelThreshold";
+		static constexpr const char* THRESHOLD_DBM = "threshold";
 		static constexpr const char* PREAMPLIFIER = "preamplifier";
-		static constexpr const char* AUTO_ATTENUATION = "auto_attenuation";
-		static constexpr const char* ATTENUATION_DB = "attenuation_db";
-		static constexpr const char* MEAS_TIME_NS = "meas_time_ns";
-		static constexpr const char* MEAS_DETECTOR_TYPE = "meas_detector_type";
-		static constexpr const char* FREQ_DETECTOR_LINES = "freq_detector_lines";
-		static constexpr const char* FREQ_DETECTOR_TYPE = "freq_detector_type";
-		static constexpr const char* TIME_DETECTOR_TYPE = "time_detector_type";
-		static constexpr const char* TIME_DETECTOR_INTERVAL_TYPE = "time_detector_interval_type";
-		static constexpr const char* TIME_PARAMETER_MS = "time_parameter_ms";
-		static constexpr const char* USE_MARKER = "use_marker";
-		static constexpr const char* RETURN_POWER_VALUES = "return_power_values";
+		static constexpr const char* AUTO_ATTENUATION = "autoAttenuation";
+		static constexpr const char* ATTENUATION_DB = "attenuation";
+		static constexpr const char* MEAS_TIME_NS = "measurementTime";
+		static constexpr const char* MEAS_DETECTOR_TYPE = "measurementDetectorType";
+		static constexpr const char* FREQ_DETECTOR_LINES = "numBins";
+		static constexpr const char* FREQ_DETECTOR_TYPE = "frequencyDetectorType";
+		static constexpr const char* TIME_DETECTOR_TYPE = "timeDetectorType";
+		static constexpr const char* TIME_DETECTOR_INTERVAL_TYPE = "timeDetectorIntervalType";
+		static constexpr const char* TIME_PARAMETER_MS = "timeParameter";
+		static constexpr const char* USE_MARKER = "useMarker";
+		static constexpr const char* RETURN_POWER_VALUES = "returnPowerValues";
 	};
 };
 
@@ -165,11 +157,6 @@ json buildDLLDefaultParamJson(json default_param = json::object()) {
 
 	default_param[DefaultDLLParam::KEY][DefaultDLLParam::Station::KEY][DefaultDLLParam::Station::Address::KEY] = DefaultDLLParam::Station::Address::VALUE;
 	default_param[DefaultDLLParam::KEY][DefaultDLLParam::Station::KEY][DefaultDLLParam::Station::ReceiverType::KEY] = DefaultDLLParam::Station::ReceiverType::VALUE;
-	
-	default_param[DefaultDLLParam::KEY][DefaultDLLParam::SweepSettings::KEY][DefaultDLLParam::SweepSettings::FRONT_END_MASK] = DefaultDLLParam::SweepSettings::FRONT_END_MASK_V;
-	default_param[DefaultDLLParam::KEY][DefaultDLLParam::SweepSettings::KEY][DefaultDLLParam::SweepSettings::START_FREQ_HZ] = DefaultDLLParam::SweepSettings::START_FREQ_HZ_V;
-	default_param[DefaultDLLParam::KEY][DefaultDLLParam::SweepSettings::KEY][DefaultDLLParam::SweepSettings::STOP_FREQ_HZ] = DefaultDLLParam::SweepSettings::STOP_FREQ_HZ_V;
-	default_param[DefaultDLLParam::KEY][DefaultDLLParam::SweepSettings::KEY][DefaultDLLParam::SweepSettings::REQ_RAW_DATA] = DefaultDLLParam::SweepSettings::REQ_RAW_DATA_V;
 
 	return default_param;
 }

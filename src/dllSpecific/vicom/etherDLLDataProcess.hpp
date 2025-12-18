@@ -51,7 +51,7 @@ using namespace RohdeSchwarz::ViCom::RFPOWERSCAN;
  * @return json: A JSON object containing the processed scan data.
  * @throws NO EXCEPTION HANDLING
 **/
-json processPowerScanResult(const SMeasResult* pResult)
+json processPowerScanResult(const SSweepSettings* sweepSettings, const SMeasResult* pResult)
 {
     json resultJson;
 
@@ -61,8 +61,12 @@ json processPowerScanResult(const SMeasResult* pResult)
     }
 
     const SMeasResult::SSpectrumResult* spectrumResult = pResult->pSpectrumResult;
+	auto startFreq = sweepSettings->dStartFrequencyInHz;
+	auto stopFreq = sweepSettings->dStopFrequencyInHz;
     
     resultJson["count"] = spectrumResult->dwCount;
+	resultJson["startFrequency"] = startFreq;
+	resultJson["stopFrequency"] = stopFreq;
 
     // Convert the float array of spectrum values to a Base64 encoded string
     if (spectrumResult->dwCount > 0 && spectrumResult->pfSpectrumValuesInDBm)
