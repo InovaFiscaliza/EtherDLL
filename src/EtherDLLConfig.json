@@ -21,7 +21,7 @@
             "thresholdMethod": "Noise Riding"
         },
         "station": {
-            "address": "172.24.3.15",
+            "address": "172.24.3.11",
             "port": 3303,
             "timeoutS": 10
         }

@@ -4,16 +4,17 @@ classdef EtherDLLTestClient_exported < matlab.apps.AppBase
     properties (Access = public)
         EtherDLLTest           matlab.ui.Figure
         mainGrid               matlab.ui.container.GridLayout
-        parsedData             matlab.ui.container.Tree
+        ACKButton              matlab.ui.control.Button
+        PINGButton             matlab.ui.control.Button
         cleanParsedAreaIcon    matlab.ui.control.Image
-        receivedMsg            matlab.ui.control.TextArea
+        parsedData             matlab.ui.container.Tree
         connectButton          matlab.ui.control.StateButton
         bandSelectDropDown     matlab.ui.control.DropDown
         cleanReceivedAreaIcon  matlab.ui.control.Image
         repeatCmdIcon          matlab.ui.control.Image
         CommandDropDown        matlab.ui.control.DropDown
         sentMsg                matlab.ui.control.TextArea
-        parsedMsg              matlab.ui.control.TextArea
+        receivedMsg            matlab.ui.control.TextArea
         SPTAxes                matlab.ui.control.UIAxes
         OCCAxes                matlab.ui.control.UIAxes
         AOAAxes                matlab.ui.control.UIAxes
@@ -28,6 +29,8 @@ classdef EtherDLLTestClient_exported < matlab.apps.AppBase
         KHZ_FROM_MHZ = 1000
         GHZ_MIN_VALUE = 1000
         GHZ_FROM_MHZ = 0.001
+
+        TOLERANCE = 1
 
         % EtherDLL Constants
         PACK_END = "CR/LF"
@@ -49,6 +52,8 @@ classdef EtherDLLTestClient_exported < matlab.apps.AppBase
         data % Store plot data to allow band switching
         refresh = false; % store requests for graph refresh
         pendingConnection = true; % store connection state, good knows why state button stopped working 
+        spectrumData = {}; % Store spectrum traces as cell array of structs with frequency and measurement pairs
+        spectrumDataOrder = []; % Store the order in which the spectrumData must be plotted (FIFO)
     end
     
     %-----------------------------------------------------------------%
@@ -90,7 +95,7 @@ classdef EtherDLLTestClient_exported < matlab.apps.AppBase
                 return;
             end
 
-            app.loadCommandList();
+            loadCommandList(app);
             app.connectButton.Tooltip = sprintf('Connect/Disconnect to EtherDLL on port %d', app.config.service.port);
         end
 
@@ -136,7 +141,7 @@ classdef EtherDLLTestClient_exported < matlab.apps.AppBase
                 app.connection = tcpclient(app.config.proxy.address,app.config.service.port, 'Timeout',app.config.service.timeout_s, 'ConnectTimeout',app.config.service.timeout_s, 'Tag', 'EtherDLL');
                 configureCallback(app.connection,"terminator",@app.receivedData);
                 configureTerminator(app.connection,app.PACK_END);
-                app.loadCommandList();
+                loadCommandList(app);
                 doing_fine = true;
             catch
                 warning('Failed to connect to EtherDLL');
@@ -163,7 +168,7 @@ classdef EtherDLLTestClient_exported < matlab.apps.AppBase
                 flush(app.connection);
                 clear app.connection;
                 delete(app.connection);
-                app.cleanSentMsg;
+                cleanSentMsg(app);
             catch
                 warning('Failed to disconnect from EtherDLL.');
             end
@@ -173,64 +178,58 @@ classdef EtherDLLTestClient_exported < matlab.apps.AppBase
         function receivedData(app, src, ~)
             % Handle incomming data in the command channel
             raw_data = read(src,src.NumBytesAvailable,"string");
-            struct_data = app.processRawData(raw_data);
-            app.processServiceData(struct_data);
+            struct_data = processRawData(app,raw_data);
+            
+            % Process each structure independently
+            for i = 1:length(struct_data)
+                processStructData(app,struct_data(i));
+            end
         end
 
         %-----------------------------------------------------------------%
-        function out_data = processRawData(app, in_data)
-            % Process raw data from socket into structures
-            
+         function out_data = processRawData(app, in_data)
             try
-                mid_data = split(in_data,"\r\n");
-                if isstring(mid_data)
-                    out_data = jsondecode(mid_data);
-                else
-                    out_data = mid_data;
-                    if iscell(mid_data)
-                        for i = 1:length(mid_data)
-                            out_data(i) = jsondecode(mid_data(i));
+                % Split on line terminators (CR/LF, LF, etc.)
+                mid_data = splitlines(in_data);
+                
+                % Remove empty strings
+                mid_data(strlength(mid_data) == 0) = [];
+                
+                % Convert each JSON string to structure - always return as array
+                out_data = [];  % Start as empty array
+                if ~isempty(mid_data)
+                    for i = 1:length(mid_data)
+                        try
+                            decoded = jsondecode(mid_data(i));
+                            out_data = [out_data; decoded];  % Concatenate vertically to build struct array
+                        catch
+                            message = newline + "Error - Non JSON data: <" + evalc('disp(mid_data(i))') + ">";
+                            app.receivedMsg.Value = [message;app.receivedMsg.Value];
                         end
                     end
                 end
-                app.receivedMsg.Value = [evalc('disp(in_data)');app.receivedMsg.Value];
+                
+                app.receivedMsg.Value = evalc('disp(in_data)');
             catch
-                if in_data == null
+                if isempty(in_data)
                     app.connectButton.Value = not(app.connectButton.Value);
                     message = newline + "Error - Not Connected to EtherDLL";
                 else
-                    message = newline + "Error - Non JSON data: <" + evalc('disp(in_data)') + ">";
+                    message = newline + "Error processing raw data: <" + evalc('disp(in_data)') + ">";
                 end
                 app.receivedMsg.Value = [message;app.receivedMsg.Value];
             end
         end
 
         %-----------------------------------------------------------------%
-        function processServiceData(app, in_data)
-            % Check for specific keys
-            if isfield(in_data, 'PING')
-                % Handle PING response
-                disp('Received PING');
-            elseif isfield(in_data, 'ACK')
-                % Handle ACK response
-                disp('Received ACK');
-            elseif isfield(in_data, 'NACK')
-                % Handle NACK response
-                disp('Received NACK');
-            else
-                app.processStationData(in_data);
-            end
-        end
-
-        %-----------------------------------------------------------------%
-        function processStationData(app, data)
+        function processStructData(app, data)
             % Process different kinds of data from the received data into
             % adjusted structures. Dynamically identifies and processes keys
             % such as "spectrum", "occupancy", "measurement", "equipment", "settings".
             % Response may include none, one, many or all keys.
             
             % Define supported data keys and their corresponding handler methods
-            supportedKeys = {'spectrum', 'aoa', 'occupancy', 'measure', 'equipment', 'setting', 'site'};
+            supportedKeys = {'spectrum', 'aoa', 'occupancy', 'measure', 'equipment', 'setting', 'site', 'PING', 'ACK', 'NACK'};
             
             % Get all fields in the incoming data structure
             dataFields = fieldnames(data);
@@ -246,32 +245,38 @@ classdef EtherDLLTestClient_exported < matlab.apps.AppBase
                         switch fieldName
                             case 'spectrum'
                                 if isfield(data.(fieldName), 'traceDataDF')                                    
-                                    data.spectrum = app.buildAxis(data.spectrum, 'traceDataDF', 'DF Antenna Field Strength', false);
+                                    data.spectrum = buildAxis(app,data.spectrum, 'traceDataDF', 'DF Antenna Field Strength', false);
                                 end
-                                data.spectrum = app.buildAxis(data.spectrum, 'traceData', 'Field Strength', false);
+                                data.spectrum = buildAxis(app,data.spectrum, 'traceData', 'Field Strength', false);
 
-                                app.plotData(app.SPTAxes, data.spectrum);
-                                app.presentData('spectrum',data.spectrum,["numBands","numTotalBins","numBins","firstBin","numTimeOfDays"])
+                                plotData(app,app.SPTAxes, data.spectrum);
+                                presentData(app,'spectrum',data.spectrum,["numBands","numTotalBins","numBins","firstBin","numTimeOfDays"])
                             case 'occupancy'
-                                data.occupancy = app.buildAxis(data.occupancy, 'chanData', "Channel Data", false);
-                                data.occupancy = app.buildAxis(data.occupancy, 'aveRange', "Average Range", false);
-                                data.occupancy = app.buildAxis(data.occupancy, 'aveFldStr', "Average Field Strength", false);
+                                data.occupancy = buildAxis(app,data.occupancy, 'chanData', "Channel Data", false);
+                                data.occupancy = buildAxis(app,data.occupancy, 'aveRange', "Average Range", false);
+                                data.occupancy = buildAxis(app,data.occupancy, 'aveFldStr', "Average Field Strength", false);
 
-                                app.plotData(app.OCCAxes, data.occupancy);
+                                plotData(app,app.OCCAxes, data.occupancy);
                             case 'aoa'
-                                data.aoa = app.buildAxis(data.aoa, 'traceData', 'Azimuth', false);
-                                data.aoa = app.buildAxis(data.aoa, 'confidence','Confidence', true);
-                                app.plotData(app.AOAAxes, data.aoa);
+                                data.aoa = buildAxis(app,data.aoa, 'traceData', 'Azimuth', false);
+                                data.aoa = buildAxis(app,data.aoa, 'confidence','Confidence', true);
+                                plotData(app,app.AOAAxes, data.aoa);
                             case 'measure'
-                                app.presentData('measure',data.measure, ["noiseFloor", "powerDbm"]);
+                                presentData(app,'measure',data.measure, ["noiseFloor", "powerDbm"]);
                             case 'equipment'
-                                app.presentData('equipment',data.equipment,["hostName","selectedAntenna"],false);
+                                presentData(app,'equipment',data.equipment,["hostName","selectedAntenna"]);
                             case 'setting'
-                                app.presentData('setting',data.setting,["primaryThresholdAbsolute","primaryThresholdAboveNoise","secondaryThresholdAbsolute","secondaryThresholdAboveNoise","saveIntermediateData","useSecondaryThreshold","numAzimuths","attenuation"],false);
+                                presentData(app,'setting',data.setting,["primaryThresholdAbsolute","primaryThresholdAboveNoise","secondaryThresholdAbsolute","secondaryThresholdAboveNoise","saveIntermediateData","useSecondaryThreshold","numAzimuths","attenuation"]);
                             case 'site'
-                                app.presentData('site',data.site,["dateTime","latitude","longitude","numSats"],false);
+                                presentData(app,'site',data.site,["dateTime","latitude","longitude","numSats"]);
                             case 'task'
-                                app.presentData('task',data.task,["dateTime","taskId","key","state","status","completionTime"],true)
+                                presentData(app,'task',data.task,["dateTime","taskId","key","state","status","completionTime"])
+                            case 'PING'
+                                flashButtonColor(app,app.PINGButton, [0.9 0.9 0.9], 1.0);
+                            case 'ACK'
+                                flashButtonColor(app,app.ACKButton, [0.0 1.0 0.0], 1.0);
+                            case 'NACK'
+                                flashButtonAckNack(app,app.ACKButton, 1.0);
                         end
                     catch ME
                         warning(ME.identifier, 'Error processing field "%s": %s', fieldName, ME.message);
@@ -282,37 +287,119 @@ classdef EtherDLLTestClient_exported < matlab.apps.AppBase
 
         %-----------------------------------------------------------------%
         function data = buildAxis(app, data, arrayName, measureAxisName, isAlpha)
-            % build x and y axis for different data types
+            % build x and y axis for different data types and accumulate spectrum data
             % data: structure containing data to be plotted
-            % arrayName: Name of the data filed, e.g. 'traceData', 'aoa', 'occupancy'.
-            % measureAxisName: Name to be used as lable for the measurement axis
-            % isAlpha: if true, store data in alphaAxis instead of measureAxis
+            % arrayName: Name of the data field, e.g. 'traceData', 'aoa', 'occupancy'.
+            % measureAxisName: Name to be used as label for the measurement axis
+            % isAlpha: if true, store data in alphaAxis instead of accumulating
             % Returns: modified data structure with measureAxis (or custom name) and frequencyAxis
             
             % Convert base64 data to float32 array
             newTrace = app.base64ToFloat32(data.(arrayName));
             
+            % If this is alpha/confidence data, just store it and return
             if isAlpha
                 data.alphaAxis = newTrace;
                 return;
             end
-
-            % Initialize or append to measureAxis array
-            if ~isfield(data, 'measureAxis')
-                % First trace - initialize as cell array
-                data.measureAxis = {newTrace};
-                data.measureAxisNames = {measureAxisName};
+            
+            % Create frequency array for this trace's frequency range
+            frequencyArray = linspace(data.startFrequency, data.stopFrequency, data.numBins);
+            
+            % Check if we already have data for this frequency range
+            existingIdx = findSpectrumRangeIndex(app, data);
+            
+            if existingIdx > 0
+                % Update existing frequency range's measurement data
+                % Store with measurement axis name to track source and
+                % update the spectrumDataOrder later used for plotting
+                app.spectrumData{existingIdx}.measurements{end+1} = newTrace;
+                app.spectrumData{existingIdx}.measurementNames{end+1} = measureAxisName;
+                app.spectrumDataOrder = [existingIdx, app.spectrumDataOrder(app.spectrumDataOrder ~= existingIdx)];
             else
-                % Append new trace
-                data.measureAxis{end+1} = newTrace;
-                data.measureAxisNames{end+1} = measureAxisName;
+                % Create new entry for this frequency range
+                newEntry = struct();
+                newEntry.startFreq = data.startFrequency;
+                newEntry.stopFreq = data.stopFrequency;
+                newEntry.numBins = data.numBins;
+                newEntry.frequency = frequencyArray;
+                newEntry.measurements = {newTrace};
+                newEntry.measurementNames = {measureAxisName};
+                
+                app.spectrumData{end+1} = newEntry;
+                app.spectrumDataOrder = [length(app.spectrumData), app.spectrumDataOrder];
             end
             
-            % Create frequency axis if it doesn't exist
-            if ~isfield(data, 'frequencyAxis')
-                data.frequencyAxis = linspace(data.startFrequency, data.stopFrequency, data.numBins);
+            % Build combined data structure for legacy compatibility with plotData
+            data = app.buildCombinedSpectrumData();
+            
+        end
+
+        %-----------------------------------------------------------------%
+        function idx = findSpectrumRangeIndex(app, data)
+            % Find if a spectrum range already exists in app.spectrumData
+            % Returns: index if found, 0 if not found
+            
+            idx = 0;
+            if isempty(app.spectrumData)
+                return;
             end
             
+            for i = 1:length(app.spectrumData)
+                if abs(app.spectrumData{i}.startFreq - data.startFrequency) < app.TOLERANCE && ...
+                   abs(app.spectrumData{i}.stopFreq - data.stopFrequency) < app.TOLERANCE && ...
+                   abs(app.spectrumData.numBins - data.numBins) < app.TOLERANCE
+                    idx = i;
+                    return;
+                end
+            end
+        end
+
+        %-----------------------------------------------------------------%
+        function data = buildCombinedSpectrumData(app)
+            % Merge all frequency ranges and their corresponding measurement arrays
+            % Returns: combined data structure suitable for plotData
+            
+            data = struct();
+            
+            % Sort spectrum data by start frequency in ascending order
+            startFreqs = cellfun(@(x) x.startFreq, app.spectrumData);
+            [~, sortIdx] = sort(startFreqs);
+            sortedSpectra = app.spectrumData(sortIdx);
+            
+            % Merge all frequency arrays and corresponding measurements
+            combinedFrequency = [];
+            combinedMeasurements = cell(0);
+            combinedMeasurementNames = {};
+            
+            % Track which trace index each measurement corresponds to
+            measurementTraceIdx = [];
+            
+            for i = 1:length(sortedSpectra)
+                currentSpectrum = sortedSpectra{i};
+                
+                % Append frequency array
+                combinedFrequency = [combinedFrequency; currentSpectrum.frequency(:)];
+                
+                % Append all measurements for this frequency range
+                for j = 1:length(currentSpectrum.measurements)
+                    combinedMeasurements{end+1} = currentSpectrum.measurements{j};
+                    combinedMeasurementNames{end+1} = currentSpectrum.measurementNames{j};
+                    measurementTraceIdx(end+1) = i; % Track which spectrum range this measurement came from
+                end
+            end
+            
+            % Build output structure
+            data.frequencyAxis = combinedFrequency;
+            data.measureAxis = combinedMeasurements;
+            data.measureAxisNames = combinedMeasurementNames;
+            data.combinedStartFreq = min(startFreqs);
+            data.combinedStopFreq = max(startFreqs); % Get from actual spectra end freqs
+            
+            % Fix combinedStopFreq to use actual stop frequency
+            data.combinedStopFreq = max(cellfun(@(x) x.stopFreq, app.spectrumData));
+            
+            data.numTraces = length(combinedMeasurements);
         end
 
         %-----------------------------------------------------------------%
@@ -321,17 +408,26 @@ classdef EtherDLLTestClient_exported < matlab.apps.AppBase
             % axesHandle: UIAxes object (app.SPTAxes, app.AOAAxes, app.OCCAxes, etc.)
             % data: structure containing spectrum information with measureAxis (cell array)
             
+            hold(axesHandle, "on");
             if app.refresh
-                hold(axesHandle, "off");
+                %hold(axesHandle, "off");
                 app.refresh = false;
             else
-                hold(axesHandle, "on");
+                %hold(axesHandle, "on");
             end
             
-            xlim(axesHandle, [data.startFrequency data.stopFrequency]);
+            % Skip if no data
+            if ~isfield(data, 'frequencyAxis') || isempty(data.frequencyAxis)
+                return;
+            end
+            
+            % Use combined frequency range
+            xMin = data.combinedStartFreq;
+            xMax = data.combinedStopFreq;
+            xlim(axesHandle, [xMin xMax]);
 
             % Set 10 ticks on horizontal axis (frequency)
-            xTicks = linspace(data.startFrequency, data.stopFrequency, 10);
+            xTicks = linspace(xMin, xMax, 10);
             axesHandle.XTick = xTicks;
             axesHandle.XTickLabel = app.formatEngineeringNotation(xTicks);
             
@@ -339,8 +435,18 @@ classdef EtherDLLTestClient_exported < matlab.apps.AppBase
             numTraces = length(data.measureAxis);
             allValues = [];
             for i = 1:numTraces
-                allValues = [allValues; data.measureAxis{i}(:)];
+                trace = data.measureAxis{i};
+                % Filter out NaN values when computing limits
+                validValues = trace(~isnan(trace));
+                if ~isempty(validValues)
+                    allValues = [allValues; validValues(:)];
+                end
             end
+            
+            if isempty(allValues)
+                return;
+            end
+            
             yMin = min(allValues);
             yMax = max(allValues);
             
@@ -349,28 +455,47 @@ classdef EtherDLLTestClient_exported < matlab.apps.AppBase
             axesHandle.YTick = yTicks;
             axesHandle.YTickLabel = app.formatEngineeringNotation(yTicks);
 
-            % Plot each trace
+            traceColors = [
+                0.0000, 0.4470, 0.7410, 0.9;  % Blue
+                0.8500, 0.3250, 0.0980, 0.9;  % Orange
+                0.9290, 0.6940, 0.1250, 0.9;  % Yellow
+                0.4940, 0.1840, 0.5560, 0.9;  % Purple
+                0.4660, 0.6740, 0.1880, 0.9;  % Green
+                0.3010, 0.7450, 0.9330, 0.9;  % Cyan
+                0.6350, 0.0780, 0.1840, 0.9;  % Dark Red
+                0.5, 0.5, 0.5, 0.9;            % Gray
+            ];
+            
             legendLabels = cell(numTraces, 1);
             for i = 1:numTraces
                 currentTrace = data.measureAxis{i};
+                
+                % Select color based on trace index (cycle through predefined colors)
+                colorIdx = mod(i-1, size(traceColors, 1)) + 1;
+                currentColor = traceColors(colorIdx, :);
                 
                 % Check if this is confidence data (for transparency-based plotting)
                 if isfield(data, 'alphaAxis')
                     % Convert measureValue (0-100) to alpha values (0-1)
                     alphaValues = data.alphaAxis / 100;
                     scatter(axesHandle, data.frequencyAxis, currentTrace, 36, ...
-                        [0.2 0.5 0.9], 'filled', 'MarkerFaceAlpha', 'flat', ...
+                        currentColor, 'filled', 'MarkerFaceAlpha', 'flat', ...
                         'AlphaData', alphaValues);
                 else
-                    % Standard line plot
-                    plot(axesHandle, data.frequencyAxis, currentTrace, '-', 'LineWidth', 2.5);
+                    % Standard line plot with predefined color
+                    plot(axesHandle, data.frequencyAxis, currentTrace, '-', ...
+                        'LineWidth', 2.5, 'Color', currentColor);
                 end
+                
+                legendLabels{i} = data.measureAxisNames{i};
             end
             
             % Add legend if multiple traces
             if length(data.measureAxis) > 1
                 legend(axesHandle, legendLabels, 'Location', 'northeast');
             end
+            drawnow limiterate;
+            hold(axesHandle, "off");
         end
 
         %-----------------------------------------------------------------%
@@ -384,12 +509,18 @@ classdef EtherDLLTestClient_exported < matlab.apps.AppBase
             % or updates them if they do. Each child node displays "fieldName: value".
             
             % Get or create the parent node
-            if isprop(app, parentNodeName)
-                parentNode = app.(parentNodeName);
-            else
+            parentNode = [];
+            existingNodes = app.parsedData.Children;
+            for i = 1:length(existingNodes)
+                if strcmp(existingNodes(i).Text, parentNodeName)
+                    parentNode = existingNodes(i);
+                    break;
+                end
+            end
+            
+            if isempty(parentNode)
                 % Create parent node dynamically
                 parentNode = uitreenode(app.parsedData, 'Text', parentNodeName);
-                app.(parentNodeName) = parentNode;
             end
             
             % Process each field to present
@@ -403,23 +534,27 @@ classdef EtherDLLTestClient_exported < matlab.apps.AppBase
                     elseif islogical(data.(fieldName))
                         valueStr = string(data.(fieldName));
                     else
-                        valueStr = char(data.(fieldName));
+                        valueStr = fieldName;
+                    end
+
+                    % Check if child node already exists
+                    childNode = [];
+                    existingChildren = parentNode.Children;
+                    for j = 1:length(existingChildren)
+                        if startsWith(existingChildren(j).Text, fieldName)
+                            childNode = existingChildren(j);
+                            break;
+                        end
                     end
                     
-                    message = sprintf('%s: %s', fieldName, valueStr);
-                    
-                    % Check if child node already exists
-                    childNodeName = [parentNodeName, fieldName];  % Create unique property name
-                    
-                    if isprop(app, childNodeName)
-                        % Update existing child node
-                        childNode = app.(childNodeName);
-                        childNode.Text = message;
-                    else
+
+                    message = [fieldName, ':', valueStr];
+                    if isempty(childNode)
                         % Create new child node
                         childNode = uitreenode(parentNode, 'Text', message);
-                        app.addprop(childNodeName);  % Add dynamic property to app
-                        app.(childNodeName) = childNode;
+                    else
+                        % Update existing child node
+                        childNode.Text = message;
                     end
                 end
             end
@@ -484,6 +619,59 @@ classdef EtherDLLTestClient_exported < matlab.apps.AppBase
             float32Array = typecast(bytes, 'single');
         end
 
+                %-----------------------------------------------------------------%
+        function flashButtonColor(app, button, newColor, duration)
+            % Temporarily change button background color for specified duration
+            % button: the button to flash
+            % newColor: RGB color array [R G B] with values 0-1
+            % duration: time in seconds to display the color change
+            
+            % Store original background color
+            originalColor = button.BackgroundColor;
+            
+            % Change to new color
+            button.BackgroundColor = newColor;
+            
+            % Create a timer to restore original color after duration
+            timer_obj = timer('TimerFcn', @(~,~) set(button, 'BackgroundColor', originalColor), ...
+                              'StartDelay', duration, ...
+                              'ExecutionMode', 'singleShot');
+            start(timer_obj);
+            
+            % Ensure timer is deleted after execution
+            timer_obj.StopFcn = @(~,~) delete(timer_obj);
+        end
+
+        %-----------------------------------------------------------------%
+        function flashButtonAckNack(app, duration)
+            % Change ACK button to red and text to NACK for specified duration
+            % duration: time in seconds to display the color change
+            
+            % Store original properties
+            originalColor = app.ACKButton.BackgroundColor;
+            originalText = app.ACKButton.Text;
+            
+            % Change to red and update text
+            app.ACKButton.BackgroundColor = [1.0 0.0 0.0];
+            app.ACKButton.Text = 'NACK';
+            
+            % Create a timer to restore original properties after duration
+            timer_obj = timer('TimerFcn', @(~,~) restoreButtonProperties(), ...
+                              'StartDelay', duration, ...
+                              'ExecutionMode', 'singleShot');
+            
+            % Define nested function to restore properties
+            function restoreButtonProperties()
+                app.ACKButton.BackgroundColor = originalColor;
+                app.ACKButton.Text = originalText;
+            end
+            
+            start(timer_obj);
+            
+            % Ensure timer is deleted after execution
+            timer_obj.StopFcn = @(~,~) delete(timer_obj);
+        end
+
     end
 
     % Callbacks that handle component events
@@ -492,7 +680,7 @@ classdef EtherDLLTestClient_exported < matlab.apps.AppBase
         % Code that executes after component creation
         function startupFcn(app)
             % load client config, command samples and start app
-            app.loadConf();
+            loadConf(app);
             pause on
         end
 
@@ -505,7 +693,7 @@ classdef EtherDLLTestClient_exported < matlab.apps.AppBase
                 app.repeatCmdIcon.Enable = true;
             else
                 app.CommandDropDown.FontColor = [0.80,0.80,0.80];
-                app.cleanSentMsg();
+                cleanSentMsg(app);
             end
         end
 
@@ -546,7 +734,7 @@ classdef EtherDLLTestClient_exported < matlab.apps.AppBase
                 drawnow;              % force immediate UI update before holding into the connect function
                 pause(0.01); 
             
-                connected = app.connect();
+                connected = connect(app);
                 
                 if connected
                     app.connectButton.Text = 'Disconnect';
@@ -559,7 +747,7 @@ classdef EtherDLLTestClient_exported < matlab.apps.AppBase
 
             else % False value is associated with Connected state, i.e. User required to disconnect
                 app.connectButton.Text = 'Disconnecting...';
-                app.disconnect();
+                disconnect(app);
                 app.connectButton.Text = 'Connect';
             end            
             app.connectButton.Enable = true;
@@ -575,7 +763,7 @@ classdef EtherDLLTestClient_exported < matlab.apps.AppBase
 
         % Image clicked function: cleanParsedAreaIcon
         function cleanParsedAreaIClicked(app, event)
-            app.parsedMsg.Value = "";
+            app.parsedData.Children = [];
         end
     end
 
@@ -598,7 +786,7 @@ classdef EtherDLLTestClient_exported < matlab.apps.AppBase
 
             % Create mainGrid
             app.mainGrid = uigridlayout(app.EtherDLLTest);
-            app.mainGrid.ColumnWidth = {'fit', 'fit', '3x', '10x'};
+            app.mainGrid.ColumnWidth = {'0.7x', 'fit', '3x', '10x'};
             app.mainGrid.RowHeight = {'fit', 'fit', '1x', '3x', 'fit', 'fit', '6x', 'fit', '6x', 'fit'};
             app.mainGrid.BackgroundColor = [1 1 1];
 
@@ -632,12 +820,12 @@ classdef EtherDLLTestClient_exported < matlab.apps.AppBase
             app.SPTAxes.Layout.Row = [1 6];
             app.SPTAxes.Layout.Column = 4;
 
-            % Create parsedMsg
-            app.parsedMsg = uitextarea(app.mainGrid);
-            app.parsedMsg.Tooltip = {'Messages received from EtherDLL'};
-            app.parsedMsg.Placeholder = '< will display raw messages parsed by the app>';
-            app.parsedMsg.Layout.Row = [9 10];
-            app.parsedMsg.Layout.Column = [1 3];
+            % Create receivedMsg
+            app.receivedMsg = uitextarea(app.mainGrid);
+            app.receivedMsg.Tooltip = {'Messages received from EtherDLL'};
+            app.receivedMsg.Placeholder = '< will display raw messages received from EtherDLL >';
+            app.receivedMsg.Layout.Row = [7 8];
+            app.receivedMsg.Layout.Column = [1 3];
 
             % Create sentMsg
             app.sentMsg = uitextarea(app.mainGrid);
@@ -685,7 +873,7 @@ classdef EtherDLLTestClient_exported < matlab.apps.AppBase
             app.bandSelectDropDown.Enable = 'off';
             app.bandSelectDropDown.Tooltip = {'Select the band to display'};
             app.bandSelectDropDown.Layout.Row = 6;
-            app.bandSelectDropDown.Layout.Column = [1 3];
+            app.bandSelectDropDown.Layout.Column = 3;
             app.bandSelectDropDown.Value = 'Band 0';
 
             % Create connectButton
@@ -696,12 +884,10 @@ classdef EtherDLLTestClient_exported < matlab.apps.AppBase
             app.connectButton.Layout.Row = 1;
             app.connectButton.Layout.Column = [1 3];
 
-            % Create receivedMsg
-            app.receivedMsg = uitextarea(app.mainGrid);
-            app.receivedMsg.Tooltip = {'Messages received from EtherDLL'};
-            app.receivedMsg.Placeholder = '< will display raw messages received from EtherDLL >';
-            app.receivedMsg.Layout.Row = [7 8];
-            app.receivedMsg.Layout.Column = [1 3];
+            % Create parsedData
+            app.parsedData = uitree(app.mainGrid);
+            app.parsedData.Layout.Row = [9 10];
+            app.parsedData.Layout.Column = [1 3];
 
             % Create cleanParsedAreaIcon
             app.cleanParsedAreaIcon = uiimage(app.mainGrid);
@@ -713,10 +899,17 @@ classdef EtherDLLTestClient_exported < matlab.apps.AppBase
             app.cleanParsedAreaIcon.VerticalAlignment = 'bottom';
             app.cleanParsedAreaIcon.ImageSource = fullfile(pathToMLAPP, 'sweep.svg');
 
-            % Create parsedData
-            app.parsedData = uitree(app.mainGrid);
-            app.parsedData.Layout.Row = [9 10];
-            app.parsedData.Layout.Column = [1 3];
+            % Create PINGButton
+            app.PINGButton = uibutton(app.mainGrid, 'push');
+            app.PINGButton.Layout.Row = 6;
+            app.PINGButton.Layout.Column = 1;
+            app.PINGButton.Text = 'PING';
+
+            % Create ACKButton
+            app.ACKButton = uibutton(app.mainGrid, 'push');
+            app.ACKButton.Layout.Row = 6;
+            app.ACKButton.Layout.Column = 2;
+            app.ACKButton.Text = 'ACK';
 
             % Show the figure after all components are created
             app.EtherDLLTest.Visible = 'on';

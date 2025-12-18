@@ -276,7 +276,6 @@ private:
 	json msgKeys = config[service::KEY][service::Msg::KEY].get<json>();
 
 	std::string msgEndStr = msgKeys[service::Msg::End::KEY].get<std::string>();
-	std::string msgJsonEndStr = std::string(edll::JSON_END) + msgEndStr;
 	std::string ackStr = msgJsonStartStr + msgKeys[service::Msg::Ack::KEY].get<std::string>() + msgJsonMidStr;
 	std::string nackStr = msgJsonStartStr + msgKeys[service::Msg::Nack::KEY].get<std::string>() + msgJsonMidStr;
 	std::string pingStr = msgJsonStartStr + msgKeys[service::Msg::Ping::KEY].get<std::string>() + msgJsonMidStr;
@@ -574,6 +573,9 @@ public:
 			json oneResponse = response.waitAndPop(interruptionCode, logSource);
 
 			std::string message = oneResponse.dump() + msgEndStr;
+
+			// sleep for a short time to avoid overwhelming the client
+			// std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
 			iResult = send(clientSocket, message.c_str(), static_cast<int>(message.length()), 0);
 			if (iResult == SOCKET_ERROR) {

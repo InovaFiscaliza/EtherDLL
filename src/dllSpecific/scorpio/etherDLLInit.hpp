@@ -429,6 +429,8 @@ bool disconnectAPI(DLLConnectionData& stationConnID)
 	loggerPtr->warn("Disconnecting station returned:" + ERetCodeToString(errCode));
 
 	// TODO: DLL function not returning API_SUCCESS - Need to investigate
+	// TODO: Keep track of all running tasks and terminate then before closing connection
+
 	if (errCode != ERetCode::API_SUCCESS)
 	{
 		loggerPtr->error("Error disconnecting from station " + ERetCodeToString(errCode));
