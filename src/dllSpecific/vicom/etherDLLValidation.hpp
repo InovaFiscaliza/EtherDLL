@@ -118,6 +118,9 @@ bool validRequest(json request, unsigned long msgType, MessageQueue& response) {
         case VicomTask::POWER_SCAN_CODE:
             validatePowerScanRequest(request[TaskKeys::Arguments::VALUE], validator);
 			break;
+        case VicomTask::GPS_GET_LOCATION_CODE:
+            // No specific arguments to validate
+            break;
         default: {
             loggerPtr->error("Unknown message type for validation: {}", msgType);
 			response.push(buildErrorResponse(request, "Unknown command code."), logSource);

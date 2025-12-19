@@ -29,7 +29,9 @@ classdef EtherDLLTestClient < matlab.apps.AppBase
         % EtherDLL Constants
         PACK_END = "CR/LF"
 
-        % Scorpio Command Codes
+        % Vicom Command Codes
+        POWER_SCAN = 1
+        GPS_GET_LOCATION = 2
         AVD = 15
         MEASURE = 84
         OCC = 12
@@ -213,6 +215,10 @@ classdef EtherDLLTestClient < matlab.apps.AppBase
             % adjusted structure
             
                 switch data.CODE
+                    case app.POWER_SCAN
+                        disp("Received Power Scan data");
+                    case app.GPS_GET_LOCATION
+                        disp("Received GPS Location data");
                     case app.AVD
                         warning("No processing defined")
                     case app.MEASURE

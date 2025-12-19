@@ -38,6 +38,7 @@
 #include "stdafx.h"
 #include <atlstr.h>
 #include "ViComRFPowerScanInterface.h"
+#include "ViComGpsInterface.h"
 #include "ViComRFPowerScanInterfaceData.h"
 #include "ViComBasicInterface.h"
 #include "ViComBasicInterfaceData.h"
@@ -68,6 +69,8 @@
 using json = nlohmann::json;
 using namespace RohdeSchwarz::ViCom;
 using namespace RohdeSchwarz::ViCom::RFPOWERSCAN;
+using namespace RohdeSchwarz::ViCom::GPS;
+
 
 // Global variables
 extern spdlog::logger* loggerPtr;
@@ -78,8 +81,10 @@ extern spdlog::logger* loggerPtr;
  * This structure will hold the loader and interface pointers for the Vicom API
 **/
 struct VicomConnection {
-	std::unique_ptr<CViComLoader<CViComRFPowerScanInterface>> loader;
-	CViComRFPowerScanInterface* pInterface;
+	std::unique_ptr<CViComLoader<CViComRFPowerScanInterface>> ps_loader;
+	CViComRFPowerScanInterface* ps_pInterface;
+	std::unique_ptr<CViComLoader<CViComGpsInterface>> gps_loader;
+	CViComGpsInterface* gps_pInterface;
 };
 
 // ----------------------------------------------------------------------
@@ -257,8 +262,10 @@ bool connectAPI(DLLConnectionData& stationConnData, const nlohmann::json& config
 	// Check if running in demo mode and skip connection if so
 	if (config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::DemoMode::KEY].get<bool>()) {
 		loggerPtr->warn("Starting EtherDLL service in DEMO mode. No connection to station will be attempted.");
-		stationConnData.loader = nullptr;
-		stationConnData.pInterface = nullptr;
+		stationConnData.ps_loader = nullptr;
+		stationConnData.ps_pInterface = nullptr;
+		stationConnData.gps_loader = nullptr;
+		stationConnData.gps_pInterface = nullptr;
 		return true;
 	}
 
@@ -273,22 +280,42 @@ bool connectAPI(DLLConnectionData& stationConnData, const nlohmann::json& config
 		// For now, receiver type is hardcoded. This could be read from config.
 		Receiver::Type receptor = Receiver::TSMW;
 
-		stationConnData.loader = std::make_unique<CViComLoader<CViComRFPowerScanInterface>>(receptor);
+		// Power Scan Interface
+		stationConnData.ps_loader = std::make_unique<CViComLoader<CViComRFPowerScanInterface>>(receptor);
 
-		if (!stationConnData.loader->Connect(err, ipAddressStr.c_str()))
+		if (!stationConnData.ps_loader->Connect(err, ipAddressStr.c_str()))
 		{
 			CStringA ansiErrorString(err.GetErrorString());
-			loggerPtr->error("No receiver found. Error: {}", ansiErrorString.GetString());
+			loggerPtr->error("No receiver found for Power Scan. Error: {}", ansiErrorString.GetString());
 			return false;
 		}
 		
-		loggerPtr->info("TSMW connected at address {}.", ipAddressStr);
-		stationConnData.pInterface = stationConnData.loader->GetInterface(err);
+		loggerPtr->info("TSMW for Power Scan connected at address {}.", ipAddressStr);
+		stationConnData.ps_pInterface = stationConnData.ps_loader->GetInterface(err);
 
-		if (stationConnData.pInterface == NULL)
+		if (stationConnData.ps_pInterface == NULL)
 		{
 			CStringA ansiErrorString(err.GetErrorString());
-			loggerPtr->error("Failed to get interface. Error: {}", ansiErrorString.GetString());
+			loggerPtr->error("Failed to get Power Scan interface. Error: {}", ansiErrorString.GetString());
+			return false;
+		}
+
+		// GPS Interface
+		stationConnData.gps_loader = std::make_unique<CViComLoader<CViComGpsInterface>>(receptor);
+		if (!stationConnData.gps_loader->Connect(err, ipAddressStr.c_str()))
+		{
+			CStringA ansiErrorString(err.GetErrorString());
+			loggerPtr->error("No receiver found for GPS. Error: {}", ansiErrorString.GetString());
+			return false;
+		}
+
+		loggerPtr->info("TSMW for GPS connected at address {}.", ipAddressStr);
+		stationConnData.gps_pInterface = stationConnData.gps_loader->GetInterface(err);
+
+		if (stationConnData.gps_pInterface == NULL)
+		{
+			CStringA ansiErrorString(err.GetErrorString());
+			loggerPtr->error("Failed to get GPS interface. Error: {}", ansiErrorString.GetString());
 			return false;
 		}
 	}
@@ -316,13 +343,13 @@ bool connectAPI(DLLConnectionData& stationConnData, const nlohmann::json& config
 */
 bool disconnectAPI(DLLConnectionData& stationConnData)
 {
-	if (stationConnData.loader)
+	if (stationConnData.ps_loader)
 	{
 		try
 		{
 			CViComError err;
-			stationConnData.loader->Disconnect(err);
-			loggerPtr->info("Disconnected from station.");
+			stationConnData.ps_loader->Disconnect(err);
+			loggerPtr->info("Disconnected from Power Scan station.");
 		}
 		catch (const CViComError& err)
 		{
@@ -331,7 +358,26 @@ bool disconnectAPI(DLLConnectionData& stationConnData)
 		}
 		catch (const std::exception& e)
 		{
-			loggerPtr->error("An exception occurred during disconnectAPI: {}", e.what());
+			loggerPtr->error("An exception occurred during disconnectAPI for Power Scan: {}", e.what());
+			return false;
+		}
+	}
+	if (stationConnData.gps_loader)
+	{
+		try
+		{
+			CViComError err;
+			stationConnData.gps_loader->Disconnect(err);
+			loggerPtr->info("Disconnected from GPS station.");
+		}
+		catch (const CViComError& err)
+		{
+			CStringA ansiErrorString(err.GetErrorString());
+			loggerPtr->error("CViComError on disconnect ({}) \"{}\"", err.GetErrorCode(), ansiErrorString.GetString());
+		}
+		catch (const std::exception& e)
+		{
+			loggerPtr->error("An exception occurred during disconnectAPI for GPS: {}", e.what());
 			return false;
 		}
 	}

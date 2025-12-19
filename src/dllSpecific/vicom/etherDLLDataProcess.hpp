@@ -24,6 +24,8 @@
 #include "stdafx.h"
 #include "ViComRFPowerScanInterface.h"
 #include "ViComRFPowerScanInterfaceData.h"
+#include "ViComGpsInterface.h"
+#include "ViComGpsInterfaceData.h"
 #include "ViComBasicInterface.h"
 #include "ViComBasicInterfaceData.h"
 
@@ -42,7 +44,7 @@
 // For convenience
 using json = nlohmann::json;
 using namespace RohdeSchwarz::ViCom;
-using namespace RohdeSchwarz::ViCom::RFPOWERSCAN;
+
 
 // ----------------------------------------------------------------------
 /** @brief Process the power scan result and convert it to a JSON object
@@ -51,8 +53,10 @@ using namespace RohdeSchwarz::ViCom::RFPOWERSCAN;
  * @return json: A JSON object containing the processed scan data.
  * @throws NO EXCEPTION HANDLING
 **/
-json processPowerScanResult(const SSweepSettings* sweepSettings, const SMeasResult* pResult)
+json processPowerScanResult(const SSweepSettings* sweepSettings, const RFPOWERSCAN::SMeasResult* pResult)
 {
+    using namespace RohdeSchwarz::ViCom::RFPOWERSCAN;
+
     json resultJson;
 
     if (!pResult || !pResult->pSpectrumResult) {
@@ -60,7 +64,7 @@ json processPowerScanResult(const SSweepSettings* sweepSettings, const SMeasResu
         return resultJson;
     }
 
-    const SMeasResult::SSpectrumResult* spectrumResult = pResult->pSpectrumResult;
+    const RFPOWERSCAN::SMeasResult::SSpectrumResult* spectrumResult = pResult->pSpectrumResult;
 	auto startFreq = sweepSettings->dStartFrequencyInHz;
 	auto stopFreq = sweepSettings->dStopFrequencyInHz;
     
@@ -81,4 +85,20 @@ json processPowerScanResult(const SSweepSettings* sweepSettings, const SMeasResu
     }
 
     return resultJson;
+}
+
+json processGPSResult(const RohdeSchwarz::ViCom::GPS::SMeasResult* pResult)
+{
+    using namespace RohdeSchwarz::ViCom::GPS;
+    
+    json resultJson;
+    
+    if (!pResult) {
+        resultJson["error"] = "Invalid or null GPS result pointer.";
+        return resultJson;
+    }
+    resultJson["latitude"] = pResult->sPosition.dLatitude;
+    resultJson["longitude"] = pResult->sPosition.dLongitude;
+    resultJson["altitude"] = pResult->sPosition.dAltitude;
+	return resultJson;
 }

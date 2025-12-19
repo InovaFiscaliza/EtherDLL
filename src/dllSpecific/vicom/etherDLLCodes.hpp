@@ -60,4 +60,7 @@ struct VicomTask
 {
 	static constexpr const char* POWER_SCAN_NAME = "power_scan";
 	static constexpr unsigned long POWER_SCAN_CODE = 1;
+
+	static constexpr const char* GPS_GET_LOCATION_NAME = "gps_get_location";
+	static constexpr unsigned long GPS_GET_LOCATION_CODE = 2;
 };
