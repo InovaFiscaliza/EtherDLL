@@ -606,7 +606,7 @@ void DLLFunctionCall(DLLConnectionData DLLConnID, json request, unsigned long ms
  * @param logger: spdlog logger object for logging messages
  * @throws NO EXCEPTION HANDLING
 */
-void processRequestQueue(DLLConnectionData DLLConnID, MessageQueue& request, MessageQueue& response, edll::INT_CODE& interruptionCode)
+void processRequestQueue(DLLConnectionData DLLConnID, MessageQueue& request, MessagePreprocessor& preprocessor, MessageQueue& response, edll::INT_CODE& interruptionCode)
 {
 	const std::string funcName = "processRequestQueue";
 
@@ -620,6 +620,13 @@ void processRequestQueue(DLLConnectionData DLLConnID, MessageQueue& request, Mes
 			continue;
 		}
 
-		DLLFunctionCall(DLLConnID, oneRequest, cmd);
+		std::optional<json> processedResponse = preprocessor.process(oneRequest);
+
+		if (!processedResponse.has_value()) {
+			loggerPtr->debug(funcName + " request filtered by preprocessor");
+			continue;
+		}
+
+		DLLFunctionCall(DLLConnID, processedResponse, cmd);
 	}
 }
