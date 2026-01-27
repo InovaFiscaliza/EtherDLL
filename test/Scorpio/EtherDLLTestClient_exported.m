@@ -244,22 +244,20 @@ classdef EtherDLLTestClient_exported < matlab.apps.AppBase
                         % Call the appropriate handler function based on field name
                         switch fieldName
                             case 'spectrum'
-                                if isfield(data.(fieldName), 'traceDataDF')                                    
-                                    data.spectrum = buildAxis(app,data.spectrum, 'traceDataDF', 'DF Antenna Field Strength', false);
-                                end
-                                data.spectrum = buildAxis(app,data.spectrum, 'traceData', 'Field Strength', false);
+                                data = buildAxis(app,data,'spectrum', 'traceData', 'Field Strength', false);
+                                data = buildAxis(app,data,'spectrum', 'traceDataDF', 'DF Antenna Field Strength', false);
 
                                 plotData(app,app.SPTAxes, data.spectrum);
                                 presentData(app,'spectrum',data.spectrum,["numBands","numTotalBins","numBins","firstBin","numTimeOfDays"])
                             case 'occupancy'
-                                data.occupancy = buildAxis(app,data.occupancy, 'chanData', "Channel Data", false);
-                                data.occupancy = buildAxis(app,data.occupancy, 'aveRange', "Average Range", false);
-                                data.occupancy = buildAxis(app,data.occupancy, 'aveFldStr', "Average Field Strength", false);
+                                data.occupancy = buildAxis(app,data, 'occupancy', 'chanData', "Channel Data", false);
+                                data.occupancy = buildAxis(app,data, 'occupancy', 'aveRange', "Average Range", false);
+                                data.occupancy = buildAxis(app,data, 'occupancy', 'aveFldStr', "Average Field Strength", false);
 
                                 plotData(app,app.OCCAxes, data.occupancy);
                             case 'aoa'
-                                data.aoa = buildAxis(app,data.aoa, 'traceData', 'Azimuth', false);
-                                data.aoa = buildAxis(app,data.aoa, 'confidence','Confidence', true);
+                                data.aoa = buildAxis(app,data, 'aoa', 'traceData', 'Azimuth', false);
+                                data.aoa = buildAxis(app,data, 'aoa', 'confidence','Confidence', true);
                                 plotData(app,app.AOAAxes, data.aoa);
                             case 'measure'
                                 presentData(app,'measure',data.measure, ["noiseFloor", "powerDbm"]);
@@ -286,7 +284,7 @@ classdef EtherDLLTestClient_exported < matlab.apps.AppBase
         end
 
         %-----------------------------------------------------------------%
-        function data = buildAxis(app, data, arrayName, measureAxisName, isAlpha)
+        function data = buildAxis(app, data, rootName, arrayName, measureAxisName, isAlpha)
             % build x and y axis for different data types and accumulate spectrum data
             % data: structure containing data to be plotted
             % arrayName: Name of the data field, e.g. 'traceData', 'aoa', 'occupancy'.
@@ -294,8 +292,21 @@ classdef EtherDLLTestClient_exported < matlab.apps.AppBase
             % isAlpha: if true, store data in alphaAxis instead of accumulating
             % Returns: modified data structure with measureAxis (or custom name) and frequencyAxis
             
+            % test if all required fields are present within data structure
+            if ~isfield(data, rootName) 
+                return;
+            else
+                if ~isfield(data.(rootName), arrayName)
+                    return;
+                end
+            end
+
+            if ~isfield(data.spectrum, 'startFrequency') || ~isfield(data.spectrum, 'stopFrequency') || ~isfield(data.spectrum, 'numBins')
+                return;
+            end
+
             % Convert base64 data to float32 array
-            newTrace = app.base64ToFloat32(data.(arrayName));
+            newTrace = app.base64ToFloat32(data.(rootName).(arrayName));
             
             % If this is alpha/confidence data, just store it and return
             if isAlpha
@@ -304,34 +315,45 @@ classdef EtherDLLTestClient_exported < matlab.apps.AppBase
             end
             
             % Create frequency array for this trace's frequency range
-            frequencyArray = linspace(data.startFrequency, data.stopFrequency, data.numBins);
+            freqData = data.spectrum;
+            frequencyArray = linspace(freqData.startFrequency, freqData.stopFrequency, freqData.numBins);
             
             % Check if we already have data for this frequency range
-            existingIdx = findSpectrumRangeIndex(app, data);
+            existingIdx = findSpectrumRangeIndex(app, freqData);
             
             if existingIdx > 0
-                % Update existing frequency range's measurement data
-                % Store with measurement axis name to track source and
-                % update the spectrumDataOrder later used for plotting
-                app.spectrumData{existingIdx}.measurements{end+1} = newTrace;
-                app.spectrumData{existingIdx}.measurementNames{end+1} = measureAxisName;
+                % Try to find existing measurement by name using vectorized comparison
+                existingNames = string(app.spectrumData{existingIdx}.measurementNames);
+                matchIdx = find(existingNames == measureAxisName, 1);
+                
+                if ~isempty(matchIdx)
+                    % Update existing measurement
+                    app.spectrumData{existingIdx}.measurements{matchIdx} = newTrace;
+                else
+                    % Add new measurement to existing frequency range
+                    app.spectrumData{existingIdx}.measurementNames{end+1} = measureAxisName;
+                    app.spectrumData{existingIdx}.measurements{end+1} = newTrace;
+                end
+                
+                % Move this index to front of order (FIFO), removing duplicates
                 app.spectrumDataOrder = [existingIdx, app.spectrumDataOrder(app.spectrumDataOrder ~= existingIdx)];
             else
                 % Create new entry for this frequency range
                 newEntry = struct();
-                newEntry.startFreq = data.startFrequency;
-                newEntry.stopFreq = data.stopFrequency;
-                newEntry.numBins = data.numBins;
+                newEntry.startFreq = freqData.startFrequency;
+                newEntry.stopFreq = freqData.stopFrequency;
+                newEntry.numBins = freqData.numBins;
                 newEntry.frequency = frequencyArray;
                 newEntry.measurements = {newTrace};
                 newEntry.measurementNames = {measureAxisName};
+                newEntry.measurementType = rootName;
                 
                 app.spectrumData{end+1} = newEntry;
                 app.spectrumDataOrder = [length(app.spectrumData), app.spectrumDataOrder];
             end
             
             % Build combined data structure for legacy compatibility with plotData
-            data = app.buildCombinedSpectrumData();
+            data = buildCombinedSpectrumData(app, data);
             
         end
 
@@ -356,11 +378,9 @@ classdef EtherDLLTestClient_exported < matlab.apps.AppBase
         end
 
         %-----------------------------------------------------------------%
-        function data = buildCombinedSpectrumData(app)
+        function data = buildCombinedSpectrumData(app, data)
             % Merge all frequency ranges and their corresponding measurement arrays
             % Returns: combined data structure suitable for plotData
-            
-            data = struct();
             
             % Sort spectrum data by start frequency in ascending order
             startFreqs = cellfun(@(x) x.startFreq, app.spectrumData);
@@ -369,11 +389,7 @@ classdef EtherDLLTestClient_exported < matlab.apps.AppBase
             
             % Merge all frequency arrays and corresponding measurements
             combinedFrequency = [];
-            combinedMeasurements = cell(0);
-            combinedMeasurementNames = {};
-            
-            % Track which trace index each measurement corresponds to
-            measurementTraceIdx = [];
+            measurementsByName = containers.Map();  % Map to store measurements by name
             
             for i = 1:length(sortedSpectra)
                 currentSpectrum = sortedSpectra{i};
@@ -383,10 +399,25 @@ classdef EtherDLLTestClient_exported < matlab.apps.AppBase
                 
                 % Append all measurements for this frequency range
                 for j = 1:length(currentSpectrum.measurements)
-                    combinedMeasurements{end+1} = currentSpectrum.measurements{j};
-                    combinedMeasurementNames{end+1} = currentSpectrum.measurementNames{j};
-                    measurementTraceIdx(end+1) = i; % Track which spectrum range this measurement came from
+                    measurementName = currentSpectrum.measurementNames{j};
+                    
+                    if ~isKey(measurementsByName, measurementName)
+                        % Create new entry for this measurement name
+                        measurementsByName(measurementName) = currentSpectrum.measurements{j}(:);
+                    else
+                        % Append to existing measurement with same name (splice consecutive data)
+                        existingData = measurementsByName(measurementName);
+                        measurementsByName(measurementName) = [existingData(:); currentSpectrum.measurements{j}(:)];
+                    end
                 end
+            end
+            
+            % Build output structure - consolidate measurements by name
+            combinedMeasurements = {};
+            combinedMeasurementNames = {};
+            for measurementName = keys(measurementsByName)
+                combinedMeasurementNames{end+1} = measurementName{1};
+                combinedMeasurements{end+1} = measurementsByName(measurementName{1});
             end
             
             % Build output structure
@@ -401,7 +432,7 @@ classdef EtherDLLTestClient_exported < matlab.apps.AppBase
             
             data.numTraces = length(combinedMeasurements);
         end
-
+    
         %-----------------------------------------------------------------%
         function plotData(app, axesHandle, data)
             % plot spectrum data on specified axes
@@ -494,7 +525,7 @@ classdef EtherDLLTestClient_exported < matlab.apps.AppBase
             if length(data.measureAxis) > 1
                 legend(axesHandle, legendLabels, 'Location', 'northeast');
             end
-            drawnow limiterate;
+            drawnow limitrate;
             hold(axesHandle, "off");
         end
 
@@ -534,7 +565,7 @@ classdef EtherDLLTestClient_exported < matlab.apps.AppBase
                     elseif islogical(data.(fieldName))
                         valueStr = string(data.(fieldName));
                     else
-                        valueStr = fieldName;
+                        valueStr = data.(fieldName);
                     end
 
                     % Check if child node already exists
@@ -548,10 +579,10 @@ classdef EtherDLLTestClient_exported < matlab.apps.AppBase
                     end
                     
 
-                    message = [fieldName, ':', valueStr];
+                    message = string(fieldName) + ": " + string(valueStr);
                     if isempty(childNode)
                         % Create new child node
-                        childNode = uitreenode(parentNode, 'Text', message);
+                        uitreenode(parentNode, 'Text', message);
                     else
                         % Update existing child node
                         childNode.Text = message;
