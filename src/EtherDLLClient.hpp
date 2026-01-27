@@ -47,6 +47,8 @@
 using json = nlohmann::json;
 
 using service = edll::DefaultConfig::Service;
+using serviceSocket = edll::DefaultConfig::Service::Socket;
+using serviceProtocol = edll::DefaultConfig::Service::Protocol;
 using taskKeys = edll::DefaultConfig::Service::TaskKeys;
 
 // Global variables
@@ -258,6 +260,7 @@ public:
  * @throws NO EXCEPTION HANDLING
  **/
 class ClientConn {
+
 private:
 
 	// Configuration parameters
@@ -280,7 +283,8 @@ private:
 	std::string nackStr = msgJsonStartStr + msgKeys[service::Msg::Nack::KEY].get<std::string>() + msgJsonMidStr;
 	std::string pingStr = msgJsonStartStr + msgKeys[service::Msg::Ping::KEY].get<std::string>() + msgJsonMidStr;
 
-	bool pingEnable = config[service::KEY][service::PingEnable::KEY].get<bool>();
+	bool pingEnable = config[service::KEY][serviceProtocol::PingEnable::KEY].get<bool>();
+	bool peerMode = config[service::KEY][serviceProtocol::PeerMode::KEY].get<bool>();
 
 	std::string idStr = config[service::KEY][taskKeys::KEY][taskKeys::ClientId::KEY].get<std::string>();
 
@@ -331,7 +335,7 @@ private:
 
 		json service_config = config[service::KEY].get<json>();
 
-		std::string portStr = std::to_string(service_config[service::Port::KEY].get<int>());
+		std::string portStr = std::to_string(service_config[serviceSocket::Port::KEY].get<int>());
 		int iResult = getaddrinfo(NULL, portStr.c_str(), &hints, &result);
 		if (iResult != 0) {
 			loggerPtr->error("Socket getaddrinfo failed. EC:" + std::to_string(iResult));
@@ -349,7 +353,7 @@ private:
 			return;
 		}
 
-		int timeout = service_config[service::Timeout::KEY].get<int>() * 1000; // milliseconds
+		int timeout = service_config[serviceSocket::Timeout::KEY].get<int>() * 1000; // milliseconds
 		iResult = setsockopt(listenSocket, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout, sizeof(timeout));
 		if (iResult == SOCKET_ERROR) {
 			loggerPtr->error("Socket setsockopt timeout failed. EC:" + std::to_string(WSAGetLastError()));
@@ -454,12 +458,12 @@ public:
 
 		json serviceKeys = config[edll::DefaultConfig::Service::KEY].get<json>();
 
-		int bufferSize = serviceKeys[service::BufferSize::KEY].get<int>();
+		int bufferSize = serviceKeys[serviceSocket::BufferSize::KEY].get<int>();
 		std::string buffer;
 		buffer.resize(bufferSize + 1);
 		std::string accumulatedData = "";
 
-		int bufferTTLInit = serviceKeys[service::BufferTTL::KEY].get<int>();
+		int bufferTTLInit = serviceKeys[serviceSocket::BufferTTL::KEY].get<int>();
 		int bufferTTL = bufferTTLInit;
 
 		int iResult = 0;
@@ -562,7 +566,7 @@ public:
 	 * @param logger: spdlog logger object for logging messages
 	 * @throws NO EXCEPTION HANDLING
 	*/
-	void DLLResponseToClient(MessageQueue& response)
+	void DLLResponseToClient(MessagePreprocessor& preprocessor, MessageQueue& response)
 	{
 		const std::string logSource = "DLLResponseToClient";
 
@@ -572,7 +576,14 @@ public:
 		{
 			json oneResponse = response.waitAndPop(interruptionCode, logSource);
 
-			std::string message = oneResponse.dump() + msgEndStr;
+			// Preprocess response - skip sending if nullopt returned
+			std::optional<json> processedResponse = preprocessor.process(oneResponse);
+			if (!processedResponse.has_value()) {
+				loggerPtr->debug(logSource + " response filtered by preprocessor");
+				continue;
+			}
+
+			std::string message = processedResponse.value().dump() + msgEndStr;
 
 			// sleep for a short time to avoid overwhelming the client
 			// std::this_thread::sleep_for(std::chrono::milliseconds(1000));
@@ -606,7 +617,7 @@ public:
 	{
 		const std::string logSource = "pingClient";
 
-		int pingPeriodMs = static_cast<int>(config[service::KEY][service::PingPeriod::KEY].get<double>() * 1000);
+		int pingPeriodMs = static_cast<int>(config[service::KEY][serviceProtocol::PingPeriod::KEY].get<double>() * 1000);
 		int iResult = 0;
 
 		while (interruptionCode == edll::Code::RUNNING) {
