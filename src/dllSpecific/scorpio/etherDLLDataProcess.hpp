@@ -197,3 +197,114 @@ FrequencyRange panFrequencyInfo(const SEquipCtrlMsg::SGetPanResp* panResponse)
 
     return freqInfo;
 }
+
+// ----------------------------------------------------------------------
+/** @brief Preprocessor for filtering and transforming messages.
+ *  Message processor state might be affected by received messages.
+ *
+ * Provides preprocessing logic for messages before sending to client.
+ * Returns an optional to indicate whether the message should be sent.
+**/
+class MessagePreprocessor {
+private:
+    const json* configPtr;
+    spdlog::logger* loggerPtr;
+
+public:
+    // ------------------------------------------------------------------
+    /** @brief Default constructor - initializes with null pointers
+    **/
+    MessagePreprocessor()
+        : configPtr(nullptr), loggerPtr(nullptr) {
+    }
+
+    // ------------------------------------------------------------------
+    /** @brief Construct preprocessor with configuration
+        * @param config: JSON configuration object
+        * @param logger: Logger reference for debug output
+        **/
+    MessagePreprocessor(const json& config, spdlog::logger& logger)
+        : configPtr(&config), loggerPtr(&logger) {
+    }
+
+    // ------------------------------------------------------------------
+    /** @brief Initialize or update preprocessor configuration
+        * @param config: JSON configuration object
+        * @param logger: Logger reference for debug output
+        **/
+    void initialize(const json& config, spdlog::logger& logger) {
+        configPtr = &config;
+        loggerPtr = &logger;
+    }
+
+    // ------------------------------------------------------------------
+    /** @brief Check if preprocessor is properly initialized
+        * @return bool: True if initialized, false otherwise
+        **/
+    bool isInitialized() const {
+        return configPtr != nullptr && loggerPtr != nullptr;
+    }
+
+    // ------------------------------------------------------------------
+    /** @brief Process response before sending to client
+        *
+        * Applies filtering, transformation, and validation to outgoing messages.
+        * Returns empty optional if message should be suppressed.
+        *
+        * @param response: JSON response object to preprocess (modified in place)
+        * @return std::optional<json>: Processed message, or std::nullopt to skip sending
+        * @throws NO EXCEPTION HANDLING
+        **/
+    std::optional<json> process(json response) {
+        // Ensure preprocessor is initialized
+        if (!isInitialized()) {
+            // Cannot log without logger - return nullopt to suppress message
+            return std::nullopt;
+        }
+
+        // Filter: Skip empty or invalid responses
+        if (response.is_null() || response.empty()) {
+            loggerPtr->debug("ResponsePreprocessor: Skipping empty response");
+            return std::nullopt;
+        }
+
+        // Transform: Remove internal-only fields before sending
+        removeInternalFields(response);
+
+        // Validate: Ensure required fields are present
+        if (!validateResponse(response)) {
+            loggerPtr->warn("ResponsePreprocessor: Response failed validation");
+            return std::nullopt;
+        }
+
+        return response;
+    }
+
+private:
+    // ------------------------------------------------------------------
+    /** @brief Remove fields intended for internal use only
+        * @param response: JSON object to modify
+        **/
+    void removeInternalFields(json& response) {
+        // Remove internal tracking fields not meant for client
+        static const std::vector<std::string> internalFields = {
+            "_internal", "_suppress", "_debug"
+        };
+
+        for (const auto& field : internalFields) {
+            if (response.contains(field)) {
+                response.erase(field);
+            }
+        }
+    }
+
+    // ------------------------------------------------------------------
+    /** @brief Validate response has minimum required structure
+        * @param response: JSON object to validate
+        * @return bool: True if valid, false otherwise
+        **/
+    bool validateResponse(const json& response) {
+        // Basic validation - customize based on protocol requirements
+        return response.is_object();
+    }
+};
