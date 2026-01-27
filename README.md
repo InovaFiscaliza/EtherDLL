@@ -91,6 +91,7 @@ The specific modules are placed in the `src/specific/<DLLName>` folder, where <D
 | `etherDLLInit.hpp` | Define functions to initialize and terminate DLL resources, including registering callback functions. It also includes functions to build default configuration parameters associated with the DLL API. |
 | `etherDLLRequest.hpp` | Define functions access the received message queue and translates the JSON messages received from clients to the in memory structures used by the DLL, including . |
 | `etherDLLValidation.hpp` | Define functions for validating json data before putting sending it to the DLL. If error is detected, the appropriate response to the client is sending, thus avoiding DLL errors that might compromise the overall application and system stability. |
+| `etherDLLData.hpp` | Define data structures used to store data received from the DLL API and used for preprocessing, before data is sent back to the client. |
 | `etherDLLDataProcess.hpp` | Define functions for processing data received from the DLL. |
 | `etherDLLResponse.hpp` | Define functions for handling responses from the DLL. |
 
@@ -107,6 +108,7 @@ The following table lists the specific functions and data types that must be imp
 | etherDLLInit.hpp | `bool validDLLConfigParams(json config)` | This function will be called by the main function evaluate if the JSON configuration loaded contains all DLL specific arguments. This avoids testing for these arguments throughout the application execution. |
 | | ||
 | etherDLLRequest.hpp | `void processRequestQueue(DLLConnectionData, Request MessageQueue, Response MessageQueue, interruptionCode)` | This function will be called to process incoming requests from the client. It retrieves data from the request queue, validate than and forward to the specific DLL functions and methods. Response from the DLL are expected to be returned via callback functions initialized and registered by the connectAPI function. |
+| etherDLLDataProcess.hpp | ResponsePreprocessor class | This class must be defined to handle the preprocessing of data received from the DLL API before sending it back to the client. The class must include a constructor that receives the logger instance and the configuration data as arguments. It must also include a public method with the following signature: `std::optional<json> process(json response)`, which will be called to process the raw data received from the DLL API. The method might return a processed data in JSON format or null, if no data is to be sent to the client. |
 
 <div>
     <a href="#about-etherdll">
