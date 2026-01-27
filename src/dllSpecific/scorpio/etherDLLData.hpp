@@ -96,10 +96,9 @@ struct Configuration {
 struct Spectrum {
     unsigned long taskId;
     FrequencyRange frequencyInfo;
-    std::vector<float> trace;      // Power Amplitude Normalized data in dBm
+    std::vector<float> trace;       // Power Amplitude Normalized data in dBm
 	std::string unit;               // e.g., "dBm"; "dBuV/m", "%", "degrees"
-    std::string firstUpdateTime;    // datetime in ISO 8601 format "YYYY-MM-DDThh:mm:ss.ssssZ"
-    std::string lastUpdateTime;     // datetime in ISO 8601 format "YYYY-MM-DDThh:mm:ss.ssssZ"
+    std::string timestamp;          // datetime in ISO 8601 format "YYYY-MM-DDThh:mm:ss.ssssZ"
 };
 
 // Define the result structure (add to etherDLLData.hpp or at the top of this file)
