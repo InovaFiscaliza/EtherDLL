@@ -114,39 +114,59 @@ namespace edll {
 		struct Service {
 			static constexpr const char* KEY = "service";
 
-			struct Port {
-				static constexpr const char* KEY = "port";
-				static constexpr int VALUE = 5555;
+			struct Socket {
+				static constexpr const char* KEY = "socket";
+
+				struct Port {
+					static constexpr const char* KEY = "port";
+					static constexpr int VALUE = 5555;
+				};
+				struct BufferSize {
+					static constexpr const char* KEY = "bufferSizeBytes";
+					static constexpr int VALUE = 4096;
+					static constexpr int MAX_VALUE = 1000000;
+				};
+				struct Timeout {
+					static constexpr const char* KEY = "timeoutS";
+					static constexpr int VALUE = 10;
+				};
+				struct Sleep {
+					static constexpr const char* KEY = "sleepMs";
+					static constexpr int VALUE = 100;
+				};
+				struct BufferTTL {
+					static constexpr const char* KEY = "bufferTTLMsgCount";
+					static constexpr int VALUE = 5;
+				};
 			};
-			struct BufferSize {
-				static constexpr const char* KEY = "bufferSizeBytes";
-				static constexpr int VALUE = 4096;
-				static constexpr int MAX_VALUE = 1000000;
-			};
-			struct Timeout {
-				static constexpr const char* KEY = "timeoutS";
-				static constexpr int VALUE = 10;
-			};
-			struct Sleep {
-				static constexpr const char* KEY = "sleepMs";
-				static constexpr int VALUE = 100;
-			};
-			struct BufferTTL {
-				static constexpr const char* KEY = "bufferTTLMsgCount";
-				static constexpr int VALUE = 5;
-			};
-			struct PingPeriod {
-				static constexpr const char* KEY = "pingPeriodS";
-				static constexpr int VALUE = 30;
-			};
-			struct PingEnable {
-				static constexpr const char* KEY = "pingEnable";
-				static constexpr bool VALUE = true;
+			struct Protocol {
+				static constexpr const char* KEY = "protocol";
+
+				struct PingEnable {
+					static constexpr const char* KEY = "pingEnable";
+					static constexpr bool VALUE = true;
+				};
+				struct PingPeriod {
+					static constexpr const char* KEY = "pingPeriodS";
+					static constexpr int VALUE = 30;
+				};
+
+
+				struct PeerMode {
+					static constexpr const char* KEY = "peerMode";
+					static constexpr bool VALUE = true;
+				};
+				struct ResponseBufferSize {
+					static constexpr const char* KEY = "responseBuffer";
+					static constexpr int VALUE = 4096;
+					static constexpr int MAX_VALUE = 1000000000;
+				};
 			};
 			struct DemoMode {
 				static constexpr const char* KEY = "demoMode";
 				static constexpr bool VALUE = false;
 			};
+
 			struct Msg {
 				static constexpr const char* KEY = "msgKeys";
 
@@ -224,30 +244,50 @@ namespace edll {
  **/
 json buildCoreDefaultConfigJson(json default_config = json::object()) {
 
-	default_config[edll::DefaultConfig::Log::KEY][edll::DefaultConfig::Log::Name::KEY] = edll::DefaultConfig::Log::Name::VALUE;
-	default_config[edll::DefaultConfig::Log::KEY][edll::DefaultConfig::Log::Console::KEY][edll::DefaultConfig::Log::Console::Level::KEY] = edll::DefaultConfig::Log::Console::Level::VALUE;
-	default_config[edll::DefaultConfig::Log::KEY][edll::DefaultConfig::Log::File::KEY][edll::DefaultConfig::Log::File::Level::KEY] = edll::DefaultConfig::Log::File::Level::VALUE;
-	default_config[edll::DefaultConfig::Log::KEY][edll::DefaultConfig::Log::File::KEY][edll::DefaultConfig::Log::File::Filename::KEY] = edll::DefaultConfig::Log::File::Filename::VALUE;
-	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::Port::KEY] = edll::DefaultConfig::Service::Port::VALUE;
-	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::BufferSize::KEY] = edll::DefaultConfig::Service::BufferSize::VALUE;
-	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::Timeout::KEY] = edll::DefaultConfig::Service::Timeout::VALUE;
-	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::Sleep::KEY] = edll::DefaultConfig::Service::Sleep::VALUE;
-	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::BufferTTL::KEY] = edll::DefaultConfig::Service::BufferTTL::VALUE;
-	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::PingPeriod::KEY] = edll::DefaultConfig::Service::PingPeriod::VALUE;
-	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::PingEnable::KEY] = edll::DefaultConfig::Service::PingEnable::VALUE;
-	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::DemoMode::KEY] = edll::DefaultConfig::Service::DemoMode::VALUE;
-	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::Msg::KEY][edll::DefaultConfig::Service::Msg::End::KEY] = edll::DefaultConfig::Service::Msg::End::VALUE;
-	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::Msg::KEY][edll::DefaultConfig::Service::Msg::Ping::KEY] = edll::DefaultConfig::Service::Msg::Ping::VALUE;
-	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::Msg::KEY][edll::DefaultConfig::Service::Msg::Ack::KEY] = edll::DefaultConfig::Service::Msg::Ack::VALUE;
-	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::Msg::KEY][edll::DefaultConfig::Service::Msg::Nack::KEY] = edll::DefaultConfig::Service::Msg::Nack::VALUE;
-	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::TaskKeys::KEY][edll::DefaultConfig::Service::TaskKeys::ClientId::KEY] = edll::DefaultConfig::Service::TaskKeys::ClientId::VALUE;
-	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::TaskKeys::KEY][edll::DefaultConfig::Service::TaskKeys::QueueId::KEY] = edll::DefaultConfig::Service::TaskKeys::QueueId::VALUE;
-	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::TaskKeys::KEY][edll::DefaultConfig::Service::TaskKeys::DLLId::KEY] = edll::DefaultConfig::Service::TaskKeys::DLLId::VALUE;
-	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::TaskKeys::KEY][edll::DefaultConfig::Service::TaskKeys::ClientIp::KEY] = edll::DefaultConfig::Service::TaskKeys::ClientIp::VALUE;
-	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::TaskKeys::KEY][edll::DefaultConfig::Service::TaskKeys::CommandCode::KEY] = edll::DefaultConfig::Service::TaskKeys::CommandCode::VALUE;
-	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::TaskKeys::KEY][edll::DefaultConfig::Service::TaskKeys::CommandName::KEY] = edll::DefaultConfig::Service::TaskKeys::CommandName::VALUE;
-	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::TaskKeys::KEY][edll::DefaultConfig::Service::TaskKeys::Arguments::KEY] = edll::DefaultConfig::Service::TaskKeys::Arguments::VALUE;
-	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::TaskKeys::KEY][edll::DefaultConfig::Service::TaskKeys::Message::KEY] = edll::DefaultConfig::Service::TaskKeys::Message::VALUE;
+	using log = edll::DefaultConfig::Log;
+	using logConsole = log::Console;
+	using logFile = log::File;
+	using service = edll::DefaultConfig::Service;
+	using socket = service::Socket;
+	using protocol = service::Protocol;
+	using msg = service::Msg;
+	using taskKeys = service::TaskKeys;
+
+	// Log section
+	json& logSection = default_config[log::KEY];
+	logSection[log::Name::KEY] = log::Name::VALUE;
+	logSection[logConsole::KEY][logConsole::Level::KEY] = logConsole::Level::VALUE;
+	logSection[logFile::KEY][logFile::Level::KEY] = logFile::Level::VALUE;
+	logSection[logFile::KEY][logFile::Filename::KEY] = logFile::Filename::VALUE;
+
+	// Service section
+	json& svcSection = default_config[service::KEY];
+	svcSection[socket::Port::KEY] = socket::Port::VALUE;
+	svcSection[socket::BufferSize::KEY] = socket::BufferSize::VALUE;
+	svcSection[socket::Timeout::KEY] = socket::Timeout::VALUE;
+	svcSection[socket::Sleep::KEY] = socket::Sleep::VALUE;
+	svcSection[socket::BufferTTL::KEY] = socket::BufferTTL::VALUE;
+	svcSection[protocol::PingPeriod::KEY] = protocol::PingPeriod::VALUE;
+	svcSection[protocol::PingEnable::KEY] = protocol::PingEnable::VALUE;
+	svcSection[service::DemoMode::KEY] = service::DemoMode::VALUE;
+
+	// Message keys subsection
+	json& msgSection = svcSection[msg::KEY];
+	msgSection[msg::End::KEY] = msg::End::VALUE;
+	msgSection[msg::Ping::KEY] = msg::Ping::VALUE;
+	msgSection[msg::Ack::KEY] = msg::Ack::VALUE;
+	msgSection[msg::Nack::KEY] = msg::Nack::VALUE;
+
+	// Task keys subsection
+	json& taskSection = svcSection[taskKeys::KEY];
+	taskSection[taskKeys::ClientId::KEY] = taskKeys::ClientId::VALUE;
+	taskSection[taskKeys::QueueId::KEY] = taskKeys::QueueId::VALUE;
+	taskSection[taskKeys::DLLId::KEY] = taskKeys::DLLId::VALUE;
+	taskSection[taskKeys::ClientIp::KEY] = taskKeys::ClientIp::VALUE;
+	taskSection[taskKeys::CommandCode::KEY] = taskKeys::CommandCode::VALUE;
+	taskSection[taskKeys::CommandName::KEY] = taskKeys::CommandName::VALUE;
+	taskSection[taskKeys::Arguments::KEY] = taskKeys::Arguments::VALUE;
+	taskSection[taskKeys::Message::KEY] = taskKeys::Message::VALUE;
 
 	return default_config;
 }
@@ -316,6 +356,8 @@ bool validServiceParams(json config) {
 	// TODO: Refactor to use JsonValidator class
 
 	using service = edll::DefaultConfig::Service;
+	using serviceSocket = service::Socket;
+	using serviceProtocol = service::Protocol;
 
 	json service_config = config.value(service::KEY, json());
 
@@ -325,40 +367,40 @@ bool validServiceParams(json config) {
 		loggerPtr->error("Missing 'service' configuration section.");
 		test_result = false;
 	}
-	int port = service_config.value(service::Port::KEY, -1);
+	int port = service_config.value(serviceSocket::Port::KEY, -1);
 	if (port < 1 || port > 65535) {
 		loggerPtr->error("Invalid port number in configuration. Expected between 1 and 65535. Received: " + std::to_string(port));
 		test_result = false;
 	}
-	int BufferSize = service_config.value(service::BufferSize::KEY, -1);
-	if (BufferSize < 1 || BufferSize > service::BufferSize::MAX_VALUE) {
-		loggerPtr->error("Invalid buffer size in configuration. Expected between 1 and " + std::to_string(service::BufferSize::MAX_VALUE) + ". Received: " + std::to_string(BufferSize));
+	int BufferSize = service_config.value(serviceSocket::BufferSize::KEY, -1);
+	if (BufferSize < 1 || BufferSize > serviceSocket::BufferSize::MAX_VALUE) {
+		loggerPtr->error("Invalid buffer size in configuration. Expected between 1 and " + std::to_string(serviceSocket::BufferSize::MAX_VALUE) + ". Received: " + std::to_string(BufferSize));
 		test_result = false;
 	}
-	int timeout = service_config.value(service::Timeout::KEY, -1);
+	int timeout = service_config.value(serviceSocket::Timeout::KEY, -1);
 	if (timeout < 1) {
 		loggerPtr->error("Invalid timeout value in configuration. Expected greater than 0. Received: " + std::to_string(timeout));
 		test_result = false;
 	}
-	int sleepMs = service_config.value(service::Sleep::KEY, -1);
+	int sleepMs = service_config.value(serviceSocket::Sleep::KEY, -1);
 	if (sleepMs < 1) {
 		loggerPtr->error("Invalid sleep_ms value in configuration. Expected greater than 0. Received: " + std::to_string(sleepMs));
 		test_result = false;
 	}
-	int bufferTTL = service_config.value(service::BufferTTL::KEY, -1);
+	int bufferTTL = service_config.value(serviceSocket::BufferTTL::KEY, -1);
 	if (bufferTTL < 1) {
 		loggerPtr->error("Invalid buffer_ttl_period value in configuration. Expected greater than 0. Received: " + std::to_string(bufferTTL));
 		test_result = false;
 	}
-	int pingPeriod = service_config.value(service::PingPeriod::KEY, -1);
+	int pingPeriod = service_config.value(serviceProtocol::PingPeriod::KEY, -1);
 	if (pingPeriod < 0) {
 		loggerPtr->error("Invalid ping_period value in configuration. Expected 0 or greater. Received: " + std::to_string(pingPeriod));
 		test_result = false;
 	}
-	if (service_config.contains(service::PingEnable::KEY)) {
-		if (!service_config[service::PingEnable::KEY].is_boolean()) {
+	if (service_config.contains(serviceProtocol::PingEnable::KEY)) {
+		if (!service_config[serviceProtocol::PingEnable::KEY].is_boolean()) {
 			loggerPtr->error("Invalid ping_enable value in configuration. Expected boolean type. Received: " +
-				service_config[service::PingEnable::KEY].dump());
+				service_config[serviceProtocol::PingEnable::KEY].dump());
 			test_result = false;
 		}
 	}
