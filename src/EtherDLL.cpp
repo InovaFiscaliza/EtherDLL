@@ -20,6 +20,7 @@
 // Include to DLL specific headers
 #include "etherDLLInit.hpp"
 #include "etherDLLRequest.hpp"
+#include "etherDLLDataProcess.hpp"
 
 // Include core EtherDLL headers
 #include "EtherDLLLog.hpp"
@@ -53,7 +54,7 @@ using json = nlohmann::json;
 
 // ----------------------------------------------------------------------
 /*
-	Global variables related to the application
+	Global variables
 */
 // Code to represent the cause for not running
 edll::INT_CODE interruptionCode = edll::Code::RUNNING;
@@ -61,6 +62,8 @@ edll::INT_CODE interruptionCode = edll::Code::RUNNING;
 // Message queues
 MessageQueue request;
 MessageQueue response;
+MessagePreprocessor preprocessor;
+
 
 // Logger pointer
 spdlog::logger* loggerPtr = nullptr;
@@ -231,14 +234,8 @@ static  std::string handleInputArguments(int argc, char* argv[]) {
 * * @return int: Exit code
 */
 int main(int argc, char* argv[]) {
-
-	// Initialize Winsock
-	WSADATA wsaData;
-	int wsaResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
-	if (wsaResult != 0) {
-		std::cerr << "WSAStartup failed with error: " << wsaResult << std::endl;
-		return static_cast<int>(edll::Code::SERVICE_ERROR);
-	}
+	
+	registerSignalHandlers();
 
 	std::string configFileName = handleInputArguments(argc, argv);
 
@@ -254,8 +251,6 @@ int main(int argc, char* argv[]) {
 
 	loggerPtr->flush();
 
-	registerSignalHandlers();
-
 	if (!validDLLConfigParams(config)) {
 		logger_ptr->error("Exiting due to invalid DLL specific configuration parameters.");
 		WSACleanup();
@@ -267,11 +262,20 @@ int main(int argc, char* argv[]) {
 		return static_cast<int>(edll::Code::SERVICE_ERROR);
 	}
 
+	// Initialize Winsock
+	WSADATA wsaData;
+	int wsaResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
+	if (wsaResult != 0) {
+		std::cerr << "WSAStartup failed with error: " << wsaResult << std::endl;
+		return static_cast<int>(edll::Code::SERVICE_ERROR);
+	}
+
 	// Add these at the top with other global variables:
 	std::mutex threadCompletionMutex;
 	std::condition_variable threadCompletionCV;
 	std::atomic<bool> anyThreadCompleted = false;
 
+	// Connect to the DLL API
 
 	DLLConnectionData DLLConnID = DEFAULT_DLL_CONNECTION_DATA;
 
@@ -280,6 +284,11 @@ int main(int argc, char* argv[]) {
 		interruptionCode = edll::Code::STATION_ERROR;
 	}
 
+	// Initialize preprocessor
+	preprocessor.initialize(config, *logger_ptr);
+
+
+	// Main service loop
 	while (interruptionCode == edll::Code::RUNNING)
 	{
 		// Initialize ClientConn object to wait for a client connection
@@ -319,7 +328,7 @@ int main(int argc, char* argv[]) {
 
 		auto requestProcFuture = std::async(std::launch::async, [&]() {
 			logger_ptr->debug("Starting thread that send requests from queue to DLL");
-			processRequestQueue(DLLConnID, request, response, interruptionCode);
+			processRequestQueue(DLLConnID, request, preprocessor, response, interruptionCode);
 			signalCompletion();
 			logger_ptr->debug("Finished thread that send requests from queue to DLL");
 			return true;
@@ -327,7 +336,7 @@ int main(int argc, char* argv[]) {
 
 		auto responseComFuture = std::async(std::launch::async, [&]() {
 			logger_ptr->debug("Starting thread that sends DLL response to client");
-			clientConn.DLLResponseToClient(response);
+			clientConn.DLLResponseToClient(preprocessor, response);
 			signalCompletion();
 			logger_ptr->debug("Finished thread that sends DLL response to client");
 			return true;
