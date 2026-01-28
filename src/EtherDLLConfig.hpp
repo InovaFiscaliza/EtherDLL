@@ -235,6 +235,45 @@ namespace edll {
 	};
 }
 
+
+// ----------------------------------------------------------------------
+/**
+ * @brief Read the configuration file and return a JSON object
+ *
+ * @param config: JSON object containing configuration
+ * @return nlohmann::json: JSON object containing the configuration
+ * @throws std::invalid_argument if the file cannot be read or parsed
+ * @throws std::runtime_error if the file does not exist and cannot be created
+**/
+static json readConfigFile(std::string fileName) {
+
+	json config;
+
+	try {
+		std::ifstream configFile(fileName);
+
+		if (!configFile.is_open()) {
+			std::cout << "Configuration file not found, creating default: " + fileName << std::endl;
+			newDefaultConfigFile(fileName);
+		}
+
+		configFile.open(fileName);
+		config = json::parse(configFile);
+		configFile.close();
+	}
+	catch (const json::parse_error& e) {
+		std::cout << "JSON parsing error: " + std::string(e.what());
+		throw std::invalid_argument("Invalid JSON format in configuration file: " + fileName);
+	}
+	catch (const std::exception& e) {
+		std::cout << "Error reading configuration file: " + std::string(e.what());
+		throw std::invalid_argument("Error reading configuration file: " + fileName);
+	}
+
+	return config;
+}
+
+
 // ------------------------------------------------------
 /** @brief Build a default configuration JSON object from the DefaultConfig struct
  *
