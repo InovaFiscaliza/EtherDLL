@@ -1075,4 +1075,5 @@ bool stringToBool(std::string str);
 std::string COleTimeToIsoStr(double oleTime);
 std::string base64Encode(BYTE const* buf, unsigned int bufLen);
 std::string wchartToUtf8String(const wchar_t* wstr, size_t len);
+static  std::string handleInputArguments(int argc, char* argv[]);
 json buildDemoData();
