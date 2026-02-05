@@ -22,6 +22,7 @@
 // Include provided DLL libraries
 
 // Include DLL specific libraries
+#include "etherDLLCodes.hpp"
 
 // Include core EtherDLL libraries
 #include "EtherDLLConfig.hpp"
@@ -47,6 +48,8 @@ const double MIN_BANDWIDTH = 500;  // Minimum bandwidth in Hz
 const double MAX_BANDWIDTH = 80e6; // Maximum bandwidth in Hz
 const int MIN_DURATION = 1;        // Minimum duration in seconds
 const int MAX_DURATION = 3600;     // Maximum duration in seconds
+const int MIN_REVISIT_TIME = 1;        // Minimum revisit time in seconds
+const int MAX_REVISIT_TIME = 3600;     // Maximum revisit time in seconds
 const int MIN_ANT = 1;             // Minimum antenna number
 const int MAX_ANT = 16;            // Maximum antenna number
 const int MIN_DF_CONFIDENCE = 1;      // Minimum DF confidence level
@@ -71,6 +74,10 @@ const int MIN_RCVD_ATTEN = 0;      // Minimum receiver attenuation in dB
 const int MAX_RCVD_ATTEN = 255;     // Maximum receiver attenuation in dB
 const int MIN_AGC_TIME = 0;        // Minimum AGC time in ms
 const int MAX_AGC_TIME = 3600000;  // Maximum AGC time in
+const int MIN_TRACE_COUNT = 1;      // Minimum trace count
+const int MAX_TRACE_COUNT = 1024;   // Maximum trace count
+const int MIN_TRACE_BUFFER = 1;   // Minimum trace buffer size
+const int MAX_TRACE_BUFFER = 10485760; // Maximum trace buffer size
 
 
 // ----------------------------------------------------------------------
@@ -166,6 +173,58 @@ void validateOccupancyDFRequest(const json& request, JsonValidator& validator) {
         });
 }
 
+
+// ----------------------------------------------------------------------
+/**
+ * @brief Validate OccupancyDF request JSON object
+ * @param request: JSON object containing the specific arguments for OccupancyDF request
+ * @param validator: JsonValidator instance to accumulate validation results
+ * @return void
+ * @throws NO EXCEPTION HANDLING
+**/
+void validatePPScan(const json& request, JsonValidator& validator) {
+
+    validator
+        .requireRange(request, "ant", MIN_ANT, MAX_ANT)
+        .validateObjectItems(request, "time", [](const json& time, JsonValidator& v, size_t index) {
+        v.custom(time, "stopAbsolute",
+            [&time](const json& val) {
+                bool hasStopAbsolute = time.contains("stopAbsolute") && !time["stopAbsolute"].is_null();
+                bool hasStopRevisitCount = time.contains("stopRevisitCount") && !time["stopRevisitCount"].is_null();
+                return hasStopAbsolute != hasStopRevisitCount; // XOR: exactly one must be true
+            },
+            "Either 'stopAbsolute' or 'stopRevisitCount' must be defined, but not both")
+            .requireRange(time, "minRevisitSec", MIN_REVISIT_TIME, MAX_REVISIT_TIME);
+            })
+        .validateObjectItems(request, "band", [](const json& bandItem, JsonValidator& v, size_t index) {
+        v.requireRange(bandItem, "channelBandwidth", MIN_BANDWIDTH, MAX_BANDWIDTH)
+            .requireRange(bandItem, "stopFrequency", MIN_FREQ, MAX_FREQ)
+            .requireRange(bandItem, "startFrequency", MIN_FREQ, MAX_FREQ)
+            .custom(bandItem,
+                "startFrequency",
+                [&bandItem](const json& lf) {
+                    if (bandItem.contains("stopFrequency")) {
+                        return lf.get<double>() < bandItem["stopFrequency"].get<double>();
+                    }
+                    return true;
+                },
+                "startFrequency must be less than stopFrequency");
+            })
+        .requireType(request, "power", VALID_TYPE_OBJECT)
+        .validateObjectItems(request, "power", [](const json& power, JsonValidator& v, size_t index) {
+        v.requireType(power, "enabled", VALID_TYPE_BOOLEAN)
+            .validateObjectItems(power, "trace", [](const json& trace, JsonValidator& v, size_t index) {
+            v.optionalRange(trace, "minCount", MIN_TRACE_COUNT, MAX_TRACE_COUNT)
+                .optionalRange(trace, "traceBufferSize", MIN_TRACE_BUFFER, MAX_TRACE_BUFFER)
+                .optionalType(trace, "average", VALID_TYPE_BOOLEAN)
+                .optionalType(trace, "min", VALID_TYPE_BOOLEAN)
+                .optionalType(trace, "max", VALID_TYPE_BOOLEAN)
+                .optionalType(trace, "clearWrite", VALID_TYPE_BOOLEAN);
+                });
+            });
+}
+
+
 // ----------------------------------------------------------------------
 /**
  * @brief Validate panParams JSON object
@@ -237,21 +296,21 @@ nlohmann::json buildErrorResponse(const nlohmann::json& jsonObj, const std::stri
 * @return nlohmann::json:
 * @throws NO EXCEPTION HANDLING
 **/
-bool validRequest(json request, unsigned long msgType, MessageQueue& response) {
+bool validRequest(json request, MessageQueue& response) {
 
-	const std::string logSource = "EtherDLLValidation::validRequest";
-    
+    using TaskKeys = edll::DefaultConfig::Service::TaskKeys;
     JsonValidator validator;
-
-	// Validate common fields
-	using TaskKeys = edll::DefaultConfig::Service::TaskKeys;
 
     validator
         .requireType(request, TaskKeys::CommandCode::VALUE, VALID_TYPE_NUMBER)
 	    .requireType(request, TaskKeys::CommandName::VALUE, VALID_TYPE_STRING)
 		.requireType(request, TaskKeys::Arguments::VALUE, VALID_TYPE_OBJECT);
 
-    switch (msgType) {          
+    unsigned long msgType = request.value(TaskKeys::CommandCode::VALUE, TaskKeys::CommandCode::INIT_VALUE);
+    switch (msgType) {
+        case PP_CODE::SET_SCAN:
+            validatePPScan(request[TaskKeys::Arguments::VALUE], validator);
+			break;
         case ECSMSDllMsgType::GET_OCCUPANCYDF:
             validateOccupancyDFRequest(request[TaskKeys::Arguments::VALUE], validator);
             // Fall through intended
@@ -295,7 +354,7 @@ bool validRequest(json request, unsigned long msgType, MessageQueue& response) {
     if (!validator.isValid()) {
 		std::string message = "Request validation failed: " + validator.getErrorString();
         loggerPtr->error(message);
-		response.push(buildErrorResponse(request, message), logSource);
+		response.push(buildErrorResponse(request, message), "EtherDLLValidation::validRequest");
         return false;
 	}
 	loggerPtr->debug("Request validation passed");
