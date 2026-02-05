@@ -1,4 +1,4 @@
-/** @file EtherDLLUtils.hpp
+﻿/** @file EtherDLLUtils.hpp
  * @brief Declarations of utility functions for EtherDLL base program
  *
  * @author fslobao
@@ -59,6 +59,143 @@ typedef unsigned char BYTE;
 // Global variables
 extern spdlog::logger* loggerPtr;
 
+
+/**
+ * @enum MeasurementUnit
+ * @brief Enumeration of supported measurement units
+ *
+ * Numeric codes for efficient storage and comparison. Extensible for future units.
+ *
+ * @note Values are stable across versions - do NOT reorder existing entries
+ */
+enum class MeasurementUnit : uint8_t {
+    // Power measurements
+    DBM = 0,           ///< Power in dBm (decibels relative to 1 milliwatt)
+    DBUV_M = 1,        ///< Field strength in dBμV/m (dB microvolts per meter)
+    DBW = 2,           ///< Power in dBW (decibels relative to 1 watt)
+    WATTS = 3,         ///< Power in watts (linear scale)
+
+    // Percentage measurements
+    PERCENT = 10,      ///< Percentage (0-100%)
+    OCCUPANCY = 11,    ///< Occupancy percentage (0-100%)
+
+    // Angle measurements
+    DEGREES = 20,      ///< Angle in degrees (0-360°)
+    RADIANS = 21,      ///< Angle in radians (0-2π)
+
+    // Confidence/Quality metrics
+    CONFIDENCE = 30,   ///< Confidence level (0-100%)
+    SNR = 31,          ///< Signal-to-Noise Ratio in dB
+
+    // Raw/Dimensionless
+    LINEAR = 40,       ///< Linear scale (no unit)
+    COUNTS = 41,       ///< Raw ADC counts
+
+    // Frequency (for auxiliary data)
+    HERTZ = 50,        ///< Frequency in Hz
+
+    UNKNOWN = 255      ///< Unknown or invalid unit
+};
+
+/**
+ * @namespace UnitHelper
+ * @brief Helper functions for MeasurementUnit enum
+ */
+namespace UnitHelper {
+    /**
+     * @brief Convert MeasurementUnit to human-readable string
+     *
+     * @param unit The measurement unit enum value
+     * @return const char* String representation (compile-time constant)
+     *
+     * @threadsafety Thread-safe (returns const char*)
+     * @throws NO EXCEPTION HANDLING
+     */
+    inline constexpr const char* toString(MeasurementUnit unit) {
+        switch (unit) {
+        case MeasurementUnit::DBM:       return "dBm";
+        case MeasurementUnit::DBUV_M:    return "dBμV/m";
+        case MeasurementUnit::DBW:       return "dBW";
+        case MeasurementUnit::WATTS:     return "W";
+        case MeasurementUnit::PERCENT:   return "%";
+        case MeasurementUnit::OCCUPANCY: return "% Occ";
+        case MeasurementUnit::DEGREES:   return "°";
+        case MeasurementUnit::RADIANS:   return "rad";
+        case MeasurementUnit::CONFIDENCE:return "% Conf";
+        case MeasurementUnit::SNR:       return "dB SNR";
+        case MeasurementUnit::LINEAR:    return "linear";
+        case MeasurementUnit::COUNTS:    return "counts";
+        case MeasurementUnit::HERTZ:     return "Hz";
+        default:                         return "unknown";
+        }
+    }
+
+    /**
+     * @brief Parse string to MeasurementUnit enum
+     *
+     * Case-insensitive string matching for JSON deserialization.
+     *
+     * @param str Unit string from JSON/user input
+     * @return MeasurementUnit Parsed enum value (UNKNOWN if not recognized)
+     *
+     * @threadsafety Thread-safe
+     * @throws NO EXCEPTION HANDLING
+     */
+    inline MeasurementUnit fromString(const std::string& str) {
+        // Convert to lowercase for case-insensitive comparison
+        std::string lower = str;
+        std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
+
+        if (lower == "dbm") return MeasurementUnit::DBM;
+        if (lower == "dbuv/m" || lower == "dbuvm") return MeasurementUnit::DBUV_M;
+        if (lower == "dbw") return MeasurementUnit::DBW;
+        if (lower == "w" || lower == "watts") return MeasurementUnit::WATTS;
+        if (lower == "%" || lower == "percent") return MeasurementUnit::PERCENT;
+        if (lower == "occupancy" || lower == "occ") return MeasurementUnit::OCCUPANCY;
+        if (lower == "degrees" || lower == "deg" || lower == "°") return MeasurementUnit::DEGREES;
+        if (lower == "radians" || lower == "rad") return MeasurementUnit::RADIANS;
+        if (lower == "confidence" || lower == "conf") return MeasurementUnit::CONFIDENCE;
+        if (lower == "snr") return MeasurementUnit::SNR;
+        if (lower == "linear") return MeasurementUnit::LINEAR;
+        if (lower == "counts") return MeasurementUnit::COUNTS;
+        if (lower == "hz" || lower == "hertz") return MeasurementUnit::HERTZ;
+
+        loggerPtr->warn("Unknown unit string: '{}', defaulting to UNKNOWN", str);
+        return MeasurementUnit::UNKNOWN;
+    }
+
+    /**
+     * @brief Check if unit represents power measurement
+     *
+     * @param unit The measurement unit to check
+     * @return bool True if unit is a power type
+     */
+    inline constexpr bool isPower(MeasurementUnit unit) {
+        return unit == MeasurementUnit::DBM ||
+            unit == MeasurementUnit::DBUV_M ||
+            unit == MeasurementUnit::DBW ||
+            unit == MeasurementUnit::WATTS;
+    }
+
+    /**
+     * @brief Check if unit represents angle measurement
+     */
+    inline constexpr bool isAngle(MeasurementUnit unit) {
+        return unit == MeasurementUnit::DEGREES ||
+            unit == MeasurementUnit::RADIANS;
+    }
+
+    /**
+     * @brief Get category string for logging
+     */
+    inline constexpr const char* getCategory(MeasurementUnit unit) {
+        if (isPower(unit)) return "Power";
+        if (isAngle(unit)) return "Angle";
+        if (unit == MeasurementUnit::PERCENT ||
+            unit == MeasurementUnit::OCCUPANCY) return "Percentage";
+        return "Other";
+    }
+}
 
 // ----------------------------------------------------------------------
 /** @brief Compute djb2 hash of string
@@ -199,9 +336,9 @@ public:
     // ----------------------------------------------------------------------
 	/** @brief Test if a field is of the expected type
      * Add a validation error if the field is of the wrong type
-     * @param obj The JSON object to validate
-     * @param fieldName The name of the field to check
-     * @param typeName The expected type of the field
+     * @param obj - The JSON object to validate
+     * @param fieldName - The name of the field to check
+     * @param typeName - The expected type of the field
      * @return JsonValidator&
      * @throws NO EXCEPTION HANDLING
     **/
@@ -259,20 +396,27 @@ public:
         return *this;
     }
 
-    
-    template<typename T>
     // ----------------------------------------------------------------------
 	/** @brief Test if a required numeric field is within a specified range
      * Range limits are included (>= min and <= max)
-     * @tparam T The numeric type
-     * @param obj The JSON object to validate
-     * @param fieldName The name of the field to check
-     * @param typeName The expected type of the field
-     * @param minValue The minimum allowed value
-     * @param maxValue The maximum allowed value
+     * Max and Min values follow the numerical type expected in JSON to avoid data loss.
+	 * e.g. you may use 1 or 1.0 for fields that are float/double types in the JSON,
+	 *      but when the JSON has an integer type using 1.1 will be truncated to 1,
+     *      so minValue = 1 will pass, although 1 < 1.1.
+     * 
+	 * @tparam T - Generic numeric type (<int>,<float>,<double>), as used in the JSON object
+     * 
+     * @param obj - The JSON object to validate
+     * @param fieldName - The name of the field to check
+     * @param typeName - The expected type of the field
+	 * @param minValue - The minimum allowed value. 
+     * @param maxValue - The maximum allowed value. Should follow the numerical type expected in JSON to avoid data loss during conversion
+     * 
      * @return JsonValidator&
+     * 
      * @throws NO EXCEPTION HANDLING
     **/
+    template<typename T>
     JsonValidator& requireRange(const json& obj, const std::string& fieldName,
         T minValue, T maxValue) {
 
@@ -1065,6 +1209,89 @@ public:
     }
 };
 
+/**
+ * @class TimeStampHelper
+ * @brief Centralized utility for converting between std::chrono::time_point and ISO 8601 strings
+ *
+ * Provides consistent timestamp formatting across all data structures.
+ * Thread-safe (stateless functions only).
+ *
+ * @note ISO 8601 format: "YYYY-MM-DDThh:mm:ss.sssZ" (UTC timezone)
+ */
+class TimeStampHelper {
+public:
+    /**
+     * @brief Convert chrono time_point to ISO 8601 string format
+     *
+     * @param timePoint The time point to convert
+     * @return std::string ISO 8601 formatted string (e.g., "2025-09-16T14:32:05.123Z")
+     *
+     * @threadsafety Thread-safe (no shared state)
+     * @throws NO EXCEPTION HANDLING
+     */
+    static std::string toISO8601(const std::chrono::system_clock::time_point& timePoint) {
+        auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(
+            timePoint.time_since_epoch()
+        ).count();
+
+        auto seconds = milliseconds / 1000;
+        auto ms = milliseconds % 1000;
+
+        std::time_t time = static_cast<std::time_t>(seconds);
+        std::tm tm;
+        gmtime_s(&tm, &time); // Windows-specific thread-safe version
+
+        std::ostringstream oss;
+        oss << std::put_time(&tm, "%Y-%m-%dT%H:%M:%S");
+        oss << '.' << std::setfill('0') << std::setw(3) << ms << 'Z';
+
+        return oss.str();
+    }
+
+    /**
+     * @brief Convert ISO 8601 string to chrono time_point
+     *
+     * @param isoString ISO 8601 formatted string (e.g., "2025-09-16T14:32:05.123Z")
+     * @return std::chrono::system_clock::time_point The parsed time point
+     *
+     * @threadsafety Thread-safe (no shared state)
+     * @throws std::invalid_argument if string format is invalid
+     */
+    static std::chrono::system_clock::time_point fromISO8601(const std::string& isoString) {
+        std::tm tm = {};
+        std::istringstream ss(isoString);
+
+        ss >> std::get_time(&tm, "%Y-%m-%dT%H:%M:%S");
+
+        if (ss.fail()) {
+            throw std::invalid_argument("Invalid ISO 8601 timestamp format: " + isoString);
+        }
+
+        // Parse milliseconds if present
+        int milliseconds = 0;
+        if (ss.peek() == '.') {
+            ss.ignore(1); // Skip '.'
+            ss >> milliseconds;
+        }
+
+        auto timePoint = std::chrono::system_clock::from_time_t(std::mktime(&tm));
+        timePoint += std::chrono::milliseconds(milliseconds);
+
+        return timePoint;
+    }
+
+    /**
+     * @brief Get current system time as time_point
+     *
+     * @return std::chrono::system_clock::time_point Current UTC time
+     *
+     * @threadsafety Thread-safe (system call)
+     * @throws NO EXCEPTION HANDLING
+     */
+    static std::chrono::system_clock::time_point now() {
+        return std::chrono::system_clock::now();
+    }
+};
 
 // ----------------------------------------------------------------------
 // Function prototypes
