@@ -542,3 +542,53 @@ std::string eErrorCodeToString(ErrorCodes::EErrorCode code)
 	default: return "Unknown error. Code " + std::to_string(static_cast<int>(code));
 	}
 }
+
+// ----------------------------------------------------------------------
+/**
+ * @brief Preprocessor command codes and their descriptions
+**/
+struct PP_CODE {
+	// Stop preprocessor and station activities and return then to initial state
+	static constexpr int RESET = 1000;
+	// Stop all station activities
+	static constexpr int STOP = 1001;
+	// Run built-in self test at the station hardware
+	static constexpr int BIST = 1002;
+	// Set spectrum scan parameters
+	static constexpr int SET_SCAN = 1020;
+	// Get station identification information
+	static constexpr int GET_IDN = 2000;
+	// Get preprocessor and station state information
+	static constexpr int GET_STATUS = 2001;
+	// Get error log information
+	static constexpr int GET_ERROR = 2002;
+	// Get built-in self test results
+	static constexpr int GET_BIST = 2003;
+	// Get GPS measurement information
+	static constexpr int GET_GPS = 2010;
+	// Get spectrum scan results
+	static constexpr int GET_SCAN = 2020;
+
+	// ----------------------------------------------------------------------
+	/**
+	 * @brief Convert Preprocessor command code to string description
+	 *
+	 * @param code: Preprocessor command code
+	 * @return const char*: Description of the Preprocessor command
+	**/
+	static constexpr const char* toString(int code) {
+		switch (code) {
+			case RESET: return "Stop preprocessor and station activities and return then to initial state";
+			case STOP: return "Stop all station activities";
+			case BIST: return "Run built-in self test at the station hardware";
+			case SET_SCAN: return "Set spectrum scan parameters";
+			case GET_IDN: return "Get station identification information";
+			case GET_STATUS: return "Get preprocessor and station state information";
+			case GET_ERROR: return "Get error log information";
+			case GET_BIST: return "Get built-in self test results";
+			case GET_GPS: return "Get GPS measurement information";
+			case GET_SCAN: return "Get spectrum scan results";
+			default: return "Undefined Preprocessor Code";
+		}
+	}
+};
