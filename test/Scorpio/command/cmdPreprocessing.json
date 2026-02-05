@@ -1,0 +1,47 @@
+{
+    "CODE": 14,
+    "COMMAND": "cmdRequestOccupancyDF",
+    "ARGS": {
+        "ant": 1,
+        "numBands": 2,
+        "storageTime": 15,
+        "measurementTime": 100,
+        "numAzimuths": 360,
+        "confidence": 75,
+        "recordHoldoff": 50,
+        "scanDfThreshold": 10,
+        "recordAudioDf": false,
+        "band": [
+            {
+                "startFrequency": 88000000,
+                "stopFrequency": 108000000,
+                "channelBandwidth": 25000,
+                "stopTime": "2024-06-01T12:30:00Z",
+                "stopRevisitCount": 20,
+                "traceBufferSize": 50,
+                "minRevisitTimeSec": 1,
+                "minTraceCount": 5,
+                "traceAverage": true,
+                "traceMin": false,
+                "traceMax": false,
+                "clearWrite": true,
+                "AOA": true,
+                "power": true,
+                "occupancy": true
+            },
+            {
+                "channelBandwidth": 25000,
+                "exclude": false,
+                "startFrequency": 108000000,
+                "stopFrequency": 136000000
+            }
+        ],
+        "rcvrCtrl": {
+            "bandwidth": 250000,
+            "bfo": 800,
+            "detMode": 2,
+            "freq": 90000000,
+            "agcTime": 500
+        }
+    }
+}
