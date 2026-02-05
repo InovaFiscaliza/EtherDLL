@@ -451,7 +451,7 @@ SAVDReqData* jsonToSAVDReqData(nlohmann::json jsonObj) {
  * @return void
  * @throws NO EXCEPTION HANDLING
 **/
-void DLLFunctionCall(DLLConnectionData DLLConnID, json request, unsigned long msgType)
+void DLLFunctionCall(DLLConnectionData DLLConnID, json request)
 {
 	ERetCode errCode = ERetCode::API_SUCCESS;
 
@@ -461,7 +461,10 @@ void DLLFunctionCall(DLLConnectionData DLLConnID, json request, unsigned long ms
 
 	json reqArguments = request.value(TaskKeys::Arguments::VALUE, json::object());
 
-	switch (msgType) {
+	unsigned long CommandCode = request.value(TaskKeys::CommandCode::VALUE, TaskKeys::CommandCode::INIT_VALUE);
+
+	switch (CommandCode) {
+
 		case ECSMSDllMsgType::GET_OCCUPANCY:
 		{
 			SOccupReqData* occupDFReqMsg = jsonToSOccupReqData(reqArguments);
@@ -610,13 +613,11 @@ void processRequestQueue(DLLConnectionData DLLConnID, MessageQueue& request, Mes
 {
 	const std::string funcName = "processRequestQueue";
 
-	while (interruptionCode == edll::Code::RUNNING)
+	while (interruptionCode == edll::CODE::RUNNING)
 	{
 		json oneRequest = request.waitAndPop(interruptionCode, funcName);
 
-		unsigned long cmd = oneRequest.value(TaskKeys::CommandCode::VALUE, TaskKeys::CommandCode::INIT_VALUE);
-
-		if (!validRequest(oneRequest, cmd, response)) {
+		if (!validRequest(oneRequest, response)) {
 			continue;
 		}
 
@@ -627,6 +628,6 @@ void processRequestQueue(DLLConnectionData DLLConnID, MessageQueue& request, Mes
 			continue;
 		}
 
-		DLLFunctionCall(DLLConnID, processedResponse, cmd);
+		DLLFunctionCall(DLLConnID, processedResponse);
 	}
 }
