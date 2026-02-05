@@ -127,7 +127,7 @@ public:
 		{
 			std::unique_lock<std::mutex> lock(mtx);
 			pop_condition.wait(lock, [this, msgCount, &interruptionCode] {
-				return messageCount != msgCount || interruptionCode != edll::Code::RUNNING;
+				return messageCount != msgCount || interruptionCode != edll::CODE::RUNNING;
 				});
 		}
 		return msgCount;
@@ -171,12 +171,12 @@ public:
 
 			// Wait until queue is not empty or we're interrupted
 			push_condition.wait(lock, [this, &interruptionCode] {
-				return !msgQueue.empty() || interruptionCode != edll::Code::RUNNING;
+				return !msgQueue.empty() || interruptionCode != edll::CODE::RUNNING;
 				});
 		}
 
 		// If wait was interrupted, return empty json
-		if (interruptionCode != edll::Code::RUNNING) {
+		if (interruptionCode != edll::CODE::RUNNING) {
 			return json(); 
 		}
 
@@ -198,12 +198,12 @@ public:
 
 		// Wait until queue is not empty or we're interrupted
 		bool notified = push_condition.wait_for(lock, std::chrono::milliseconds(timeoutMs), [this, &interruptionCode] {
-			return interruptionCode != edll::Code::RUNNING;
+			return interruptionCode != edll::CODE::RUNNING;
 			});
 
 		if (messagePushed) {
 			messagePushed = false;
-			return interruptionCode == edll::Code::RUNNING;
+			return interruptionCode == edll::CODE::RUNNING;
 		}
 		else {
 			return false;
@@ -339,7 +339,7 @@ private:
 		int iResult = getaddrinfo(NULL, portStr.c_str(), &hints, &result);
 		if (iResult != 0) {
 			loggerPtr->error("Socket getaddrinfo failed. EC:" + std::to_string(iResult));
-			interruptionCode = edll::Code::CLIENT_ERROR;
+			interruptionCode = edll::CODE::CLIENT_ERROR;
 			WSACleanup();
 			return;
 		}
@@ -347,7 +347,7 @@ private:
 		listenSocket = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
 		if (listenSocket == INVALID_SOCKET) {
 			loggerPtr->error("Socket creation failed. EC:" + std::to_string(WSAGetLastError()));
-			interruptionCode = edll::Code::CLIENT_ERROR;
+			interruptionCode = edll::CODE::CLIENT_ERROR;
 			freeaddrinfo(result);
 			WSACleanup();
 			return;
@@ -357,7 +357,7 @@ private:
 		iResult = setsockopt(listenSocket, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout, sizeof(timeout));
 		if (iResult == SOCKET_ERROR) {
 			loggerPtr->error("Socket setsockopt timeout failed. EC:" + std::to_string(WSAGetLastError()));
-			interruptionCode = edll::Code::CLIENT_ERROR;
+			interruptionCode = edll::CODE::CLIENT_ERROR;
 			freeaddrinfo(result);
 			closesocket(listenSocket);
 			WSACleanup();
@@ -367,7 +367,7 @@ private:
 		iResult = ::bind(listenSocket, result->ai_addr, static_cast<int>(result->ai_addrlen));
 		if (iResult == SOCKET_ERROR) {
 			loggerPtr->error("Socket bind failed. EC:" + std::to_string(WSAGetLastError()));
-			interruptionCode = edll::Code::CLIENT_ERROR;
+			interruptionCode = edll::CODE::CLIENT_ERROR;
 			freeaddrinfo(result);
 			closesocket(listenSocket);
 			WSACleanup();
@@ -379,7 +379,7 @@ private:
 		iResult = listen(listenSocket, SOMAXCONN);
 		if (iResult == SOCKET_ERROR) {
 			loggerPtr->error("Socket listen failed. EC:" + std::to_string(WSAGetLastError()));
-			interruptionCode = edll::Code::CLIENT_ERROR;
+			interruptionCode = edll::CODE::CLIENT_ERROR;
 			closesocket(listenSocket);
 			WSACleanup();
 			return;
@@ -470,7 +470,7 @@ public:
 
 		loggerPtr->debug(logSource + " is waiting for messages from " + clientIP);
 
-		while (interruptionCode == edll::Code::RUNNING) {
+		while (interruptionCode == edll::CODE::RUNNING) {
 
 			// read data from socket - blocking call
 			int bytesRead = recv(clientSocket, buffer.data(), static_cast<int>(bufferSize), 0);
@@ -535,7 +535,7 @@ public:
 				}
 
 				if (error == WSAETIMEDOUT) {
-					if (interruptionCode != edll::Code::RUNNING) {
+					if (interruptionCode != edll::CODE::RUNNING) {
 						response.push(buildServiceInterruptionMsg(interruptionCode), logSource, true);
 					}
 					continue;
@@ -572,7 +572,7 @@ public:
 
 		int iResult = 0;
 
-		while (interruptionCode == edll::Code::RUNNING)
+		while (interruptionCode == edll::CODE::RUNNING)
 		{
 			json oneResponse = response.waitAndPop(interruptionCode, logSource);
 
@@ -620,7 +620,7 @@ public:
 		int pingPeriodMs = static_cast<int>(config[service::KEY][serviceProtocol::PingPeriod::KEY].get<double>() * 1000);
 		int iResult = 0;
 
-		while (interruptionCode == edll::Code::RUNNING) {
+		while (interruptionCode == edll::CODE::RUNNING) {
 
 			bool timeout = response.waitAction(interruptionCode, logSource, pingPeriodMs);
 

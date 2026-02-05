@@ -42,7 +42,7 @@ namespace edll {
 	using INT_CODE = int;
     
 	// Interruption codes used for tracking the reason for service interruption
-    struct Code {
+    struct CODE {
         static constexpr int RUNNING = 0;
         static constexpr int KILL_INTERRUPT = 1;
         static constexpr int CTRL_C_INTERRUPT = 2;
