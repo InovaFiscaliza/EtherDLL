@@ -246,16 +246,16 @@ public:
     }
 
     // ------------------------------------------------------------------
-    /** @brief Process response before sending to client
+    /** @brief Process data before sending to DLL or to client
         *
         * Applies filtering, transformation, and validation to outgoing messages.
         * Returns empty optional if message should be suppressed.
         *
-        * @param response: JSON response object to preprocess (modified in place)
+        * @param data: JSON object to preprocess
         * @return std::optional<json>: Processed message, or std::nullopt to skip sending
         * @throws NO EXCEPTION HANDLING
         **/
-    std::optional<json> process(json response) {
+    std::optional<json> process(json data) {
         // Ensure preprocessor is initialized
         if (!isInitialized()) {
             // Cannot log without logger - return nullopt to suppress message
@@ -263,21 +263,45 @@ public:
         }
 
         // Filter: Skip empty or invalid responses
-        if (response.is_null() || response.empty()) {
+        if (data.is_null() || data.empty()) {
             loggerPtr->debug("ResponsePreprocessor: Skipping empty response");
             return std::nullopt;
         }
 
-        // Transform: Remove internal-only fields before sending
-        removeInternalFields(response);
+        using TaskKeys = edll::DefaultConfig::Service::TaskKeys;
 
-        // Validate: Ensure required fields are present
-        if (!validateResponse(response)) {
-            loggerPtr->warn("ResponsePreprocessor: Response failed validation");
-            return std::nullopt;
+        unsigned long msgType = data.value(TaskKeys::CommandCode::VALUE, TaskKeys::CommandCode::INIT_VALUE);
+        switch (msgType) {
+		    case PP_CODE::RESET:
+                
+                break;
+			case PP_CODE::STOP:
+                break;
+			case PP_CODE::BIST:
+                break;
+            case PP_CODE::SET_SCAN:
+                break;
+            case PP_CODE::GET_IDN:
+                break;
+            case PP_CODE::GET_STATUS:
+                break;
+            case PP_CODE::GET_ERROR:
+                break;
+            case PP_CODE::GET_BIST:
+                break;
+            case PP_CODE::GET_GPS:
+                break;
+            case PP_CODE::GET_SCAN:
+				break;
+            default:
+                break;
         }
 
-        return response;
+
+        // Transform: Remove internal-only fields before sending
+        removeInternalFields(data);
+
+        return data;
     }
 
 private:
