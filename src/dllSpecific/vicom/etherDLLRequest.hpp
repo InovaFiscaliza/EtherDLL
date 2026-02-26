@@ -63,7 +63,7 @@ extern MessageQueue response;
  * @return void
  * @throws NO EXCEPTION HANDLING
 **/
-void DLLFunctionCall(DLLConnectionData& DLLConn, json request, unsigned long msgType)
+void DLLFunctionCall(DLLConnectionData& DLLConn, json request, unsigned long msgType, std::atomic<bool>& refMeasurementInProgress, const std::atomic<edll::INT_CODE>& interruptionCode)
 {
 	const std::string logSource = "Vicom::DLLFunctionCall";
 	loggerPtr->debug("Processing request: {}", request.dump());
@@ -120,10 +120,10 @@ void DLLFunctionCall(DLLConnectionData& DLLConn, json request, unsigned long msg
 			sweepSettings.sSpectrumSettings.fMaxDeviceMeasRateInHz = reqArguments[SweepConf::MAX_DEVICE_MEAS_RATE].get<float>();
 
 			if (!checkParam(SweepConf::WINDOW_TYPE)) return;
-			sweepSettings.sSpectrumSettings.eWindowType = (RohdeSchwarz::ViCom::RFPOWERSCAN::SSpectrumSettings::etWindowType)reqArguments[SweepConf::WINDOW_TYPE].get<int>();
+			sweepSettings.sSpectrumSettings.eWindowType = static_cast<SSpectrumSettings::etWindowType>(reqArguments[SweepConf::WINDOW_TYPE].get<int>());
 
 			if (!checkParam(SweepConf::FFT_SIZE)) return;
-			sweepSettings.sSpectrumSettings.eFFTSize = (RohdeSchwarz::ViCom::RFPOWERSCAN::SSpectrumSettings::etFFTSize)reqArguments[SweepConf::FFT_SIZE].get<int>();
+			sweepSettings.sSpectrumSettings.eFFTSize = static_cast<SSpectrumSettings::etFFTSize>(reqArguments[SweepConf::FFT_SIZE].get<int>());
 
 			if (!checkParam(SweepConf::AUTO_BANDWIDTH)) return;
 			sweepSettings.sSpectrumSettings.bAutoBandwidth = reqArguments[SweepConf::AUTO_BANDWIDTH].get<bool>() ? TRUE : FALSE;
@@ -152,7 +152,7 @@ void DLLFunctionCall(DLLConnectionData& DLLConn, json request, unsigned long msg
 			sweepSettings.sMeasurementTime.dwMeasTimeInNs = reqArguments[SweepConf::MEAS_TIME_NS].get<DWORD>();
 
 			if (!checkParam(SweepConf::MEAS_DETECTOR_TYPE)) return;
-			sweepSettings.sMeasurementTime.eDetectorType = (RohdeSchwarz::ViCom::RFPOWERSCAN::SMeasurementTime::etDetectorType) reqArguments[SweepConf::MEAS_DETECTOR_TYPE].get<int>();
+			sweepSettings.sMeasurementTime.eDetectorType = static_cast<SMeasurementTime::etDetectorType>(reqArguments[SweepConf::MEAS_DETECTOR_TYPE].get<int>());
 
 
 			// --- Frequency Detector Settings ---
@@ -160,15 +160,15 @@ void DLLFunctionCall(DLLConnectionData& DLLConn, json request, unsigned long msg
 			sweepSettings.sFrequencyDetector.dwCountOfLines = reqArguments[SweepConf::FREQ_DETECTOR_LINES].get<DWORD>();
 
 			if (!checkParam(SweepConf::FREQ_DETECTOR_TYPE)) return;
-			sweepSettings.sFrequencyDetector.eDetectorType = (RohdeSchwarz::ViCom::RFPOWERSCAN::SFrequencyDetector::etFrequencyDetectorType)reqArguments[SweepConf::FREQ_DETECTOR_TYPE].get<int>();
+			sweepSettings.sFrequencyDetector.eDetectorType = static_cast<SFrequencyDetector::etFrequencyDetectorType>(reqArguments[SweepConf::FREQ_DETECTOR_TYPE].get<int>());
 
 
 			// --- Time Detector Settings ---
 			if (!checkParam(SweepConf::TIME_DETECTOR_TYPE)) return;
-			sweepSettings.sTimeDetector.eDetectorType = (RohdeSchwarz::ViCom::RFPOWERSCAN::STimeDetector::etTimeDetectorType)reqArguments[SweepConf::TIME_DETECTOR_TYPE].get<int>();
+			sweepSettings.sTimeDetector.eDetectorType = static_cast<STimeDetector::etTimeDetectorType>(reqArguments[SweepConf::TIME_DETECTOR_TYPE].get<int>());
 
 			if (!checkParam(SweepConf::TIME_DETECTOR_INTERVAL_TYPE)) return;
-			sweepSettings.sTimeDetector.eDetectorIntervalType = (RohdeSchwarz::ViCom::RFPOWERSCAN::STimeDetector::etTimeDetectorIntervalType)reqArguments[SweepConf::TIME_DETECTOR_INTERVAL_TYPE].get<int>();
+			sweepSettings.sTimeDetector.eDetectorIntervalType = static_cast<STimeDetector::etTimeDetectorIntervalType>(reqArguments[SweepConf::TIME_DETECTOR_INTERVAL_TYPE].get<int>());
 
 			if (!checkParam(SweepConf::TIME_PARAMETER_MS)) return;
 			sweepSettings.sTimeDetector.dwTimeParameterInMs = reqArguments[SweepConf::TIME_PARAMETER_MS].get<DWORD>();
@@ -193,23 +193,36 @@ void DLLFunctionCall(DLLConnectionData& DLLConn, json request, unsigned long msg
 			
 			RohdeSchwarz::ViCom::CViComBasicInterface& basicIF = DLLConn.ps_pInterface->GetBasicInterface();
 			basicIF.StartMeasurement();
+			refMeasurementInProgress.store(true, std::memory_order_release);
 
-			// Get result with a 5-second timeout
-			const RohdeSchwarz::ViCom::RFPOWERSCAN::SMeasResult* pResult = DLLConn.ps_pInterface->GetResult(err, 5000); 
-			if (pResult) {
-				responseJson = processPowerScanResult(&sweepSettings, pResult);
-				loggerPtr->info("Power scan successful.");
-			}
-			else {
-				CStringA ansiErrorString(err.GetErrorString());
-				loggerPtr->error("Failed to get power scan result: {}", ansiErrorString.GetString());
-				responseJson["error"] = vicomErrorToJson(err);
+			while (refMeasurementInProgress.load(std::memory_order_acquire) && interruptionCode == edll::Code::RUNNING) {
+				int retrieveTimeMs = static_cast<int>(1000 / sweepSettings.sSpectrumSettings.fMaxReportingRateInHz);
+				const RohdeSchwarz::ViCom::RFPOWERSCAN::SMeasResult* pResult = DLLConn.ps_pInterface->GetResult(err, 5000);
+				if (pResult) {
+					responseJson = processPowerScanResult(&sweepSettings, pResult);
+					loggerPtr->info("Power scan successful.");
+				}
+				else {
+					CStringA ansiErrorString(err.GetErrorString());
+					loggerPtr->error("Failed to get power scan result: {}", ansiErrorString.GetString());
+					responseJson["error"] = vicomErrorToJson(err);
+				}
+				response.push(responseJson, logSource);
+				
+				// Interruption-aware sleep
+				auto startTime = std::chrono::steady_clock::now();
+				while (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - startTime).count() < retrieveTimeMs
+					&& interruptionCode == edll::Code::RUNNING
+					&& refMeasurementInProgress.load(std::memory_order_acquire))
+				{
+					std::this_thread::sleep_for(std::chrono::milliseconds(50));
+				}
 			}
 
 			basicIF.StopMeasurement();
 			basicIF.HasMeasurementStopped();
 			
-			response.push(responseJson, logSource);
+			//response.push(responseJson, logSource);
 			break;
 		}
 		case VicomTask::GPS_GET_LOCATION_CODE:
@@ -233,9 +246,17 @@ void DLLFunctionCall(DLLConnectionData& DLLConn, json request, unsigned long msg
 			}
 
 			RohdeSchwarz::ViCom::CViComBasicInterface& basicIF = DLLConn.gps_pInterface->GetBasicInterface();
-			basicIF.StartMeasurement();
+
+			if (!basicIF.StartMeasurement(err)) {
+				CStringA ansiErrorString(err.GetErrorString());
+				loggerPtr->error("Error starting GPS measurement: {}", ansiErrorString.GetString());
+				responseJson["error"] = vicomErrorToJson(err);
+				response.push(responseJson, logSource);
+				return;
+			}
 
 			// Get result with a 5-second timeout
+			loggerPtr->info("Waiting for GPS result...");
 			const RohdeSchwarz::ViCom::GPS::SMeasResult* pResult = DLLConn.gps_pInterface->GetResult(err, 5000);
 			if (pResult) {
 				responseJson = processGPSResult(pResult);
@@ -247,12 +268,39 @@ void DLLFunctionCall(DLLConnectionData& DLLConn, json request, unsigned long msg
 				responseJson["error"] = vicomErrorToJson(err);
 			}
 
+			loggerPtr->debug("Stopping GPS measurement...");
 			basicIF.StopMeasurement();
-			basicIF.HasMeasurementStopped();
+			loggerPtr->debug("GPS measurement stop command sent.");
 			
 			response.push(responseJson, logSource);
 			break;
 		}
+
+		case VicomTask::IDN_CODE:
+		{
+			responseJson["model"] = DLLConn.receiverModel;
+			responseJson["serial"] = DLLConn.serialNumber;
+			responseJson["sw_version"] = DLLConn.softwareVersion;
+			responseJson["hw_version"] = DLLConn.hardwareVersion;
+
+			std::string idnResponse = "Rohde&Schwarz," + DLLConn.receiverModel + "," + DLLConn.serialNumber + "," + DLLConn.softwareVersion;
+			responseJson["message"] = idnResponse;
+			
+			loggerPtr->info("IDN query successful: {}", idnResponse);
+			response.push(responseJson, logSource);
+			break;
+		}
+
+		case VicomTask::STOP_MEASUMENT_CODE:
+		{
+			// Implement stop measurement logic if applicable
+			refMeasurementInProgress.store(false, std::memory_order_release);
+			loggerPtr->info("Stop measurement command received.");
+			responseJson["message"] = "Stop measurement command processed.";
+			response.push(responseJson, logSource);
+			break;
+		}
+
 		default:
 		{
 			loggerPtr->error("Unknown message type: {}", msgType);
@@ -277,22 +325,33 @@ void DLLFunctionCall(DLLConnectionData& DLLConn, json request, unsigned long msg
  * @param request: Thread-safe message queue for incoming requests
  * @param response: Thread-safe message queue for outgoing responses
  * @param interruptionCode: Signal for service interruption
+ * @param refMeasurementInProgress: (bool&) Reference to a flag indicating if a measurement is in progress
  * @throws NO EXCEPTION HANDLING
 */
-void processRequestQueue(DLLConnectionData& DLLConn, MessageQueue& request, MessageQueue& response, edll::INT_CODE& interruptionCode)
+void processRequestQueue(
+    DLLConnectionData& DLLConn,
+    MessageQueue& request,
+    MessageQueue& response,
+    const std::atomic<edll::INT_CODE>& interruptionCode,
+    std::atomic<bool>& refMeasurementInProgress
+)
 {
-	const std::string funcName = "processRequestQueue";
+    const std::string funcName = "processRequestQueue";
 
-	while (interruptionCode == edll::Code::RUNNING)
-	{
-		json oneRequest = request.waitAndPop(interruptionCode, funcName);
+    while (interruptionCode == edll::Code::RUNNING)
+    {
+        json oneRequest = request.waitAndPop(interruptionCode, funcName);
 
-		unsigned long cmd = oneRequest.value(TaskKeys::CommandCode::VALUE, TaskKeys::CommandCode::INIT_VALUE);
-
-		if (!validRequest(oneRequest, cmd, response)) {
-			continue;
+		if (interruptionCode != edll::Code::RUNNING) {
+			break;
 		}
 
-		DLLFunctionCall(DLLConn, oneRequest, cmd);
-	}
+        unsigned long cmd = oneRequest.value(TaskKeys::CommandCode::VALUE, TaskKeys::CommandCode::INIT_VALUE);
+
+        if (!validRequest(oneRequest, cmd, response)) {
+            continue;
+        }
+
+        DLLFunctionCall(DLLConn, oneRequest, cmd, refMeasurementInProgress, interruptionCode);
+    }
 }

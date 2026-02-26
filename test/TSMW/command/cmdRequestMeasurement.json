@@ -1,13 +1,13 @@
 {
     "CODE": 1,
-    "COMMAND": "power_scan",
+    "COMMAND": "powerScan",
     "ARGS": {
         "frontEndMask": 1,
         "startFrequency": 90000000,
         "stopFrequency": 107000000,
         "requireRawData": false,
         "maxReportingRate": 10.0,
-        "maxDeviceMeasurementRate": 10.0,
+        "maxDeviceMeasurementRate": 30.0,
         "windowType": 1,
         "fftSize": 1024,
         "autoBandwidth": true,
@@ -25,6 +25,7 @@
 		"timeDetectorIntervalType": 1,
 		"timeParameter": 1000,
 		"useMarker": false,
-		"returnPowerValues": false 
+		"returnPowerValues": false,
+        "singleSweepMode": false
     }
 }

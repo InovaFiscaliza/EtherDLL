@@ -56,7 +56,7 @@ using json = nlohmann::json;
 	Global variables related to the application
 */
 // Code to represent the cause for not running
-edll::INT_CODE interruptionCode = edll::Code::RUNNING;
+std::atomic<edll::INT_CODE> interruptionCode = edll::Code::RUNNING;
 
 // Message queues
 MessageQueue request;
@@ -64,6 +64,14 @@ MessageQueue response;
 
 // Logger pointer
 spdlog::logger* loggerPtr = nullptr;
+
+// Measurement in progress flag
+std::atomic<bool> measurementInProgress{ false };
+
+// Completion signaling
+std::mutex threadCompletionMutex;
+std::condition_variable threadCompletionCV;
+std::atomic<bool> anyThreadCompleted = false;
 
 // ----------------------------------------------------------------------
 /*
@@ -85,6 +93,10 @@ static void signalHandler(int signal) {
 		std::string message = "Received unknown signal. #LttOS: " + std::to_string(signal);
 		loggerPtr->warn(message);
 	}
+
+	request.notify();
+	response.notify();
+	threadCompletionCV.notify_all();
 }
 
 // ----------------------------------------------------------------------
@@ -267,11 +279,6 @@ int main(int argc, char* argv[]) {
 		return static_cast<int>(edll::Code::SERVICE_ERROR);
 	}
 
-	// Add these at the top with other global variables:
-	std::mutex threadCompletionMutex;
-	std::condition_variable threadCompletionCV;
-	std::atomic<bool> anyThreadCompleted = false;
-
 
 	//DLLConnectionData DLLConnID(DEFAULT_DLL_CONNECTION_DATA);
 	DLLConnectionData DLLConnID{};
@@ -283,6 +290,7 @@ int main(int argc, char* argv[]) {
 
 	while (interruptionCode == edll::Code::RUNNING)
 	{
+			
 		// Initialize ClientConn object to wait for a client connection
 		ClientConn clientConn(config, interruptionCode, *logger_ptr);
 
@@ -301,12 +309,12 @@ int main(int argc, char* argv[]) {
 		anyThreadCompleted = false;
 
 		// Lambda to signal completion
-		auto signalCompletion = [&threadCompletionMutex, &anyThreadCompleted, &threadCompletionCV]() {
+		auto signalCompletion = []() {
 				{
 					std::lock_guard<std::mutex> lock(threadCompletionMutex);
 					anyThreadCompleted = true;
 				}
-			threadCompletionCV.notify_one();
+			threadCompletionCV.notify_all();
 			};
 
 		// Start threads for each parallel task
@@ -320,7 +328,7 @@ int main(int argc, char* argv[]) {
 
 		auto requestProcFuture = std::async(std::launch::async, [&]() {
 			logger_ptr->debug("Starting thread that send requests from queue to DLL");
-			processRequestQueue(DLLConnID, request, response, interruptionCode);
+			processRequestQueue(DLLConnID, request, response, interruptionCode, measurementInProgress);
 			signalCompletion();
 			logger_ptr->debug("Finished thread that send requests from queue to DLL");
 			return true;

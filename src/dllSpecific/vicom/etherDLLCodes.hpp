@@ -58,9 +58,15 @@ json vicomErrorToJson(const CViComError& err)
  */
 struct VicomTask
 {
-	static constexpr const char* POWER_SCAN_NAME = "power_scan";
+	static constexpr const char* POWER_SCAN_NAME = "powerScan";
 	static constexpr unsigned long POWER_SCAN_CODE = 1;
 
-	static constexpr const char* GPS_GET_LOCATION_NAME = "gps_get_location";
+	static constexpr const char* GPS_GET_LOCATION_NAME = "gpsGetLocation";
 	static constexpr unsigned long GPS_GET_LOCATION_CODE = 2;
+
+	static constexpr const char* STOP_MEASUMENT = "stopMeasurement";
+	static constexpr unsigned long STOP_MEASUMENT_CODE = 3;
+
+	static constexpr const char* IDN_NAME = "idn";
+	static constexpr unsigned long IDN_CODE = 4;
 };

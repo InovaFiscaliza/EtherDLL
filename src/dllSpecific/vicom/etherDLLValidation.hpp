@@ -121,6 +121,9 @@ bool validRequest(json request, unsigned long msgType, MessageQueue& response) {
         case VicomTask::GPS_GET_LOCATION_CODE:
             // No specific arguments to validate
             break;
+        case VicomTask::IDN_CODE:
+            // No specific arguments to validate
+            break;
         default: {
             loggerPtr->error("Unknown message type for validation: {}", msgType);
 			response.push(buildErrorResponse(request, "Unknown command code."), logSource);

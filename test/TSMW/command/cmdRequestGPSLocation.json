@@ -1,5 +1,5 @@
 {
     "CODE": 2,
-    "COMMAND": "gps_get_location",
+    "COMMAND": "gpsGetLocation",
     "ARGS": {}
 }

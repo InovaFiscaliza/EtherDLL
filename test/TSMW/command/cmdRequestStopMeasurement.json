@@ -1,0 +1,5 @@
+{
+    "CODE": 3,
+    "COMMAND": "stopMeasurement",
+    "ARGS": {}
+}

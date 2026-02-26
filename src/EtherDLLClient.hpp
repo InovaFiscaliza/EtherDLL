@@ -115,7 +115,7 @@ public:
 	 * @return unsigned long: Message count for the item just added
 	 * @throws NO EXCEPTION HANDLING
 	**/
-	unsigned long pushAndWait(json item, std::string logSource, const edll::INT_CODE& interruptionCode, bool setClientKey = false) {
+	unsigned long pushAndWait(json item, std::string logSource, const std::atomic<edll::INT_CODE>& interruptionCode, bool setClientKey = false) {
 
 		
 		unsigned long msgCount = push(item, logSource, setClientKey);
@@ -160,7 +160,7 @@ public:
 	* @return json: Item popped from the front of the queue, or empty json if interrupted
 	* @throws NO EXCEPTION HANDLING
 	**/
-	json waitAndPop(const edll::INT_CODE& interruptionCode, std::string logSource) {
+	json waitAndPop(const std::atomic<edll::INT_CODE>& interruptionCode, std::string logSource) {
 
 		{
 			std::unique_lock<std::mutex> lock(mtx);
@@ -188,7 +188,7 @@ public:
 	 * @return bool: True if the queue changed or , false otherwise
 	 * @throws NO EXCEPTION HANDLING
 	**/
-	bool waitAction(const edll::INT_CODE& interruptionCode, std::string logSource, int timeoutMs = 1000) {
+	bool waitAction(const std::atomic<edll::INT_CODE>& interruptionCode, std::string logSource, int timeoutMs = 1000) {
 
 		std::unique_lock<std::mutex> lock(mtx);
 
@@ -240,6 +240,17 @@ public:
 		std::lock_guard<std::mutex> lock(mtx);
 		return messageCount;
 	}
+
+	/** @brief Notify any threads waiting for messages or for pop signaling
+	 * Used to wake up threads when an interruption signal is received.
+	 * @param None
+	 * @return void
+	 * @throws NO EXCEPTION HANDLING
+	**/
+	void notify() {
+		push_condition.notify_all();
+		pop_condition.notify_all();
+	}
 };
 
 
@@ -262,7 +273,7 @@ private:
 
 	// Configuration parameters
 	json config;
-	edll::INT_CODE& interruptionCode;
+	std::atomic<edll::INT_CODE>& interruptionCode;
 	spdlog::logger& logger;
 
 	// Client socket and info
@@ -295,13 +306,13 @@ private:
 	 * @return json: Message indicating service shutdown
 	 * @throws NO EXCEPTION HANDLING
 	**/
-	json buildServiceInterruptionMsg(const edll::INT_CODE& interruptionCode) {
+	json buildServiceInterruptionMsg(const std::atomic<edll::INT_CODE>& interruptionCode) {
 		json msg;
 
 		msg[taskKeys::CommandCode::VALUE] = taskKeys::CommandCode::INIT_VALUE;
 		msg[taskKeys::CommandName::VALUE] = taskKeys::CommandName::INIT_VALUE;
 		msg[taskKeys::Arguments::VALUE] = json::object();
-		msg[taskKeys::Message::VALUE] = std::string("Service interruption. Code: ") + std::to_string(interruptionCode);
+		msg[taskKeys::Message::VALUE] = std::string("Service interruption. Code: ") + std::to_string(interruptionCode.load());
 
 		return msg;
 	}
@@ -388,8 +399,37 @@ private:
 		// call the connection handler 
 		loggerPtr->info("Waiting for client connections on port " + portStr);
 
-		// hold the excecution until a client connects
-		clientSocket = accept(listenSocket, (struct sockaddr*)&clientAddr, NULL);
+		// Non-blocking accept wait loop
+		fd_set readfds;
+		struct timeval tv;
+		while (interruptionCode == edll::Code::RUNNING) {
+			FD_ZERO(&readfds);
+			FD_SET(listenSocket, &readfds);
+			tv.tv_sec = 0;
+			tv.tv_usec = 500000; // 500ms timeout
+
+			iResult = select(static_cast<int>(listenSocket + 1), &readfds, NULL, NULL, &tv);
+
+			if (iResult > 0) {
+				// hold the excecution until a client connects
+				clientSocket = accept(listenSocket, (struct sockaddr*)&clientAddr, NULL);
+				break;
+			}
+			else if (iResult == SOCKET_ERROR) {
+				loggerPtr->error("Socket select failed. EC:" + std::to_string(WSAGetLastError()));
+				break;
+			}
+			// if iResult == 0, it timed out, so just loop and check interruptionCode
+		}
+
+		closesocket(listenSocket);
+
+		if (clientSocket == INVALID_SOCKET) {
+			if (interruptionCode == edll::Code::RUNNING) {
+				loggerPtr->warn("Failed in accept operation or select timeout. EC:" + std::to_string(WSAGetLastError()));
+			}
+			return;
+		}
 
 		// configure socket for non-blocking operations
 		// u_long mode = 1;
@@ -408,12 +448,7 @@ private:
 
 		}
 
-		if (clientSocket == INVALID_SOCKET) {
-			loggerPtr->warn("Failed in accept operation with " + clientIP + ".EC:" + std::to_string(WSAGetLastError()));
-		}
-		else {
-			loggerPtr->info("Accepted connection from " + clientIP);
-		}
+		loggerPtr->info("Accepted connection from " + clientIP);
 	}
 
 
@@ -428,7 +463,7 @@ public:
 	 * @throws NO EXCEPTION HANDLING
 	**/
 	ClientConn(json config,
-		edll::INT_CODE& interruptionCode, spdlog::logger& logger)
+		std::atomic<edll::INT_CODE>& interruptionCode, spdlog::logger& logger)
 		: config(config),
 		interruptionCode(interruptionCode), logger(logger), clientIP("")
 	{
@@ -469,7 +504,25 @@ public:
 
 		while (interruptionCode == edll::Code::RUNNING) {
 
-			// read data from socket - blocking call
+			fd_set readfds;
+			FD_ZERO(&readfds);
+			FD_SET(clientSocket, &readfds);
+			struct timeval tv;
+			tv.tv_sec = 0;
+			tv.tv_usec = 500000; // 500ms timeout
+
+			iResult = select(static_cast<int>(clientSocket + 1), &readfds, NULL, NULL, &tv);
+
+			if (iResult <= 0) {
+				if (iResult == SOCKET_ERROR) {
+					loggerPtr->error(logSource + " select failed. EC:" + std::to_string(WSAGetLastError()));
+					break;
+				}
+				// timeout or interrupted, check interruptionCode at start of loop
+				continue;
+			}
+
+			// read data from socket - blocking call (but select told us data is ready)
 			int bytesRead = recv(clientSocket, buffer.data(), static_cast<int>(bufferSize), 0);
 
 			if (bytesRead > 0) {
@@ -520,30 +573,30 @@ public:
 					response.push(ackObj, logSource, true);
 				}
 			}
+			else if (bytesRead == 0) {
+				// Connection closed by client
+				loggerPtr->info(logSource + " Client disconnected.");
+				return;
+			}
 			else {
 				int error = WSAGetLastError();
-
-				if (bufferTTL == 0) {
-					if (accumulatedData.length() > 0) {
-						loggerPtr->debug(logSource + " Buffer TTL expired. Clearing accumulated data: " + accumulatedData);
-						accumulatedData.clear();
-					}
-					bufferTTL = bufferTTLInit;
-				}
-
-				if (error == WSAETIMEDOUT) {
-					if (interruptionCode != edll::Code::RUNNING) {
-						response.push(buildServiceInterruptionMsg(interruptionCode), logSource, true);
-					}
-					continue;
-				}
-				
-				if (error != WSAEWOULDBLOCK) {
-					// Unknown connection error
-					loggerPtr->error(logSource + " Client connection error: " + std::to_string(error));
+				if (error != WSAEWOULDBLOCK && error != WSAETIMEDOUT) {
+					loggerPtr->error(logSource + " recv failed. EC:" + std::to_string(error));
 					return;
 				}
 			}
+
+			if (bufferTTL == 0) {
+				if (accumulatedData.length() > 0) {
+					loggerPtr->debug(logSource + " Buffer TTL expired. Clearing accumulated data: " + accumulatedData);
+					accumulatedData.clear();
+				}
+				bufferTTL = bufferTTLInit;
+			}
+		}
+
+		if (interruptionCode != edll::Code::RUNNING) {
+			response.push(buildServiceInterruptionMsg(interruptionCode), logSource, true);
 		}
 	}
 

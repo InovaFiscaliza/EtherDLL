@@ -1,0 +1,5 @@
+{
+    "CODE": 4,
+    "COMMAND": "*idn?",
+    "ARGS": {}
+}

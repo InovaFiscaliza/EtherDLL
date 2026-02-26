@@ -85,6 +85,10 @@ struct VicomConnection {
 	CViComRFPowerScanInterface* ps_pInterface;
 	std::unique_ptr<CViComLoader<CViComGpsInterface>> gps_loader;
 	CViComGpsInterface* gps_pInterface;
+	std::string receiverModel;
+	std::string serialNumber;
+	std::string softwareVersion;
+	std::string hardwareVersion;
 };
 
 // ----------------------------------------------------------------------
@@ -119,6 +123,18 @@ struct DefaultDLLParam {
 			static constexpr const char* KEY = "receiver_type";
 			static constexpr const char* VALUE = "TSMW";
 		};
+		struct ReceiverModel {
+			static constexpr const char* KEY = "receiver_model";
+			static constexpr const char* VALUE = "";
+		};
+		struct ReceiveSoftwareVersion {
+			static constexpr const char* KEY = "receiver_software_version";
+			static constexpr const char* VALUE = "";
+		};
+		struct ReceiverHardwareVersion {
+			static constexpr const char* KEY = "receiver_hardware_version";
+			static constexpr const char* VALUE = "";
+		};
 	};
 
 	struct SweepSettings {
@@ -148,6 +164,7 @@ struct DefaultDLLParam {
 		static constexpr const char* TIME_PARAMETER_MS = "timeParameter";
 		static constexpr const char* USE_MARKER = "useMarker";
 		static constexpr const char* RETURN_POWER_VALUES = "returnPowerValues";
+		static constexpr const char* SINGLE_SWEEP = "singleSweepMode";
 	};
 };
 
@@ -162,6 +179,9 @@ json buildDLLDefaultParamJson(json default_param = json::object()) {
 
 	default_param[DefaultDLLParam::KEY][DefaultDLLParam::Station::KEY][DefaultDLLParam::Station::Address::KEY] = DefaultDLLParam::Station::Address::VALUE;
 	default_param[DefaultDLLParam::KEY][DefaultDLLParam::Station::KEY][DefaultDLLParam::Station::ReceiverType::KEY] = DefaultDLLParam::Station::ReceiverType::VALUE;
+	default_param[DefaultDLLParam::KEY][DefaultDLLParam::Station::KEY][DefaultDLLParam::Station::ReceiverModel::KEY] = DefaultDLLParam::Station::ReceiverModel::VALUE;
+	default_param[DefaultDLLParam::KEY][DefaultDLLParam::Station::KEY][DefaultDLLParam::Station::ReceiveSoftwareVersion::KEY] = DefaultDLLParam::Station::ReceiveSoftwareVersion::VALUE;
+	default_param[DefaultDLLParam::KEY][DefaultDLLParam::Station::KEY][DefaultDLLParam::Station::ReceiverHardwareVersion::KEY] = DefaultDLLParam::Station::ReceiverHardwareVersion::VALUE;
 
 	return default_param;
 }
@@ -273,6 +293,7 @@ bool connectAPI(DLLConnectionData& stationConnData, const nlohmann::json& config
 	{
 		CViComError err;
 		using station_conf = DefaultDLLParam::Station;
+
 		json station_config = config[DefaultDLLParam::KEY][station_conf::KEY].get<json>();
 		
 		std::string ipAddressStr = station_config[station_conf::Address::KEY].get<std::string>();
@@ -298,6 +319,46 @@ bool connectAPI(DLLConnectionData& stationConnData, const nlohmann::json& config
 			CStringA ansiErrorString(err.GetErrorString());
 			loggerPtr->error("Failed to get Power Scan interface. Error: {}", ansiErrorString.GetString());
 			return false;
+		}
+
+		// Retrieve TSMW device information
+		const SConnectedReceiverTable* pTable = stationConnData.ps_pInterface->GetBasicInterface().GetConnectedReceivers(err);
+		if (pTable && pTable->dwCountOfReceivers > 0) {
+			const SConnectedReceiverTable::SReceiver& receiver = pTable->Receivers[0];
+
+			auto verToStr = [](DWORD ver) {
+				return std::to_string((ver >> 24) & 0xFF) + "." +
+					std::to_string((ver >> 16) & 0xFF) + "." +
+					std::to_string((ver >> 8) & 0xFF) + "." +
+					std::to_string(ver & 0xFF);
+			};
+
+			auto typeToStr = [](Receiver::Type type) {
+				switch (type) {
+				case Receiver::TSMU: return "TSMU";
+				case Receiver::TSMU_H: return "TSMU_H";
+				case Receiver::TSMQ: return "TSMQ";
+				case Receiver::TSML_CW: return "TSML_CW";
+				case Receiver::TSML_W: return "TSML_W";
+				case Receiver::TSML_G: return "TSML_G";
+				case Receiver::TSML_C: return "TSML_C";
+				case Receiver::TSML_E: return "TSML_E";
+				case Receiver::TSML_GW: return "TSML_GW";
+				case Receiver::TSMW: return "TSMW";
+				case Receiver::TSME: return "TSME";
+				default: return "UNKNOWN";
+				}
+			};
+
+			stationConnData.receiverModel = typeToStr(receiver.eReceiver);
+			stationConnData.serialNumber = std::to_string(receiver.dwSerialNumber);
+			stationConnData.softwareVersion = verToStr(receiver.dwSoftwareVersion);
+			stationConnData.hardwareVersion = verToStr(receiver.dwHardwareVersion);
+			loggerPtr->info("TSMW Device Info - Model: {}, Serial: {}, SW Version: {}, HW Version: {}",
+				stationConnData.receiverModel, stationConnData.serialNumber, stationConnData.softwareVersion, stationConnData.hardwareVersion);
+		}
+		else {
+			loggerPtr->warn("Failed to retrieve TSMW device information.");
 		}
 
 		// GPS Interface

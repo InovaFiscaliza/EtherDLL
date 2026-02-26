@@ -44,6 +44,8 @@
 // For convenience
 using json = nlohmann::json;
 using namespace RohdeSchwarz::ViCom;
+using namespace RohdeSchwarz::ViCom::RFPOWERSCAN;
+using namespace RohdeSchwarz::ViCom::GPS;
 
 
 // ----------------------------------------------------------------------
