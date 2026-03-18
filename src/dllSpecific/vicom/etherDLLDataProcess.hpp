@@ -104,3 +104,65 @@ json processGPSResult(const RohdeSchwarz::ViCom::GPS::SMeasResult* pResult)
     resultJson["altitude"] = pResult->sPosition.dAltitude;
 	return resultJson;
 }
+
+json processSettingsResult(const RFPOWERSCAN::SSettings* pSettings)
+{
+    using namespace RohdeSchwarz::ViCom::RFPOWERSCAN;
+
+    json resultJson;
+
+    if (!pSettings) {
+        resultJson["error"] = "Invalid or null settings pointer.";
+        return resultJson;
+    }
+
+    resultJson["receiver_index"] = pSettings->dwReceiverIndex;
+    resultJson["result_buffer_depth"] = pSettings->ResultBufferDepth.dwValue;
+
+    const SSweepSettings& sweep = pSettings->SweepSettings;
+    json sweepJson;
+
+    sweepJson["front_end_selection_mask"] = sweep.dwFrontEndSelectionMask;
+    sweepJson["start_frequency"] = sweep.dStartFrequencyInHz;
+    sweepJson["stop_frequency"] = sweep.dStopFrequencyInHz;
+    sweepJson["require_raw_data"] = sweep.bRequestRawData == TRUE;
+
+    json spectrumJson;
+    spectrumJson["max_reporting_rate"] = sweep.sSpectrumSettings.fMaxReportingRateInHz;
+    spectrumJson["max_device_measurement_rate"] = sweep.sSpectrumSettings.fMaxDeviceMeasRateInHz;
+    spectrumJson["window_type"] = sweep.sSpectrumSettings.eWindowType;
+    spectrumJson["fft_size"] = sweep.sSpectrumSettings.eFFTSize;
+    spectrumJson["auto_bandwidth"] = sweep.sSpectrumSettings.bAutoBandwidth == TRUE;
+    spectrumJson["bandwidth_hz"] = sweep.sSpectrumSettings.dwBandwidthInHz;
+    spectrumJson["level_threshold"] = sweep.sSpectrumSettings.bLevelThreshold == TRUE;
+    spectrumJson["threshold_dbm"] = sweep.sSpectrumSettings.fThresholdInDbm;
+    spectrumJson["preamplifier"] = sweep.sSpectrumSettings.bPreamplifier == TRUE;
+    spectrumJson["auto_attenuation"] = sweep.sSpectrumSettings.bAutoAttenuation == TRUE;
+    spectrumJson["attenuation_db"] = sweep.sSpectrumSettings.bAttenuationInDb;
+    sweepJson["spectrum"] = spectrumJson;
+
+    json measTimeJson;
+    measTimeJson["measurement_time_ns"] = sweep.sMeasurementTime.dwMeasTimeInNs;
+    measTimeJson["detector_type"] = sweep.sMeasurementTime.eDetectorType;
+    sweepJson["measurement_time"] = measTimeJson;
+
+    json freqDetJson;
+    freqDetJson["count_of_lines"] = sweep.sFrequencyDetector.dwCountOfLines;
+    freqDetJson["detector_type"] = sweep.sFrequencyDetector.eDetectorType;
+    sweepJson["frequency_detector"] = freqDetJson;
+
+    json timeDetJson;
+    timeDetJson["detector_type"] = sweep.sTimeDetector.eDetectorType;
+    timeDetJson["detector_interval_type"] = sweep.sTimeDetector.eDetectorIntervalType;
+    timeDetJson["time_parameter_ms"] = sweep.sTimeDetector.dwTimeParameterInMs;
+    sweepJson["time_detector"] = timeDetJson;
+
+    json markerJson;
+    markerJson["use_marker"] = sweep.sMarker.bUseMarker == 1;
+    markerJson["return_power_values"] = sweep.sMarker.bReturnsPowerValues == 1;
+    sweepJson["marker"] = markerJson;
+
+    resultJson["sweep_settings"] = sweepJson;
+
+    return resultJson;
+}

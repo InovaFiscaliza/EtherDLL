@@ -135,30 +135,48 @@ void DLLFunctionCall(DLLConnectionData& DLLConn, json request, unsigned long msg
 	switch (msgType) {
 		case VicomTask::POWER_SCAN_CONFIG_CODE:
 		{
-			if (DLLConn.ps_pInterface == nullptr) {
-				loggerPtr->error("Vicom interface not connected.");
-				responseJson["error"] = "Vicom interface not connected.";
+			loggerPtr->debug(">>> POWER_SCAN_CONFIG_CODE: Start");
+
+			try {
+				if (DLLConn.ps_pInterface == nullptr) {
+					loggerPtr->error("Vicom interface not connected.");
+					responseJson["error"] = "Vicom interface not connected.";
+					response.push(responseJson, logSource);
+					loggerPtr->debug(">>> POWER_SCAN_CONFIG_CODE: End (interface null)");
+					return;
+				}
+
+				RohdeSchwarz::ViCom::CViComError err;
+				loggerPtr->debug(">>> POWER_SCAN_CONFIG_CODE: Loading default params");
+				RohdeSchwarz::ViCom::RFPOWERSCAN::SSweepSettings sweepSettings = loadDefaultParams(reqArguments);
+				loggerPtr->debug(">>> POWER_SCAN_CONFIG_CODE: Params loaded, calling SetSweepSettings");
+
+				if (!DLLConn.ps_pInterface->SetSweepSettings(err, sweepSettings)) {
+					CStringA ansiErrorString(err.GetErrorString());
+					loggerPtr->error("Error configuring SweepSettings: {}", ansiErrorString.GetString());
+					responseJson["error"] = vicomErrorToJson(err);
+					response.push(responseJson, logSource);
+					loggerPtr->debug(">>> POWER_SCAN_CONFIG_CODE: End (SetSweepSettings failed)");
+					return;
+				}
+				loggerPtr->debug(">>> POWER_SCAN_CONFIG_CODE: SetSweepSettings succeeded");
+
+				DLLConn.sweepSettings = sweepSettings;
+				DLLConn.isConfigured = true;
+
+				responseJson["status"] = "configured";
+				loggerPtr->info("Power scan configured successfully.");
 				response.push(responseJson, logSource);
-				return;
-			}
-
-			RohdeSchwarz::ViCom::CViComError err;
-			RohdeSchwarz::ViCom::RFPOWERSCAN::SSweepSettings sweepSettings = loadDefaultParams(reqArguments);
-
-			if (!DLLConn.ps_pInterface->SetSweepSettings(err, sweepSettings)) {
-				CStringA ansiErrorString(err.GetErrorString());
-				loggerPtr->error("Error configuring SweepSettings: {}", ansiErrorString.GetString());
-				responseJson["error"] = vicomErrorToJson(err);
+				loggerPtr->debug(">>> POWER_SCAN_CONFIG_CODE: End (success)");
+			} catch (const std::exception& e) {
+				loggerPtr->error(">>> POWER_SCAN_CONFIG_CODE: Exception: {}", e.what());
+				responseJson["error"] = e.what();
 				response.push(responseJson, logSource);
-				return;
+			} catch (...) {
+				loggerPtr->error(">>> POWER_SCAN_CONFIG_CODE: Unknown exception");
+				responseJson["error"] = "Unknown exception occurred";
+				response.push(responseJson, logSource);
 			}
-
-			DLLConn.sweepSettings = sweepSettings;
-			DLLConn.isConfigured = true;
-
-			responseJson["status"] = "configured";
-			loggerPtr->info("Power scan configured successfully.");
-			response.push(responseJson, logSource);
 			break;
 		}
 
@@ -180,6 +198,7 @@ void DLLFunctionCall(DLLConnectionData& DLLConn, json request, unsigned long msg
 
 			RohdeSchwarz::ViCom::CViComError err;
 			RohdeSchwarz::ViCom::RFPOWERSCAN::SSweepSettings sweepSettings = DLLConn.sweepSettings;
+			bool singleSweep = getParamValue(reqArguments, DefaultDLLParam::SweepSettings::SINGLE_SWEEP, true);
 
 			if (!DLLConn.ps_pInterface->SetSweepSettings(err, sweepSettings)) {
 				CStringA ansiErrorString(err.GetErrorString());
@@ -193,7 +212,7 @@ void DLLFunctionCall(DLLConnectionData& DLLConn, json request, unsigned long msg
 			basicIF.StartMeasurement();
 			refMeasurementInProgress.store(true, std::memory_order_release);
 
-			while (refMeasurementInProgress.load(std::memory_order_acquire) && interruptionCode == edll::Code::RUNNING) {
+			do {
 				int retrieveTimeMs = static_cast<int>(1000 / sweepSettings.sSpectrumSettings.fMaxReportingRateInHz);
 				const RohdeSchwarz::ViCom::RFPOWERSCAN::SMeasResult* pResult = DLLConn.ps_pInterface->GetResult(err, 5000);
 				if (pResult) {
@@ -210,11 +229,14 @@ void DLLFunctionCall(DLLConnectionData& DLLConn, json request, unsigned long msg
 				auto startTime = std::chrono::steady_clock::now();
 				while (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - startTime).count() < retrieveTimeMs
 					&& interruptionCode == edll::Code::RUNNING
-					&& refMeasurementInProgress.load(std::memory_order_acquire))
+					&& refMeasurementInProgress.load(std::memory_order_acquire)
+					&& singleSweep == false)
 				{
 					std::this_thread::sleep_for(std::chrono::milliseconds(50));
 				}
-			}
+			} while (singleSweep == false
+				&& refMeasurementInProgress.load(std::memory_order_acquire)
+				&& interruptionCode == edll::Code::RUNNING);
 
 			basicIF.StopMeasurement();
 			basicIF.HasMeasurementStopped();
@@ -224,57 +246,80 @@ void DLLFunctionCall(DLLConnectionData& DLLConn, json request, unsigned long msg
 
 		case VicomTask::GPS_GET_LOCATION_CODE:
 		{
-			if (DLLConn.gps_pInterface == nullptr) {
-				loggerPtr->error("Vicom GPS interface not connected.");
-				responseJson["error"] = "Vicom GPS interface not connected.";
+			loggerPtr->debug(">>> GPS_GET_LOCATION_CODE: Start");
+
+			try {
+				if (DLLConn.gps_pInterface == nullptr) {
+					loggerPtr->error("Vicom GPS interface not connected.");
+					responseJson["error"] = "Vicom GPS interface not connected.";
+					response.push(responseJson, logSource);
+					loggerPtr->debug(">>> GPS_GET_LOCATION_CODE: End (interface null)");
+					return;
+				}
+
+				RohdeSchwarz::ViCom::CViComError err;
+				RohdeSchwarz::ViCom::GPS::SGPSDeviceSettings gpsSettings; // Use default settings
+
+				loggerPtr->debug(">>> GPS_GET_LOCATION_CODE: Calling SetGPSDeviceSettings");
+				if (!DLLConn.gps_pInterface->SetGPSDeviceSettings(err, gpsSettings)) {
+					CStringA ansiErrorString(err.GetErrorString());
+					loggerPtr->error("Error configuring GPS Settings: {}", ansiErrorString.GetString());
+					responseJson["error"] = vicomErrorToJson(err);
+					response.push(responseJson, logSource);
+					loggerPtr->debug(">>> GPS_GET_LOCATION_CODE: End (SetGPSDeviceSettings failed)");
+					return;
+				}
+				loggerPtr->debug(">>> GPS_GET_LOCATION_CODE: SetGPSDeviceSettings succeeded");
+
+				RohdeSchwarz::ViCom::CViComBasicInterface& basicIF = DLLConn.gps_pInterface->GetBasicInterface();
+
+				loggerPtr->debug(">>> GPS_GET_LOCATION_CODE: Calling StartMeasurement");
+				if (!basicIF.StartMeasurement(err)) {
+					CStringA ansiErrorString(err.GetErrorString());
+					loggerPtr->error("Error starting GPS measurement: {}", ansiErrorString.GetString());
+					responseJson["error"] = vicomErrorToJson(err);
+					response.push(responseJson, logSource);
+					loggerPtr->debug(">>> GPS_GET_LOCATION_CODE: End (StartMeasurement failed)");
+					return;
+				}
+				loggerPtr->debug(">>> GPS_GET_LOCATION_CODE: StartMeasurement succeeded");
+
+				// Get result with a 5-second timeout
+				loggerPtr->info("Waiting for GPS result...");
+				loggerPtr->debug(">>> GPS_GET_LOCATION_CODE: Calling GetResult");
+				const RohdeSchwarz::ViCom::GPS::SMeasResult* pResult = DLLConn.gps_pInterface->GetResult(err, 5000);
+				if (pResult) {
+					responseJson = processGPSResult(pResult);
+					loggerPtr->info("GPS location retrieval successful.");
+				}
+				else {
+					CStringA ansiErrorString(err.GetErrorString());
+					loggerPtr->error("Failed to get GPS location result: {}", ansiErrorString.GetString());
+					responseJson["error"] = vicomErrorToJson(err);
+				}
+				loggerPtr->debug(">>> GPS_GET_LOCATION_CODE: GetResult completed");
+
+				loggerPtr->debug("Stopping GPS measurement...");
+				basicIF.StopMeasurement();
+				loggerPtr->debug("GPS measurement stop command sent.");
+				
 				response.push(responseJson, logSource);
-				return;
-			}
-
-			RohdeSchwarz::ViCom::CViComError err;
-			RohdeSchwarz::ViCom::GPS::SGPSDeviceSettings gpsSettings; // Use default settings
-
-			if (!DLLConn.gps_pInterface->SetGPSDeviceSettings(err, gpsSettings)) {
-				CStringA ansiErrorString(err.GetErrorString());
-				loggerPtr->error("Error configuring GPS Settings: {}", ansiErrorString.GetString());
-				responseJson["error"] = vicomErrorToJson(err);
+				loggerPtr->debug(">>> GPS_GET_LOCATION_CODE: End (success)");
+			} catch (const std::exception& e) {
+				loggerPtr->error(">>> GPS_GET_LOCATION_CODE: Exception: {}", e.what());
+				responseJson["error"] = e.what();
 				response.push(responseJson, logSource);
-				return;
-			}
-
-			RohdeSchwarz::ViCom::CViComBasicInterface& basicIF = DLLConn.gps_pInterface->GetBasicInterface();
-
-			if (!basicIF.StartMeasurement(err)) {
-				CStringA ansiErrorString(err.GetErrorString());
-				loggerPtr->error("Error starting GPS measurement: {}", ansiErrorString.GetString());
-				responseJson["error"] = vicomErrorToJson(err);
+			} catch (...) {
+				loggerPtr->error(">>> GPS_GET_LOCATION_CODE: Unknown exception");
+				responseJson["error"] = "Unknown exception occurred";
 				response.push(responseJson, logSource);
-				return;
 			}
-
-			// Get result with a 5-second timeout
-			loggerPtr->info("Waiting for GPS result...");
-			const RohdeSchwarz::ViCom::GPS::SMeasResult* pResult = DLLConn.gps_pInterface->GetResult(err, 5000);
-			if (pResult) {
-				responseJson = processGPSResult(pResult);
-				loggerPtr->info("GPS location retrieval successful.");
-			}
-			else {
-				CStringA ansiErrorString(err.GetErrorString());
-				loggerPtr->error("Failed to get GPS location result: {}", ansiErrorString.GetString());
-				responseJson["error"] = vicomErrorToJson(err);
-			}
-
-			loggerPtr->debug("Stopping GPS measurement...");
-			basicIF.StopMeasurement();
-			loggerPtr->debug("GPS measurement stop command sent.");
-			
-			response.push(responseJson, logSource);
 			break;
 		}
 
 		case VicomTask::IDN_CODE:
 		{
+			loggerPtr->debug(">>> IDN_CODE: Start");
 			responseJson["model"] = DLLConn.receiverModel;
 			responseJson["serial"] = DLLConn.serialNumber;
 			responseJson["sw_version"] = DLLConn.softwareVersion;
@@ -285,6 +330,7 @@ void DLLFunctionCall(DLLConnectionData& DLLConn, json request, unsigned long msg
 			
 			loggerPtr->info("IDN query successful: {}", idnResponse);
 			response.push(responseJson, logSource);
+			loggerPtr->debug(">>> IDN_CODE: End");
 			break;
 		}
 
@@ -299,14 +345,18 @@ void DLLFunctionCall(DLLConnectionData& DLLConn, json request, unsigned long msg
 
 		case VicomTask::GET_SETTINGS_CODE:
 		{
+			loggerPtr->debug(">>> GET_SETTINGS_CODE: Start");
+
 			if (DLLConn.ps_pInterface == nullptr) {
 				loggerPtr->error("Vicom interface not connected.");
 				responseJson["error"] = "Vicom interface not connected.";
 				response.push(responseJson, logSource);
+				loggerPtr->debug(">>> GET_SETTINGS_CODE: End (interface null)");
 				return;
 			}
 
 			RohdeSchwarz::ViCom::CViComError err;
+			loggerPtr->debug(">>> GET_SETTINGS_CODE: Calling GetSettings");
 			const RohdeSchwarz::ViCom::RFPOWERSCAN::SSettings* pSettings = DLLConn.ps_pInterface->GetSettings(err);
 
 			if (pSettings) {
@@ -319,6 +369,7 @@ void DLLFunctionCall(DLLConnectionData& DLLConn, json request, unsigned long msg
 				responseJson["error"] = vicomErrorToJson(err);
 			}
 			response.push(responseJson, logSource);
+			loggerPtr->debug(">>> GET_SETTINGS_CODE: End");
 			break;
 		}
 
@@ -361,18 +412,26 @@ void processRequestQueue(
 
     while (interruptionCode == edll::Code::RUNNING)
     {
+        loggerPtr->debug("processRequestQueue: waiting for request");
         json oneRequest = request.waitAndPop(interruptionCode, funcName);
+        loggerPtr->debug("processRequestQueue: got request, processing...");
 
 		if (interruptionCode != edll::Code::RUNNING) {
+			loggerPtr->debug("processRequestQueue: interruption detected, breaking");
 			break;
 		}
 
         unsigned long cmd = oneRequest.value(TaskKeys::CommandCode::VALUE, TaskKeys::CommandCode::INIT_VALUE);
+        loggerPtr->debug("processRequestQueue: cmd={}", cmd);
 
         if (!validRequest(oneRequest, cmd, response)) {
+            loggerPtr->debug("processRequestQueue: invalid request, continuing");
             continue;
         }
 
+        loggerPtr->debug("processRequestQueue: calling DLLFunctionCall");
         DLLFunctionCall(DLLConn, oneRequest, cmd, refMeasurementInProgress, interruptionCode);
+        loggerPtr->debug("processRequestQueue: DLLFunctionCall returned");
     }
+    loggerPtr->debug("processRequestQueue: exiting loop");
 }

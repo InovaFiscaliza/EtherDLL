@@ -493,6 +493,7 @@ public:
 		int bufferSize = serviceKeys[service::BufferSize::KEY].get<int>();
 		std::string buffer;
 		buffer.resize(bufferSize + 1);
+		std::fill(buffer.begin(), buffer.end(), 0);
 		std::string accumulatedData = "";
 
 		int bufferTTLInit = serviceKeys[service::BufferTTL::KEY].get<int>();
@@ -513,12 +514,12 @@ public:
 
 			iResult = select(static_cast<int>(clientSocket + 1), &readfds, NULL, NULL, &tv);
 
-			if (iResult <= 0) {
-				if (iResult == SOCKET_ERROR) {
-					loggerPtr->error(logSource + " select failed. EC:" + std::to_string(WSAGetLastError()));
-					break;
-				}
-				// timeout or interrupted, check interruptionCode at start of loop
+			if (iResult < 0) {
+				loggerPtr->error(logSource + " select failed. EC:" + std::to_string(WSAGetLastError()));
+				break;
+			}
+			if (iResult == 0) {
+				loggerPtr->debug(logSource + " select timeout, no data available");
 				continue;
 			}
 
@@ -551,6 +552,7 @@ public:
 				if (dataToProcess) {
 					bufferTTL = bufferTTLInit;
 					accumulatedData.clear();
+					std::fill(buffer.begin(), buffer.end(), 0);
 
 					// add client id and queue id to object
 					jsonObj[taskKeys::ClientIp::VALUE] = clientIP;
@@ -624,9 +626,18 @@ public:
 
 		while (interruptionCode == edll::Code::RUNNING)
 		{
+			loggerPtr->debug("DLLResponseToClient: waiting for response");
 			json oneResponse = response.waitAndPop(interruptionCode, logSource);
+			loggerPtr->debug("DLLResponseToClient: got response");
 
+			if (interruptionCode != edll::Code::RUNNING) {
+				loggerPtr->debug("DLLResponseToClient: interruption detected, breaking");
+				break;
+			}
+
+			loggerPtr->debug("DLLResponseToClient: preparing message");
 			std::string message = oneResponse.dump() + msgEndStr;
+			loggerPtr->debug("DLLResponseToClient: sending message: {}", message);
 
 			iResult = send(clientSocket, message.c_str(), static_cast<int>(message.length()), 0);
 			if (iResult == SOCKET_ERROR) {
@@ -639,6 +650,7 @@ public:
 				lastClientMsgTime = std::chrono::steady_clock::now();
 			}
 		}
+		loggerPtr->debug("DLLResponseToClient: exiting loop");
 	}
 
 	// ----------------------------------------------------------------------
