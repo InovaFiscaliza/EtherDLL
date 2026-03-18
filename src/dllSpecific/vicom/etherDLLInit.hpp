@@ -89,6 +89,8 @@ struct VicomConnection {
 	std::string serialNumber;
 	std::string softwareVersion;
 	std::string hardwareVersion;
+	RohdeSchwarz::ViCom::RFPOWERSCAN::SSweepSettings sweepSettings;
+	bool isConfigured = false;
 };
 
 // ----------------------------------------------------------------------

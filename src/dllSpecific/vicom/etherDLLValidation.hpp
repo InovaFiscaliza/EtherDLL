@@ -115,13 +115,19 @@ bool validRequest(json request, unsigned long msgType, MessageQueue& response) {
     }
 
     switch (msgType) {          
-        case VicomTask::POWER_SCAN_CODE:
-            validatePowerScanRequest(request[TaskKeys::Arguments::VALUE], validator);
-			break;
         case VicomTask::GPS_GET_LOCATION_CODE:
             // No specific arguments to validate
             break;
         case VicomTask::IDN_CODE:
+            // No specific arguments to validate
+            break;
+        case VicomTask::GET_SETTINGS_CODE:
+            // No specific arguments to validate
+            break;
+        case VicomTask::POWER_SCAN_CONFIG_CODE:
+            validatePowerScanRequest(request[TaskKeys::Arguments::VALUE], validator);
+			break;
+        case VicomTask::POWER_SCAN_MEASURE_CODE:
             // No specific arguments to validate
             break;
         default: {

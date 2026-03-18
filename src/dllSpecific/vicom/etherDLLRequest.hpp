@@ -52,6 +52,66 @@ extern MessageQueue response;
 
 // ----------------------------------------------------------------------
 /**
+ * @brief Get parameter value from JSON with default fallback
+ *
+ * @param reqArguments: JSON object containing the parameters
+ * @param key: Parameter key to look for
+ * @param defaultValue: Default value if key not found
+ * @return T: Value from JSON or default
+ * @throws NO EXCEPTION HANDLING
+**/
+template<typename T>
+T getParamValue(const json& reqArguments, const char* key, T defaultValue) {
+    if (reqArguments.contains(key)) {
+        return reqArguments[key].get<T>();
+    }
+    loggerPtr->debug("Using default value for parameter: {}", key);
+    return defaultValue;
+}
+
+// ----------------------------------------------------------------------
+/**
+ * @brief Load sweep settings from JSON arguments with default values
+ *
+ * @param reqArguments: JSON object containing the parameters
+ * @return RohdeSchwarz::ViCom::RFPOWERSCAN::SSweepSettings: Populated sweep settings structure
+ * @throws NO EXCEPTION HANDLING
+**/
+RohdeSchwarz::ViCom::RFPOWERSCAN::SSweepSettings loadDefaultParams(const json& reqArguments)
+{
+	using namespace RohdeSchwarz::ViCom::RFPOWERSCAN;
+	SSweepSettings sweepSettings;
+
+	sweepSettings.dwFrontEndSelectionMask = getParamValue(reqArguments, DefaultDLLParam::SweepSettings::FRONT_END_MASK, 1UL);
+	sweepSettings.dStartFrequencyInHz = getParamValue(reqArguments, DefaultDLLParam::SweepSettings::START_FREQ_HZ, 90000000.0);
+	sweepSettings.dStopFrequencyInHz = getParamValue(reqArguments, DefaultDLLParam::SweepSettings::STOP_FREQ_HZ, 107000000.0);
+	sweepSettings.bRequestRawData = getParamValue(reqArguments, DefaultDLLParam::SweepSettings::REQ_RAW_DATA, false) ? TRUE : FALSE;
+	sweepSettings.sSpectrumSettings.fMaxReportingRateInHz = static_cast<float>(getParamValue(reqArguments, DefaultDLLParam::SweepSettings::MAX_REPORTING_RATE, 10.0));
+	sweepSettings.sSpectrumSettings.fMaxDeviceMeasRateInHz = static_cast<float>(getParamValue(reqArguments, DefaultDLLParam::SweepSettings::MAX_DEVICE_MEAS_RATE, 30.0));
+	sweepSettings.sSpectrumSettings.eWindowType = static_cast<SSpectrumSettings::etWindowType>(getParamValue(reqArguments, DefaultDLLParam::SweepSettings::WINDOW_TYPE, 1));
+	sweepSettings.sSpectrumSettings.eFFTSize = static_cast<SSpectrumSettings::etFFTSize>(getParamValue(reqArguments, DefaultDLLParam::SweepSettings::FFT_SIZE, 1024));
+	sweepSettings.sSpectrumSettings.bAutoBandwidth = getParamValue(reqArguments, DefaultDLLParam::SweepSettings::AUTO_BANDWIDTH, true) ? TRUE : FALSE;
+	sweepSettings.sSpectrumSettings.dwBandwidthInHz = getParamValue(reqArguments, DefaultDLLParam::SweepSettings::BANDWIDTH_HZ, 20000000UL);
+	sweepSettings.sSpectrumSettings.bLevelThreshold = getParamValue(reqArguments, DefaultDLLParam::SweepSettings::LEVEL_THRESHOLD, false) ? TRUE : FALSE;
+	sweepSettings.sSpectrumSettings.fThresholdInDbm = static_cast<float>(getParamValue(reqArguments, DefaultDLLParam::SweepSettings::THRESHOLD_DBM, -100.0));
+	sweepSettings.sSpectrumSettings.bPreamplifier = getParamValue(reqArguments, DefaultDLLParam::SweepSettings::PREAMPLIFIER, true) ? TRUE : FALSE;
+	sweepSettings.sSpectrumSettings.bAutoAttenuation = getParamValue(reqArguments, DefaultDLLParam::SweepSettings::AUTO_ATTENUATION, true) ? TRUE : FALSE;
+	sweepSettings.sSpectrumSettings.bAttenuationInDb = static_cast<BYTE>(getParamValue(reqArguments, DefaultDLLParam::SweepSettings::ATTENUATION_DB, 0));
+	sweepSettings.sMeasurementTime.dwMeasTimeInNs = getParamValue(reqArguments, DefaultDLLParam::SweepSettings::MEAS_TIME_NS, 1000000UL);
+	sweepSettings.sMeasurementTime.eDetectorType = static_cast<SMeasurementTime::etDetectorType>(getParamValue(reqArguments, DefaultDLLParam::SweepSettings::MEAS_DETECTOR_TYPE, 1));
+	sweepSettings.sFrequencyDetector.dwCountOfLines = getParamValue(reqArguments, DefaultDLLParam::SweepSettings::FREQ_DETECTOR_LINES, 1024UL);
+	sweepSettings.sFrequencyDetector.eDetectorType = static_cast<SFrequencyDetector::etFrequencyDetectorType>(getParamValue(reqArguments, DefaultDLLParam::SweepSettings::FREQ_DETECTOR_TYPE, 1));
+	sweepSettings.sTimeDetector.eDetectorType = static_cast<STimeDetector::etTimeDetectorType>(getParamValue(reqArguments, DefaultDLLParam::SweepSettings::TIME_DETECTOR_TYPE, 1));
+	sweepSettings.sTimeDetector.eDetectorIntervalType = static_cast<STimeDetector::etTimeDetectorIntervalType>(getParamValue(reqArguments, DefaultDLLParam::SweepSettings::TIME_DETECTOR_INTERVAL_TYPE, 1));
+	sweepSettings.sTimeDetector.dwTimeParameterInMs = getParamValue(reqArguments, DefaultDLLParam::SweepSettings::TIME_PARAMETER_MS, 1000UL);
+	sweepSettings.sMarker.bUseMarker = getParamValue(reqArguments, DefaultDLLParam::SweepSettings::USE_MARKER, false) ? 1 : 0;
+	sweepSettings.sMarker.bReturnsPowerValues = getParamValue(reqArguments, DefaultDLLParam::SweepSettings::RETURN_POWER_VALUES, false) ? 1 : 0;
+
+	return sweepSettings;
+}
+
+// ----------------------------------------------------------------------
+/**
  * @brief Call the appropriate DLL function based on the request in JSON format
  *
  * Include the identification of the function based on request type
@@ -73,7 +133,7 @@ void DLLFunctionCall(DLLConnectionData& DLLConn, json request, unsigned long msg
 	json responseJson;
 
 	switch (msgType) {
-		case VicomTask::POWER_SCAN_CODE:
+		case VicomTask::POWER_SCAN_CONFIG_CODE:
 		{
 			if (DLLConn.ps_pInterface == nullptr) {
 				loggerPtr->error("Vicom interface not connected.");
@@ -83,106 +143,44 @@ void DLLFunctionCall(DLLConnectionData& DLLConn, json request, unsigned long msg
 			}
 
 			RohdeSchwarz::ViCom::CViComError err;
-			RohdeSchwarz::ViCom::RFPOWERSCAN::SSweepSettings sweepSettings;
+			RohdeSchwarz::ViCom::RFPOWERSCAN::SSweepSettings sweepSettings = loadDefaultParams(reqArguments);
 
-			// Populate sweepSettings from JSON
-			using SweepConf = DefaultDLLParam::SweepSettings;
+			if (!DLLConn.ps_pInterface->SetSweepSettings(err, sweepSettings)) {
+				CStringA ansiErrorString(err.GetErrorString());
+				loggerPtr->error("Error configuring SweepSettings: {}", ansiErrorString.GetString());
+				responseJson["error"] = vicomErrorToJson(err);
+				response.push(responseJson, logSource);
+				return;
+			}
 
-			// Helper Lambda for Missing Parameter Check
-			auto checkParam = [&](const char* key) -> bool {
-				if (!reqArguments.contains(key)) {
-					std::string errMsg = std::string("Missing required parameter: ") + key;
-					loggerPtr->error(errMsg);
-					responseJson["error"] = errMsg;
-					response.push(responseJson, logSource);
-					return false;
-				}
-				return true;
-			};
+			DLLConn.sweepSettings = sweepSettings;
+			DLLConn.isConfigured = true;
 
-			// --- Spectrum Settings ---
-			if (!checkParam(SweepConf::FRONT_END_MASK)) return;
-			sweepSettings.dwFrontEndSelectionMask = reqArguments[SweepConf::FRONT_END_MASK].get<unsigned long>();
+			responseJson["status"] = "configured";
+			loggerPtr->info("Power scan configured successfully.");
+			response.push(responseJson, logSource);
+			break;
+		}
 
-			if (!checkParam(SweepConf::START_FREQ_HZ)) return;
-			sweepSettings.dStartFrequencyInHz = reqArguments[SweepConf::START_FREQ_HZ].get<double>();
+		case VicomTask::POWER_SCAN_MEASURE_CODE:
+		{
+			if (DLLConn.ps_pInterface == nullptr) {
+				loggerPtr->error("Vicom interface not connected.");
+				responseJson["error"] = "Vicom interface not connected.";
+				response.push(responseJson, logSource);
+				return;
+			}
 
-			if (!checkParam(SweepConf::STOP_FREQ_HZ)) return;
-			sweepSettings.dStopFrequencyInHz = reqArguments[SweepConf::STOP_FREQ_HZ].get<double>();
+			if (!DLLConn.isConfigured) {
+				loggerPtr->error("Power scan not configured. Call powerScanConfig first.");
+				responseJson["error"] = "Power scan not configured. Call powerScanConfig first.";
+				response.push(responseJson, logSource);
+				return;
+			}
 
-			if (!checkParam(SweepConf::REQ_RAW_DATA)) return;
-			sweepSettings.bRequestRawData = reqArguments[SweepConf::REQ_RAW_DATA].get<bool>() ? TRUE : FALSE;
-					
-			if (!checkParam(SweepConf::MAX_REPORTING_RATE)) return;
-			sweepSettings.sSpectrumSettings.fMaxReportingRateInHz = reqArguments[SweepConf::MAX_REPORTING_RATE].get<float>();
+			RohdeSchwarz::ViCom::CViComError err;
+			RohdeSchwarz::ViCom::RFPOWERSCAN::SSweepSettings sweepSettings = DLLConn.sweepSettings;
 
-			if (!checkParam(SweepConf::MAX_DEVICE_MEAS_RATE)) return;
-			sweepSettings.sSpectrumSettings.fMaxDeviceMeasRateInHz = reqArguments[SweepConf::MAX_DEVICE_MEAS_RATE].get<float>();
-
-			if (!checkParam(SweepConf::WINDOW_TYPE)) return;
-			sweepSettings.sSpectrumSettings.eWindowType = static_cast<SSpectrumSettings::etWindowType>(reqArguments[SweepConf::WINDOW_TYPE].get<int>());
-
-			if (!checkParam(SweepConf::FFT_SIZE)) return;
-			sweepSettings.sSpectrumSettings.eFFTSize = static_cast<SSpectrumSettings::etFFTSize>(reqArguments[SweepConf::FFT_SIZE].get<int>());
-
-			if (!checkParam(SweepConf::AUTO_BANDWIDTH)) return;
-			sweepSettings.sSpectrumSettings.bAutoBandwidth = reqArguments[SweepConf::AUTO_BANDWIDTH].get<bool>() ? TRUE : FALSE;
-
-			if (!checkParam(SweepConf::BANDWIDTH_HZ)) return;
-			sweepSettings.sSpectrumSettings.dwBandwidthInHz = reqArguments[SweepConf::BANDWIDTH_HZ].get<DWORD>();
-
-			if (!checkParam(SweepConf::LEVEL_THRESHOLD)) return;
-			sweepSettings.sSpectrumSettings.bLevelThreshold = reqArguments[SweepConf::LEVEL_THRESHOLD].get<bool>() ? TRUE : FALSE;
-
-			if (!checkParam(SweepConf::THRESHOLD_DBM)) return;
-			sweepSettings.sSpectrumSettings.fThresholdInDbm = reqArguments[SweepConf::THRESHOLD_DBM].get<float>();
-
-			if (!checkParam(SweepConf::PREAMPLIFIER)) return;
-			sweepSettings.sSpectrumSettings.bPreamplifier = reqArguments[SweepConf::PREAMPLIFIER].get<bool>() ? TRUE : FALSE;
-
-			if (!checkParam(SweepConf::AUTO_ATTENUATION)) return;
-			sweepSettings.sSpectrumSettings.bAutoAttenuation = reqArguments[SweepConf::AUTO_ATTENUATION].get<bool>() ? TRUE : FALSE;
-
-			if (!checkParam(SweepConf::ATTENUATION_DB)) return;
-			sweepSettings.sSpectrumSettings.bAttenuationInDb = (BYTE)reqArguments[SweepConf::ATTENUATION_DB].get<int>();
-
-			
-			// --- Measurement Time Settings ---
-			if (!checkParam(SweepConf::MEAS_TIME_NS)) return;
-			sweepSettings.sMeasurementTime.dwMeasTimeInNs = reqArguments[SweepConf::MEAS_TIME_NS].get<DWORD>();
-
-			if (!checkParam(SweepConf::MEAS_DETECTOR_TYPE)) return;
-			sweepSettings.sMeasurementTime.eDetectorType = static_cast<SMeasurementTime::etDetectorType>(reqArguments[SweepConf::MEAS_DETECTOR_TYPE].get<int>());
-
-
-			// --- Frequency Detector Settings ---
-			if (!checkParam(SweepConf::FREQ_DETECTOR_LINES)) return;
-			sweepSettings.sFrequencyDetector.dwCountOfLines = reqArguments[SweepConf::FREQ_DETECTOR_LINES].get<DWORD>();
-
-			if (!checkParam(SweepConf::FREQ_DETECTOR_TYPE)) return;
-			sweepSettings.sFrequencyDetector.eDetectorType = static_cast<SFrequencyDetector::etFrequencyDetectorType>(reqArguments[SweepConf::FREQ_DETECTOR_TYPE].get<int>());
-
-
-			// --- Time Detector Settings ---
-			if (!checkParam(SweepConf::TIME_DETECTOR_TYPE)) return;
-			sweepSettings.sTimeDetector.eDetectorType = static_cast<STimeDetector::etTimeDetectorType>(reqArguments[SweepConf::TIME_DETECTOR_TYPE].get<int>());
-
-			if (!checkParam(SweepConf::TIME_DETECTOR_INTERVAL_TYPE)) return;
-			sweepSettings.sTimeDetector.eDetectorIntervalType = static_cast<STimeDetector::etTimeDetectorIntervalType>(reqArguments[SweepConf::TIME_DETECTOR_INTERVAL_TYPE].get<int>());
-
-			if (!checkParam(SweepConf::TIME_PARAMETER_MS)) return;
-			sweepSettings.sTimeDetector.dwTimeParameterInMs = reqArguments[SweepConf::TIME_PARAMETER_MS].get<DWORD>();
-
-
-			// --- Marker Settings ---
-			if (!checkParam(SweepConf::USE_MARKER)) return;
-			sweepSettings.sMarker.bUseMarker = reqArguments[SweepConf::USE_MARKER].get<bool>() ? 1 : 0;
-
-			if (!checkParam(SweepConf::RETURN_POWER_VALUES)) return;
-			sweepSettings.sMarker.bReturnsPowerValues = reqArguments[SweepConf::RETURN_POWER_VALUES].get<bool>() ? 1 : 0;
-
-
-			// Apply Settings
 			if (!DLLConn.ps_pInterface->SetSweepSettings(err, sweepSettings)) {
 				CStringA ansiErrorString(err.GetErrorString());
 				loggerPtr->error("Error configuring SweepSettings: {}", ansiErrorString.GetString());
@@ -209,7 +207,6 @@ void DLLFunctionCall(DLLConnectionData& DLLConn, json request, unsigned long msg
 				}
 				response.push(responseJson, logSource);
 				
-				// Interruption-aware sleep
 				auto startTime = std::chrono::steady_clock::now();
 				while (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - startTime).count() < retrieveTimeMs
 					&& interruptionCode == edll::Code::RUNNING
@@ -222,9 +219,9 @@ void DLLFunctionCall(DLLConnectionData& DLLConn, json request, unsigned long msg
 			basicIF.StopMeasurement();
 			basicIF.HasMeasurementStopped();
 			
-			//response.push(responseJson, logSource);
 			break;
 		}
+
 		case VicomTask::GPS_GET_LOCATION_CODE:
 		{
 			if (DLLConn.gps_pInterface == nullptr) {
@@ -293,10 +290,34 @@ void DLLFunctionCall(DLLConnectionData& DLLConn, json request, unsigned long msg
 
 		case VicomTask::STOP_MEASUMENT_CODE:
 		{
-			// Implement stop measurement logic if applicable
 			refMeasurementInProgress.store(false, std::memory_order_release);
 			loggerPtr->info("Stop measurement command received.");
 			responseJson["message"] = "Stop measurement command processed.";
+			response.push(responseJson, logSource);
+			break;
+		}
+
+		case VicomTask::GET_SETTINGS_CODE:
+		{
+			if (DLLConn.ps_pInterface == nullptr) {
+				loggerPtr->error("Vicom interface not connected.");
+				responseJson["error"] = "Vicom interface not connected.";
+				response.push(responseJson, logSource);
+				return;
+			}
+
+			RohdeSchwarz::ViCom::CViComError err;
+			const RohdeSchwarz::ViCom::RFPOWERSCAN::SSettings* pSettings = DLLConn.ps_pInterface->GetSettings(err);
+
+			if (pSettings) {
+				responseJson = processSettingsResult(pSettings);
+				loggerPtr->info("GetSettings successful.");
+			}
+			else {
+				CStringA ansiErrorString(err.GetErrorString());
+				loggerPtr->error("Failed to get settings: {}", ansiErrorString.GetString());
+				responseJson["error"] = vicomErrorToJson(err);
+			}
 			response.push(responseJson, logSource);
 			break;
 		}
