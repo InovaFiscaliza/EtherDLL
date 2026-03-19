@@ -1,0 +1,26 @@
+digraph "stdafx.h"
+{
+ // LATEX_PDF_SIZE
+  bgcolor="transparent";
+  edge [fontname=Helvetica,fontsize=10,labelfontname=Helvetica,labelfontsize=10];
+  node [fontname=Helvetica,fontsize=10,shape=box,height=0.2,width=0.4];
+  Node1 [id="Node000001",label="stdafx.h",height=0.2,width=0.4,color="gray40", fillcolor="grey60", style="filled", fontcolor="black",tooltip="Precompiled header for ViCom-specific DLL components."];
+  Node1 -> Node2 [id="edge1_Node000001_Node000002",dir="back",color="steelblue1",style="solid",tooltip=" "];
+  Node2 [id="Node000002",label="etherDLLCodes.hpp",height=0.2,width=0.4,color="grey40", fillcolor="white", style="filled",URL="$ether_d_l_l_codes_8hpp.html",tooltip="Error conversion and command code definitions for ViCom DLL."];
+  Node2 -> Node3 [id="edge2_Node000002_Node000003",dir="back",color="steelblue1",style="solid",tooltip=" "];
+  Node3 [id="Node000003",label="etherDLLInit.hpp",height=0.2,width=0.4,color="grey40", fillcolor="white", style="filled",URL="$ether_d_l_l_init_8hpp.html",tooltip="Initialization and connection functions for ViCom DLL interface."];
+  Node3 -> Node4 [id="edge3_Node000003_Node000004",dir="back",color="steelblue1",style="solid",tooltip=" "];
+  Node4 [id="Node000004",label="etherDLLRequest.hpp",height=0.2,width=0.4,color="grey40", fillcolor="white", style="filled",URL="$ether_d_l_l_request_8hpp.html",tooltip="Request processing functions for ViCom DLL interface."];
+  Node2 -> Node5 [id="edge4_Node000002_Node000005",dir="back",color="steelblue1",style="solid",tooltip=" "];
+  Node5 [id="Node000005",label="etherDLLValidation.hpp",height=0.2,width=0.4,color="grey40", fillcolor="white", style="filled",URL="$ether_d_l_l_validation_8hpp.html",tooltip="Validation functions for ViCom API request parameters."];
+  Node5 -> Node4 [id="edge5_Node000005_Node000004",dir="back",color="steelblue1",style="solid",tooltip=" "];
+  Node1 -> Node6 [id="edge6_Node000001_Node000006",dir="back",color="steelblue1",style="solid",tooltip=" "];
+  Node6 [id="Node000006",label="etherDLLDataProcess.hpp",height=0.2,width=0.4,color="grey40", fillcolor="white", style="filled",URL="$ether_d_l_l_data_process_8hpp.html",tooltip="Data processing functions for ViCom API results."];
+  Node6 -> Node4 [id="edge7_Node000006_Node000004",dir="back",color="steelblue1",style="solid",tooltip=" "];
+  Node1 -> Node3 [id="edge8_Node000001_Node000003",dir="back",color="steelblue1",style="solid",tooltip=" "];
+  Node1 -> Node7 [id="edge9_Node000001_Node000007",dir="back",color="steelblue1",style="solid",tooltip=" "];
+  Node7 [id="Node000007",label="etherDLLResponse.hpp",height=0.2,width=0.4,color="grey40", fillcolor="white", style="filled",URL="$ether_d_l_l_response_8hpp.html",tooltip="Response handling for ViCom DLL interface."];
+  Node7 -> Node3 [id="edge10_Node000007_Node000003",dir="back",color="steelblue1",style="solid",tooltip=" "];
+  Node1 -> Node8 [id="edge11_Node000001_Node000008",dir="back",color="steelblue1",style="solid",tooltip=" "];
+  Node8 [id="Node000008",label="stdafx.cpp",height=0.2,width=0.4,color="grey40", fillcolor="white", style="filled",URL="$stdafx_8cpp.html",tooltip="Precompiled header source file for ViCom DLL."];
+}

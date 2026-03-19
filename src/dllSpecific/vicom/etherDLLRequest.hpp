@@ -7,9 +7,9 @@
  * - Processing request queue and executing DLL function calls
  * - Managing Power Scan, GPS, and settings operations
  * 
- * @author fslobao
- * @date 2025-09-10
- * @version 1.2
+ * @author mlnunes@anatel.gov.br
+ * @date 2026-3-19
+ * @version 1.3
  * 
  * @note Requires C++17 or later
  * @note Uses nlohmann/json library for JSON parsing

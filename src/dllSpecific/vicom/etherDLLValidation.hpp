@@ -5,9 +5,9 @@
  * This header file contains function declarations for validating JSON objects
  * used in various ViCom API requests within the DLL interface.
  * 
- * @author fslobao
- * @date 2025-12-03
- * @version 1.2
+ * @author mlnunes@anatel.gov.br
+ * @date 2026-3-19
+ * @version 1.3
  * 
  * @note Requires C++14 or later
  * @note Uses nlohmann/json library for JSON parsing

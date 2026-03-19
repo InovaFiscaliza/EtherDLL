@@ -6,9 +6,9 @@
  * - Function to convert CViComError to JSON format
  * - Command code definitions for Vicom-specific tasks
  * 
- * @author fslobao
- * @date 2025-09-12
- * @version 1.2
+ * @author mlnunes@anatel.gov.br
+ * @date 2026-3-19
+ * @version 1.3
  * 
  * @note Requires C++14 or later
  * @note Uses nlohmann/json library for JSON handling

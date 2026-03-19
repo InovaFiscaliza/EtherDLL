@@ -8,9 +8,9 @@
  * - Connection and disconnection functions (connectAPI, disconnectAPI)
  * - Configuration file management (newDefaultConfigFile, validDLLConfigParams)
  * 
- * @author fslobao
- * @date 2025-09-10
- * @version 1.2
+ * @author mlnunes@anatel.gov.br
+ * @date 2026-3-19
+ * @version 1.3
  * 
  * @note Requires C++17 or later
  * @note Uses nlohmann/json library for JSON handling

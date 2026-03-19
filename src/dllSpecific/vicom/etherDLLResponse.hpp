@@ -6,9 +6,9 @@
  * Note: The Vicom implementation uses synchronous processing, so callback
  * functions (like those in Scorpio) are not required.
  * 
- * @author fslobao
- * @date 2025-12-03
- * @version 1.2
+ * @author mlnunes@anatel.gov.br
+ * @date 2026-3-19
+ * @version 1.3
  * 
  * @note Requires C++17 or later
  * @note Uses nlohmann/json library for JSON handling
