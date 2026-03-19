@@ -1,18 +1,24 @@
 /**
-* @file etherDLLResponse.hpp
-*
-* @brief Header file for functions that convert Vicom DLL responses to JSON
-*
-* @author fslobao
-* @date 2025-12-03
-* @version 1.1
-*
-* @note Requires C++17 or later
-* @note Uses nlohmann/json library for JSON handling
-*
-* * * Dependencies:
-* * - nlohmann/json.hpp
-**/
+ * @file etherDLLResponse.hpp
+ * @brief Response handling for ViCom DLL interface
+ * 
+ * This header file provides response queue management for the ViCom DLL.
+ * Note: The Vicom implementation uses synchronous processing, so callback
+ * functions (like those in Scorpio) are not required.
+ * 
+ * @author fslobao
+ * @date 2025-12-03
+ * @version 1.2
+ * 
+ * @note Requires C++17 or later
+ * @note Uses nlohmann/json library for JSON handling
+ * 
+ * Dependencies:
+ * - EtherDLLClient.hpp
+ * - EtherDLLLog.hpp
+ * 
+ * @ingroup vicom
+ */
 
 // ----------------------------------------------------------------------
 #pragma once

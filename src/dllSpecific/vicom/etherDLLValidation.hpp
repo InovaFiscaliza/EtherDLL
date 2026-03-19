@@ -1,21 +1,24 @@
 /**
  * @file etherDLLValidation.hpp
- * @brief Validation functions for JSON objects in Vicom API requests
- *
+ * @brief Validation functions for ViCom API request parameters
+ * 
  * This header file contains function declarations for validating JSON objects
- * used in various Vicom API requests within the DLL interface.
- *
+ * used in various ViCom API requests within the DLL interface.
+ * 
  * @author fslobao
  * @date 2025-12-03
- * @version 1.1
- *
+ * @version 1.2
+ * 
  * @note Requires C++14 or later
  * @note Uses nlohmann/json library for JSON parsing
- *
+ * 
  * Dependencies:
- * - nlohmann/json.hpp
- *
- **/
+ * - etherDLLCodes.hpp
+ * - EtherDLLConfig.hpp
+ * - EtherDLLUtils.hpp
+ * 
+ * @ingroup vicom
+ */
  // ----------------------------------------------------------------------
 #pragma once
 
@@ -40,14 +43,13 @@ using json = nlohmann::json;
 extern spdlog::logger* loggerPtr;
 
 // ----------------------------------------------------------------------
-/**
-  * @brief Validate Power Scan request JSON object
-  *
-  * @param request: JSON object containing the specific arguments for the request
-  * @param validator: JsonValidator instance to accumulate validation results
-  * @return void
-  * @throws NO EXCEPTION HANDLING
-  **/
+// Validate Power Scan request parameters
+// @brief Checks if Power Scan request JSON contains valid parameters
+// @param request JSON object containing the request arguments
+// @param validator JsonValidator instance to accumulate validation results
+// @note Validates frequency range (start < stop)
+// @ingroup vicom_validation
+// ----------------------------------------------------------------------
 void validatePowerScanRequest(const json& request, JsonValidator& validator) {
     using SweepConf = DefaultDLLParam::SweepSettings;
 
@@ -83,15 +85,15 @@ nlohmann::json buildErrorResponse(const nlohmann::json& jsonObj, const std::stri
 }
 
 // ----------------------------------------------------------------------
-/**
-* @brief Test JSON object contains the required information is present
-*
-* @param request: JSON object containing the parameters
-* @param msgType: Message type to be validated
-* @param response: Message queue to push error responses to
-* @return bool: True if the request is valid, false otherwise.
-* @throws NO EXCEPTION HANDLING
-**/
+// Validate request message structure
+// @brief Verifies that request contains required fields based on message type
+// @param request JSON object containing the request parameters
+// @param msgType Message type code to determine validation rules
+// @param response Message queue to push error responses if validation fails
+// @return true if request is valid, false otherwise
+// @note Uses specific validators based on msgType (Power Scan, GPS, etc.)
+// @ingroup vicom_validation
+// ----------------------------------------------------------------------
 bool validRequest(json request, unsigned long msgType, MessageQueue& response) {
 
 	const std::string logSource = "Vicom::validRequest";

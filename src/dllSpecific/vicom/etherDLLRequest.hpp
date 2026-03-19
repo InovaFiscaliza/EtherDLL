@@ -1,22 +1,29 @@
 /**
  * @file etherDLLRequest.hpp
- * @brief JSON to Vicom API data structure conversion and request processing
+ * @brief Request processing functions for ViCom DLL interface
  * 
- * This header file contains function declarations for converting JSON objects
- * to Vicom API data structures and for processing these requests.
+ * This header file contains function declarations for:
+ * - Converting JSON requests to ViCom API data structures
+ * - Processing request queue and executing DLL function calls
+ * - Managing Power Scan, GPS, and settings operations
  * 
  * @author fslobao
  * @date 2025-09-10
- * @version 1.1
+ * @version 1.2
  * 
  * @note Requires C++17 or later
  * @note Uses nlohmann/json library for JSON parsing
  * 
  * Dependencies:
- * - nlohmann/json.hpp
- * - ViCom*.h
+ * - etherDLLInit.hpp
+ * - etherDLLDataProcess.hpp
+ * - etherDLLValidation.hpp
+ * - ViComGpsInterface.h
+ * - EtherDLLClient.hpp
+ * - EtherDLLConfig.hpp
  * 
- **/
+ * @ingroup vicom
+ */
  // ----------------------------------------------------------------------
 #pragma once
 
@@ -51,15 +58,16 @@ extern spdlog::logger* loggerPtr;
 extern MessageQueue response;
 
 // ----------------------------------------------------------------------
-/**
- * @brief Get parameter value from JSON with default fallback
- *
- * @param reqArguments: JSON object containing the parameters
- * @param key: Parameter key to look for
- * @param defaultValue: Default value if key not found
- * @return T: Value from JSON or default
- * @throws NO EXCEPTION HANDLING
-**/
+// Get parameter value from JSON with default fallback
+// @brief Template function to safely retrieve parameters from JSON
+// @tparam T Type of the parameter value
+// @param reqArguments JSON object containing the parameters
+// @param key Parameter key to look for
+// @param defaultValue Default value if key not found
+// @return Value from JSON or default if key doesn't exist
+// @note Logs debug message when using default value
+// @ingroup vicom_request
+// ----------------------------------------------------------------------
 template<typename T>
 T getParamValue(const json& reqArguments, const char* key, T defaultValue) {
     if (reqArguments.contains(key)) {
@@ -70,13 +78,13 @@ T getParamValue(const json& reqArguments, const char* key, T defaultValue) {
 }
 
 // ----------------------------------------------------------------------
-/**
- * @brief Load sweep settings from JSON arguments with default values
- *
- * @param reqArguments: JSON object containing the parameters
- * @return RohdeSchwarz::ViCom::RFPOWERSCAN::SSweepSettings: Populated sweep settings structure
- * @throws NO EXCEPTION HANDLING
-**/
+// Load sweep settings from JSON with defaults
+// @brief Populates SSweepSettings structure from JSON request parameters
+// @param reqArguments JSON object containing optional sweep parameters
+// @return SSweepSettings structure populated with values from JSON or defaults
+// @note Uses DefaultDLLParam::SweepSettings for parameter keys and defaults
+// @ingroup vicom_request
+// ----------------------------------------------------------------------
 RohdeSchwarz::ViCom::RFPOWERSCAN::SSweepSettings loadDefaultParams(const json& reqArguments)
 {
 	using namespace RohdeSchwarz::ViCom::RFPOWERSCAN;
@@ -111,18 +119,16 @@ RohdeSchwarz::ViCom::RFPOWERSCAN::SSweepSettings loadDefaultParams(const json& r
 }
 
 // ----------------------------------------------------------------------
-/**
- * @brief Call the appropriate DLL function based on the request in JSON format
- *
- * Include the identification of the function based on request type
- * conversion from JSON to the appropriate struct for each function call.
- * 
- * @param DLLConn: Connection data for the Vicom DLL
- * @param request: JSON object containing the parameters
- * @param msgType: Message type to be validated
- * @return void
- * @throws NO EXCEPTION HANDLING
-**/
+// Execute DLL function based on message type
+// @brief Main request dispatcher - calls appropriate ViCom API function
+// @param DLLConn Connection data for the ViCom DLL
+// @param request JSON object containing the request parameters
+// @param msgType Message type code determining which function to execute
+// @param refMeasurementInProgress Flag to track measurement state
+// @param interruptionCode Signal for service interruption
+// @note Handles Power Scan config, measurement, GPS, IDN, and stop commands
+// @ingroup vicom_request
+// ----------------------------------------------------------------------
 void DLLFunctionCall(DLLConnectionData& DLLConn, json request, unsigned long msgType, std::atomic<bool>& refMeasurementInProgress, const std::atomic<edll::INT_CODE>& interruptionCode)
 {
 	const std::string logSource = "Vicom::DLLFunctionCall";
@@ -388,18 +394,17 @@ void DLLFunctionCall(DLLConnectionData& DLLConn, json request, unsigned long msg
 
 
 // ----------------------------------------------------------------------
-/** @brief Process messages from the request queue and call the appropriate DLL function
- *
- * This function will lock the thread. Must be run in a separate thread.
- * Messages are expected to be in JSON format and end with the defined message end sequence.
- *
- * @param DLLConn: Connection data for the Vicom DLL
- * @param request: Thread-safe message queue for incoming requests
- * @param response: Thread-safe message queue for outgoing responses
- * @param interruptionCode: Signal for service interruption
- * @param refMeasurementInProgress: (bool&) Reference to a flag indicating if a measurement is in progress
- * @throws NO EXCEPTION HANDLING
-*/
+// Request queue processor (runs in separate thread)
+// @brief Thread-safe queue consumer that processes incoming requests
+// @param DLLConn Connection data for the ViCom DLL
+// @param request Message queue for incoming requests
+// @param response Message queue for outgoing responses
+// @param interruptionCode Signal for service interruption
+// @param refMeasurementInProgress Flag to track measurement state
+// @note This function blocks until interruption signal is received
+// @note Must be run in a dedicated thread
+// @ingroup vicom_request
+// ----------------------------------------------------------------------
 void processRequestQueue(
     DLLConnectionData& DLLConn,
     MessageQueue& request,
