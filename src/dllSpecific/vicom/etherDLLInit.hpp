@@ -305,6 +305,8 @@ inline bool connectAPI(DLLConnectionData& stationConnData, const nlohmann::json&
       {
          CStringA ansiErrorString(err.GetErrorString());
          loggerPtr->error("No receiver found for Power Scan. Error: {}", ansiErrorString.GetString());
+         stationConnData.ps_pInterface = nullptr;
+         stationConnData.ps_loader.reset();
          return false;
       }
       
@@ -315,6 +317,8 @@ inline bool connectAPI(DLLConnectionData& stationConnData, const nlohmann::json&
       {
          CStringA ansiErrorString(err.GetErrorString());
          loggerPtr->error("Failed to get Power Scan interface. Error: {}", ansiErrorString.GetString());
+         stationConnData.ps_pInterface = nullptr;
+         stationConnData.ps_loader.reset();
          return false;
       }
 
@@ -364,6 +368,10 @@ inline bool connectAPI(DLLConnectionData& stationConnData, const nlohmann::json&
       {
          CStringA ansiErrorString(err.GetErrorString());
          loggerPtr->error("No receiver found for GPS. Error: {}", ansiErrorString.GetString());
+         stationConnData.ps_pInterface = nullptr;
+         stationConnData.ps_loader.reset();
+         stationConnData.gps_pInterface = nullptr;
+         stationConnData.gps_loader.reset();
          return false;
       }
 
@@ -374,6 +382,10 @@ inline bool connectAPI(DLLConnectionData& stationConnData, const nlohmann::json&
       {
          CStringA ansiErrorString(err.GetErrorString());
          loggerPtr->error("Failed to get GPS interface. Error: {}", ansiErrorString.GetString());
+         stationConnData.ps_pInterface = nullptr;
+         stationConnData.ps_loader.reset();
+         stationConnData.gps_pInterface = nullptr;
+         stationConnData.gps_loader.reset();
          return false;
       }
    }
@@ -381,11 +393,19 @@ inline bool connectAPI(DLLConnectionData& stationConnData, const nlohmann::json&
    {
       CStringA ansiErrorString(err.GetErrorString());
       loggerPtr->error("CViComError ({}) \"{}\"", err.GetErrorCode(), ansiErrorString.GetString());
+      stationConnData.ps_pInterface = nullptr;
+      stationConnData.ps_loader.reset();
+      stationConnData.gps_pInterface = nullptr;
+      stationConnData.gps_loader.reset();
       return false;
    }
    catch (const std::exception& e)
    {
       loggerPtr->error("An exception occurred during connectAPI: {}", e.what());
+      stationConnData.ps_pInterface = nullptr;
+      stationConnData.ps_loader.reset();
+      stationConnData.gps_pInterface = nullptr;
+      stationConnData.gps_loader.reset();
       return false;
    }
 
@@ -419,6 +439,7 @@ inline bool disconnectAPI(DLLConnectionData& stationConnData)
          loggerPtr->error("An exception occurred during disconnectAPI for Power Scan: {}", e.what());
          return false;
       }
+      stationConnData.ps_pInterface = nullptr;
    }
    if (stationConnData.gps_loader)
    {
@@ -438,6 +459,7 @@ inline bool disconnectAPI(DLLConnectionData& stationConnData)
          loggerPtr->error("An exception occurred during disconnectAPI for GPS: {}", e.what());
          return false;
       }
+      stationConnData.gps_pInterface = nullptr;
    }
    return true;
 }
