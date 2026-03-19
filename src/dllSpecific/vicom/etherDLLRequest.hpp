@@ -369,6 +369,20 @@ void DLLFunctionCall(DLLConnectionData& DLLConn, json request, unsigned long msg
 			}
 
 			RohdeSchwarz::ViCom::CViComError err;
+
+			if (!DLLConn.isConfigured) {
+				SSweepSettings defaultSettings = loadDefaultParams(reqArguments);
+
+				if (!DLLConn.ps_pInterface->SetSweepSettings(err, defaultSettings)) {
+					responseJson["error"] = vicomErrorToJson(err);
+					response.push(responseJson, logSource);
+					return;
+				}
+
+				DLLConn.sweepSettings = defaultSettings;
+				DLLConn.isConfigured = true;
+			}
+
 			loggerPtr->debug(">>> GET_SETTINGS_CODE: Calling GetSettings");
 			const RohdeSchwarz::ViCom::RFPOWERSCAN::SSettings* pSettings = DLLConn.ps_pInterface->GetSettings(err);
 
