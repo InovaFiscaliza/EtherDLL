@@ -1,31 +1,5 @@
 {
-    "CODE": 1,
-    "COMMAND": "powerScan",
-    "ARGS": {
-        "frontEndMask": 1,
-        "startFrequency": 90000000,
-        "stopFrequency": 107000000,
-        "requireRawData": false,
-        "maxReportingRate": 10.0,
-        "maxDeviceMeasurementRate": 30.0,
-        "windowType": 1,
-        "fftSize": 1024,
-        "autoBandwidth": true,
-        "bandwidth": 20000000,
-		"levelThreshold": false,
-		"threshold": -100.0,
-		"preamplifier": true,
-		"autoAttenuation": true,
-		"attenuation": 0,
-		"measurementTime": 1000000,
-		"measurementDetectorType": 1,
-		"numBins": 1024,
-		"frequencyDetectorType": 1,
-		"timeDetectorType": 1,
-		"timeDetectorIntervalType": 1,
-		"timeParameter": 1000,
-		"useMarker": false,
-		"returnPowerValues": false,
-        "singleSweepMode": false
-    }
+    "CODE": 7,
+    "COMMAND": "startPowerScanMeasurement",
+    "ARGS": {}
 }
