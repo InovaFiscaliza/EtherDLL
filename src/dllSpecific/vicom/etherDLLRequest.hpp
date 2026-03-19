@@ -195,14 +195,21 @@ void DLLFunctionCall(DLLConnectionData& DLLConn, json request, unsigned long msg
 				return;
 			}
 
+			RohdeSchwarz::ViCom::CViComError err;
+
 			if (!DLLConn.isConfigured) {
-				loggerPtr->error("Power scan not configured. Call powerScanConfig first.");
-				responseJson["error"] = "Power scan not configured. Call powerScanConfig first.";
-				response.push(responseJson, logSource);
-				return;
+				SSweepSettings defaultSettings = loadDefaultParams(reqArguments);
+
+				if (!DLLConn.ps_pInterface->SetSweepSettings(err, defaultSettings)) {
+					responseJson["error"] = vicomErrorToJson(err);
+					response.push(responseJson, logSource);
+					return;
+				}
+
+				DLLConn.sweepSettings = defaultSettings;
+				DLLConn.isConfigured = true;
 			}
 
-			RohdeSchwarz::ViCom::CViComError err;
 			RohdeSchwarz::ViCom::RFPOWERSCAN::SSweepSettings sweepSettings = DLLConn.sweepSettings;
 			bool singleSweep = getParamValue(reqArguments, DefaultDLLParam::SweepSettings::SINGLE_SWEEP, true);
 
