@@ -303,6 +303,8 @@ bool testLogConfig(json config) {
 		std::cout << "Log configuration validation errors: " << test_result << std::endl;
 		throw std::runtime_error("Log configuration validation failed. See previous errors.");
 	}
+
+	return true;
 }
 
 // ----------------------------------------------------------------------

@@ -23,9 +23,11 @@
 #pragma once
 
 // Include DLL specific libraries
+#include "etherDLLInit.hpp"
 #include "etherDLLCodes.hpp"
 
 // Include core EtherDLL libraries
+#include "EtherDLLClient.hpp"
 #include "EtherDLLConfig.hpp"
 #include "EtherDLLUtils.hpp"
 
@@ -53,15 +55,26 @@ extern spdlog::logger* loggerPtr;
 void validatePowerScanRequest(const json& request, JsonValidator& validator) {
     using SweepConf = DefaultDLLParam::SweepSettings;
 
-    validator
-        .optionalType(request, SweepConf::START_FREQ_HZ, VALID_TYPE_NUMBER)
-        .optionalType(request, SweepConf::STOP_FREQ_HZ, VALID_TYPE_NUMBER)
-        .custom(request, SweepConf::START_FREQ_HZ, [&request](const json& sf) {
-            if (request.contains(SweepConf::STOP_FREQ_HZ)) {
-                return sf.get<double>() < request[SweepConf::STOP_FREQ_HZ].get<double>();
+    const char* startFreqKey = findPresentKeyName(request, SweepConf::START_FREQ_HZ);
+    const char* stopFreqKey = findPresentKeyName(request, SweepConf::STOP_FREQ_HZ);
+
+    if (startFreqKey != nullptr) {
+        validator.optionalType(request, startFreqKey, VALID_TYPE_NUMBER);
+    }
+
+    if (stopFreqKey != nullptr) {
+        validator.optionalType(request, stopFreqKey, VALID_TYPE_NUMBER);
+    }
+
+    if (startFreqKey != nullptr) {
+        validator.custom(request, startFreqKey, [&request](const json& sf) {
+            const auto* stopFreq = findValueByKey(request, SweepConf::STOP_FREQ_HZ);
+            if (stopFreq != nullptr) {
+                return sf.get<double>() < stopFreq->get<double>();
             }
             return true;
-        }, "start_freq_hz must be less than stop_freq_hz");
+        }, "start frequency must be less than stop frequency");
+    }
 }
 
 // ----------------------------------------------------------------------

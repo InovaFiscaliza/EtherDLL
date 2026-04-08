@@ -69,11 +69,15 @@ extern MessageQueue response;
 // @ingroup vicom_request
 // ----------------------------------------------------------------------
 template<typename T>
-T getParamValue(const json& reqArguments, const char* key, T defaultValue) {
-    if (reqArguments.contains(key)) {
-        return reqArguments[key].get<T>();
-    }
-    loggerPtr->debug("Using default value for parameter: {}", key);
+T getParamValue(const json& reqArguments, const JsonKeyAlias& key, T defaultValue) {
+	if (const auto* value = findValueByKey(reqArguments, key)) {
+		if (findPresentKeyName(reqArguments, key) == key.snake_case) {
+		loggerPtr->debug("Using legacy parameter key '{}' for '{}'.", key.snake_case, key.value);
+		}
+		return value->template get<T>();
+	}
+
+	loggerPtr->debug("Using default value for parameter: {}", key.value);
     return defaultValue;
 }
 
@@ -335,8 +339,8 @@ void DLLFunctionCall(DLLConnectionData& DLLConn, json request, unsigned long msg
 			loggerPtr->debug(">>> IDN_CODE: Start");
 			responseJson["model"] = DLLConn.receiverModel;
 			responseJson["serial"] = DLLConn.serialNumber;
-			responseJson["sw_version"] = DLLConn.softwareVersion;
-			responseJson["hw_version"] = DLLConn.hardwareVersion;
+			responseJson["swVersion"] = DLLConn.softwareVersion;
+			responseJson["hwVersion"] = DLLConn.hardwareVersion;
 
 			std::string idnResponse = "Rohde&Schwarz," + DLLConn.receiverModel + "," + DLLConn.serialNumber + "," + DLLConn.softwareVersion;
 			responseJson["message"] = idnResponse;

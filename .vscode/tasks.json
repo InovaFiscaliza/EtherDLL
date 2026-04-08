@@ -2,9 +2,15 @@
     "version": "2.0.0",
     "tasks": [
       {
-        "label": "Build Solution",
-        "type": "shell",
-        "command": "buildconsole ${workspaceFolder}\\src\\EtherDLL.sln /build /cfg='Release|Win32'",
+        "label": "Build EtherDLL Solution",
+        "type": "process",
+        "command": "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\MSBuild\\Current\\Bin\\MSBuild.exe",
+        "args": [
+          "${workspaceFolder}\\src\\EtherDLL.sln",
+          "/t:Build",
+          "/p:Configuration=Release;Platform=Win32",
+          "/m"
+        ],
         "group": {
           "kind": "build",
           "isDefault": true
@@ -16,12 +22,18 @@
         "problemMatcher": "$msCompile"
       },
       {
-        "label": "Rebuild Solution",
-        "type": "shell",
-        "command": "buildconsole ${workspaceFolder}\\src\\EtherDLL.sln /rebuild /cfg='Release|Win32'",
+        "label": "Rebuild EtherDLL Solution",
+        "type": "process",
+        "command": "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\MSBuild\\Current\\Bin\\MSBuild.exe",
+        "args": [
+          "${workspaceFolder}\\src\\EtherDLL.sln",
+          "/t:Rebuild",
+          "/p:Configuration=Release;Platform=Win32",
+          "/m"
+        ],
         "group": {
           "kind": "build",
-          "isDefault": true
+          "isDefault": false
         },
         "presentation": {
           "reveal": "always",
@@ -30,12 +42,18 @@
         "problemMatcher": "$msCompile"
       },
       {
-        "label": "Build Project",
-        "type": "shell",
-        "command": "buildconsole ${workspaceFolder}\\src\\EtherDLL.sln /prj=EtherDLL_base.vcxproj /build /cfg='Release|Win32'",
+        "label": "Build EtherDLL Project",
+        "type": "process",
+        "command": "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\MSBuild\\Current\\Bin\\MSBuild.exe",
+        "args": [
+          "${workspaceFolder}\\src\\EtherDLL_base.vcxproj",
+          "/t:Build",
+          "/p:Configuration=Release;Platform=Win32",
+          "/m"
+        ],
         "group": {
           "kind": "build",
-          "isDefault": true
+          "isDefault": false
         },
         "presentation": {
           "reveal": "always",
@@ -44,12 +62,18 @@
         "problemMatcher": "$msCompile"
       },
       {
-        "label": "Rebuild Project",
-        "type": "shell",
-        "command": "buildconsole ${workspaceFolder}\\src\\EtherDLL.sln /prj=EtherDLL_base.vcxproj /rebuild /cfg='Release|Win32'",
+        "label": "Rebuild EtherDLL Project",
+        "type": "process",
+        "command": "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\MSBuild\\Current\\Bin\\MSBuild.exe",
+        "args": [
+          "${workspaceFolder}\\src\\EtherDLL_base.vcxproj",
+          "/t:Rebuild",
+          "/p:Configuration=Release;Platform=Win32",
+          "/m"
+        ],
         "group": {
           "kind": "build",
-          "isDefault": true
+          "isDefault": false
         },
         "presentation": {
           "reveal": "always",

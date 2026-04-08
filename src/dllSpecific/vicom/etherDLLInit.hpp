@@ -102,69 +102,113 @@ using DLLConnectionData = VicomConnection;
 
 inline DLLConnectionData DEFAULT_DLL_CONNECTION_DATA{};
 
+struct JsonKeyAlias {
+   const char* value;
+   const char* snake_case;
+};
+
 // ----------------------------------------------------------------------
 // Define structure for default configuration parameters related to Vicom API
 // Json like structure to centralize string parameters used to configure default parameters when using Vicom API.
 // This avoid the need of users sending all parameters every time a command is issued.
 // ----------------------------------------------------------------------
 struct DefaultDLLParam {
-   static constexpr const char* KEY = "dll_default";
+   static constexpr JsonKeyAlias KEY{"dllDefault", "dll_default"};
 
    struct Station {
-      static constexpr const char* KEY = "station";
+      static constexpr JsonKeyAlias KEY{"station", nullptr};
 
       struct Address {
-         static constexpr const char* KEY = "address";
+         static constexpr JsonKeyAlias KEY{"address", nullptr};
          static constexpr const char* VALUE = "192.168.0.2";
       };
       struct ReceiverType {
-         static constexpr const char* KEY = "receiver_type";
+         static constexpr JsonKeyAlias KEY{"receiverType", "receiver_type"};
          static constexpr const char* VALUE = "TSMW";
       };
       struct ReceiverModel {
-         static constexpr const char* KEY = "receiver_model";
+         static constexpr JsonKeyAlias KEY{"receiverModel", "receiver_model"};
          static constexpr const char* VALUE = "";
       };
       struct ReceiveSoftwareVersion {
-         static constexpr const char* KEY = "receiver_software_version";
+         static constexpr JsonKeyAlias KEY{"receiverSoftwareVersion", "receiver_software_version"};
          static constexpr const char* VALUE = "";
       };
       struct ReceiverHardwareVersion {
-         static constexpr const char* KEY = "receiver_hardware_version";
+         static constexpr JsonKeyAlias KEY{"receiverHardwareVersion", "receiver_hardware_version"};
          static constexpr const char* VALUE = "";
       };
    };
 
    struct SweepSettings {
-      static constexpr const char* KEY = "sweep_settings";
+      static constexpr JsonKeyAlias KEY{"sweepSettings", "sweep_settings"};
       
-      static constexpr const char* FRONT_END_MASK = "frontEndMask";
-      static constexpr const char* START_FREQ_HZ = "startFrequency";
-      static constexpr const char* STOP_FREQ_HZ = "stopFrequency";
-      static constexpr const char* REQ_RAW_DATA = "requireRawData";
-      static constexpr const char* MAX_REPORTING_RATE = "maxReportingRate";
-      static constexpr const char* MAX_DEVICE_MEAS_RATE = "maxDeviceMeasurementRate";
-      static constexpr const char* WINDOW_TYPE = "windowType";
-      static constexpr const char* FFT_SIZE = "fftSize";
-      static constexpr const char* AUTO_BANDWIDTH = "autoBandwidth";
-      static constexpr const char* BANDWIDTH_HZ = "bandwidth";
-      static constexpr const char* LEVEL_THRESHOLD = "levelThreshold";
-      static constexpr const char* THRESHOLD_DBM = "threshold";
-      static constexpr const char* PREAMPLIFIER = "preamplifier";
-      static constexpr const char* AUTO_ATTENUATION = "autoAttenuation";
-      static constexpr const char* ATTENUATION_DB = "attenuation";
-      static constexpr const char* MEAS_TIME_NS = "measurementTime";
-      static constexpr const char* MEAS_DETECTOR_TYPE = "measurementDetectorType";
-      static constexpr const char* FREQ_DETECTOR_LINES = "numBins";
-      static constexpr const char* FREQ_DETECTOR_TYPE = "frequencyDetectorType";
-      static constexpr const char* TIME_DETECTOR_TYPE = "timeDetectorType";
-      static constexpr const char* TIME_DETECTOR_INTERVAL_TYPE = "timeDetectorIntervalType";
-      static constexpr const char* TIME_PARAMETER_MS = "timeParameter";
-      static constexpr const char* USE_MARKER = "useMarker";
-      static constexpr const char* RETURN_POWER_VALUES = "returnPowerValues";
-      static constexpr const char* SINGLE_SWEEP = "singleSweepMode";
+      static constexpr JsonKeyAlias FRONT_END_MASK{"frontEndMask", "front_end_mask"};
+      static constexpr JsonKeyAlias START_FREQ_HZ{"startFrequency", "start_freq_hz"};
+      static constexpr JsonKeyAlias STOP_FREQ_HZ{"stopFrequency", "stop_freq_hz"};
+      static constexpr JsonKeyAlias REQ_RAW_DATA{"requireRawData", "req_raw_data"};
+      static constexpr JsonKeyAlias MAX_REPORTING_RATE{"maxReportingRate", "max_reporting_rate"};
+      static constexpr JsonKeyAlias MAX_DEVICE_MEAS_RATE{"maxDeviceMeasurementRate", "max_device_measurement_rate"};
+      static constexpr JsonKeyAlias WINDOW_TYPE{"windowType", "window_type"};
+      static constexpr JsonKeyAlias FFT_SIZE{"fftSize", "fft_size"};
+      static constexpr JsonKeyAlias AUTO_BANDWIDTH{"autoBandwidth", "auto_bandwidth"};
+      static constexpr JsonKeyAlias BANDWIDTH_HZ{"bandwidth", "bandwidth_hz"};
+      static constexpr JsonKeyAlias LEVEL_THRESHOLD{"levelThreshold", "level_threshold"};
+      static constexpr JsonKeyAlias THRESHOLD_DBM{"threshold", "threshold_dbm"};
+      static constexpr JsonKeyAlias PREAMPLIFIER{"preamplifier", nullptr};
+      static constexpr JsonKeyAlias AUTO_ATTENUATION{"autoAttenuation", "auto_attenuation"};
+      static constexpr JsonKeyAlias ATTENUATION_DB{"attenuation", "attenuation_db"};
+      static constexpr JsonKeyAlias MEAS_TIME_NS{"measurementTime", "measurement_time_ns"};
+      static constexpr JsonKeyAlias MEAS_DETECTOR_TYPE{"measurementDetectorType", "detector_type"};
+      static constexpr JsonKeyAlias FREQ_DETECTOR_LINES{"numBins", "count_of_lines"};
+      static constexpr JsonKeyAlias FREQ_DETECTOR_TYPE{"frequencyDetectorType", "frequency_detector_type"};
+      static constexpr JsonKeyAlias TIME_DETECTOR_TYPE{"timeDetectorType", "time_detector_type"};
+      static constexpr JsonKeyAlias TIME_DETECTOR_INTERVAL_TYPE{"timeDetectorIntervalType", "detector_interval_type"};
+      static constexpr JsonKeyAlias TIME_PARAMETER_MS{"timeParameter", "time_parameter_ms"};
+      static constexpr JsonKeyAlias USE_MARKER{"useMarker", "use_marker"};
+      static constexpr JsonKeyAlias RETURN_POWER_VALUES{"returnPowerValues", "return_power_values"};
+      static constexpr JsonKeyAlias SINGLE_SWEEP{"singleSweepMode", nullptr};
    };
 };
+
+inline const json* findObjectByKey(const json& parent, const JsonKeyAlias& key)
+{
+   if (parent.contains(key.value) && parent[key.value].is_object()) {
+      return &parent[key.value];
+   }
+
+   if (key.snake_case != nullptr && parent.contains(key.snake_case) && parent[key.snake_case].is_object()) {
+      return &parent[key.snake_case];
+   }
+
+   return nullptr;
+}
+
+inline const json* findValueByKey(const json& parent, const JsonKeyAlias& key)
+{
+   if (parent.contains(key.value)) {
+      return &parent[key.value];
+   }
+
+   if (key.snake_case != nullptr && parent.contains(key.snake_case)) {
+      return &parent[key.snake_case];
+   }
+
+   return nullptr;
+}
+
+inline const char* findPresentKeyName(const json& parent, const JsonKeyAlias& key)
+{
+   if (parent.contains(key.value)) {
+      return key.value;
+   }
+
+   if (key.snake_case != nullptr && parent.contains(key.snake_case)) {
+      return key.snake_case;
+   }
+
+   return nullptr;
+}
 
 // ----------------------------------------------------------------------
 // Build a default dll parameters JSON object from the DefaultDLLParam struct
@@ -175,11 +219,11 @@ struct DefaultDLLParam {
 // ----------------------------------------------------------------------
 inline json buildDLLDefaultParamJson(json default_param = json::object()) {
 
-   default_param[DefaultDLLParam::KEY][DefaultDLLParam::Station::KEY][DefaultDLLParam::Station::Address::KEY] = DefaultDLLParam::Station::Address::VALUE;
-   default_param[DefaultDLLParam::KEY][DefaultDLLParam::Station::KEY][DefaultDLLParam::Station::ReceiverType::KEY] = DefaultDLLParam::Station::ReceiverType::VALUE;
-   default_param[DefaultDLLParam::KEY][DefaultDLLParam::Station::KEY][DefaultDLLParam::Station::ReceiverModel::KEY] = DefaultDLLParam::Station::ReceiverModel::VALUE;
-   default_param[DefaultDLLParam::KEY][DefaultDLLParam::Station::KEY][DefaultDLLParam::Station::ReceiveSoftwareVersion::KEY] = DefaultDLLParam::Station::ReceiveSoftwareVersion::VALUE;
-   default_param[DefaultDLLParam::KEY][DefaultDLLParam::Station::KEY][DefaultDLLParam::Station::ReceiverHardwareVersion::KEY] = DefaultDLLParam::Station::ReceiverHardwareVersion::VALUE;
+   default_param[DefaultDLLParam::KEY.value][DefaultDLLParam::Station::KEY.value][DefaultDLLParam::Station::Address::KEY.value] = DefaultDLLParam::Station::Address::VALUE;
+   default_param[DefaultDLLParam::KEY.value][DefaultDLLParam::Station::KEY.value][DefaultDLLParam::Station::ReceiverType::KEY.value] = DefaultDLLParam::Station::ReceiverType::VALUE;
+   default_param[DefaultDLLParam::KEY.value][DefaultDLLParam::Station::KEY.value][DefaultDLLParam::Station::ReceiverModel::KEY.value] = DefaultDLLParam::Station::ReceiverModel::VALUE;
+   default_param[DefaultDLLParam::KEY.value][DefaultDLLParam::Station::KEY.value][DefaultDLLParam::Station::ReceiveSoftwareVersion::KEY.value] = DefaultDLLParam::Station::ReceiveSoftwareVersion::VALUE;
+   default_param[DefaultDLLParam::KEY.value][DefaultDLLParam::Station::KEY.value][DefaultDLLParam::Station::ReceiverHardwareVersion::KEY.value] = DefaultDLLParam::Station::ReceiverHardwareVersion::VALUE;
 
    return default_param;
 }
@@ -237,22 +281,20 @@ inline bool validDLLConfigParams(const nlohmann::json& config)
    bool validConfig = true;
    using station_conf = DefaultDLLParam::Station;
 
-   if (!config.contains(DefaultDLLParam::KEY) || !config[DefaultDLLParam::KEY].is_object()) {
+   const auto* dll_config = findObjectByKey(config, DefaultDLLParam::KEY);
+   if (dll_config == nullptr) {
       loggerPtr->error("No DLL configuration section found");
       return false;
    }
 
-   const auto& dll_config = config[DefaultDLLParam::KEY];
-
-   if (!dll_config.contains(station_conf::KEY) || !dll_config[station_conf::KEY].is_object()) {
+   const auto* station_config = findObjectByKey(*dll_config, station_conf::KEY);
+   if (station_config == nullptr) {
       loggerPtr->error("No station configuration section found");
       return false;
    }
 
-   const auto& station_config = dll_config[station_conf::KEY];
-
-   if (station_config.contains(station_conf::Address::KEY)) {
-      if (!station_config[station_conf::Address::KEY].is_string() || station_config[station_conf::Address::KEY].get<std::string>().empty()) {
+   if (station_config->contains(station_conf::Address::KEY.value)) {
+      if (!(*station_config)[station_conf::Address::KEY.value].is_string() || (*station_config)[station_conf::Address::KEY.value].get<std::string>().empty()) {
          loggerPtr->error("Station address in configuration is invalid or empty");
          validConfig = false;
       }
@@ -291,9 +333,19 @@ inline bool connectAPI(DLLConnectionData& stationConnData, const nlohmann::json&
       CViComError err;
       using station_conf = DefaultDLLParam::Station;
 
-      json station_config = config[DefaultDLLParam::KEY][station_conf::KEY].get<json>();
+      const auto* dll_config = findObjectByKey(config, DefaultDLLParam::KEY);
+      if (dll_config == nullptr) {
+         loggerPtr->error("No DLL configuration section found");
+         return false;
+      }
+
+      const auto* station_config = findObjectByKey(*dll_config, station_conf::KEY);
+      if (station_config == nullptr) {
+         loggerPtr->error("No station configuration section found");
+         return false;
+      }
       
-      std::string ipAddressStr = station_config[station_conf::Address::KEY].get<std::string>();
+      std::string ipAddressStr = (*station_config)[station_conf::Address::KEY.value].get<std::string>();
 
       // For now, receiver type is hardcoded. This could be read from config.
       Receiver::Type receptor = Receiver::TSMW;

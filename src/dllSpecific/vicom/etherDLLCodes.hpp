@@ -47,9 +47,9 @@ using namespace RohdeSchwarz::ViCom;
 inline json vicomErrorToJson(const CViComError& err)
 {
    json errorJson;
-   errorJson["error_code"] = err.GetErrorCode();
+   errorJson["errorCode"] = err.GetErrorCode();
    CStringA ansiErrorString(err.GetErrorString());
-   errorJson["error_message"] = ansiErrorString.GetString();
+   errorJson["errorMessage"] = ansiErrorString.GetString();
    return errorJson;
 }
 

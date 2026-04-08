@@ -669,7 +669,7 @@ public:
 	{
 		const std::string logSource = "pingClient";
 
-		int pingPeriodMs = config[service::KEY][service::PingPeriod::KEY].get<double>() * 1000;
+		int pingPeriodMs = config[service::KEY][service::PingPeriod::KEY].get<int>() * 1000;
 		int iResult = 0;
 
 		while (interruptionCode == edll::Code::RUNNING) {
