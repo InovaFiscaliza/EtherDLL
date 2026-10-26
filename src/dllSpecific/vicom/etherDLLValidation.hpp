@@ -66,6 +66,11 @@ void validatePowerScanRequest(const json& request, JsonValidator& validator) {
         validator.optionalType(request, stopFreqKey, VALID_TYPE_NUMBER);
     }
 
+    const char* singleSweepModeKey = findPresentKeyName(request, SweepConf::SINGLE_SWEEP);
+    if (singleSweepModeKey != nullptr) {
+        validator.optionalType(request, singleSweepModeKey, VALID_TYPE_BOOLEAN);
+    }
+
     if (startFreqKey != nullptr) {
         validator.custom(request, startFreqKey, [&request](const json& sf) {
             const auto* stopFreq = findValueByKey(request, SweepConf::STOP_FREQ_HZ);
@@ -133,6 +138,9 @@ bool validRequest(json request, unsigned long msgType, MessageQueue& response) {
         case VicomTask::GPS_GET_LOCATION_CODE:
             // No specific arguments to validate
             break;
+        case VicomTask::STOP_MEASUMENT_CODE:
+            // No specific arguments to validate
+            break;
         case VicomTask::IDN_CODE:
             // No specific arguments to validate
             break;
@@ -143,7 +151,8 @@ bool validRequest(json request, unsigned long msgType, MessageQueue& response) {
             validatePowerScanRequest(request[TaskKeys::Arguments::VALUE], validator);
 			break;
         case VicomTask::POWER_SCAN_MEASURE_CODE:
-            // No specific arguments to validate
+            validator.optionalType(request[TaskKeys::Arguments::VALUE],
+                DefaultDLLParam::SweepSettings::SINGLE_SWEEP.value, VALID_TYPE_BOOLEAN);
             break;
         default: {
             loggerPtr->error("Unknown message type for validation: {}", msgType);

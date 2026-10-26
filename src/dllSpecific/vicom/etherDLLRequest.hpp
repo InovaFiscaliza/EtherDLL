@@ -44,7 +44,10 @@
 #include <spdlog/spdlog.h>
 
 // Include general C++ libraries
+#include <chrono>
+#include <functional>
 #include <string>
+#include <utility>
 
 // For convenience
 using json = nlohmann::json;
@@ -55,7 +58,68 @@ using namespace RohdeSchwarz::ViCom::GPS;
 
 // Global variables
 extern spdlog::logger* loggerPtr;
-extern MessageQueue response;
+
+void stopAndWaitForMeasurementStop(RohdeSchwarz::ViCom::CViComBasicInterface& basicIF,
+	const char* measurementName) noexcept {
+	bool stopped = false;
+	try {
+		basicIF.StopMeasurement();
+		// Use the ViCom SDK's bounded default timeout (15 seconds).
+		stopped = basicIF.HasMeasurementStopped();
+	}
+	catch (const std::exception& e) {
+		try {
+			loggerPtr->error("{} measurement stop failed: {}", measurementName, e.what());
+		}
+		catch (...) {
+		}
+	}
+	catch (...) {
+		try {
+			loggerPtr->error("{} measurement stop failed with an unknown exception", measurementName);
+		}
+		catch (...) {
+		}
+	}
+
+	if (!stopped) {
+		try {
+			loggerPtr->warn("{} measurement was not confirmed stopped by the ViCom SDK", measurementName);
+		}
+		catch (...) {
+		}
+	}
+}
+
+class VicomScopeExit {
+private:
+	std::function<void()> cleanup;
+	bool active = true;
+
+public:
+	explicit VicomScopeExit(std::function<void()> cleanup)
+		: cleanup(std::move(cleanup)) {}
+
+	VicomScopeExit(const VicomScopeExit&) = delete;
+	VicomScopeExit& operator=(const VicomScopeExit&) = delete;
+
+	~VicomScopeExit() noexcept {
+		run();
+	}
+
+	void run() noexcept {
+		if (!active) {
+			return;
+		}
+		active = false;
+		try {
+			cleanup();
+		}
+		catch (...) {
+			// Cleanup must not prevent the worker's completion signal.
+		}
+	}
+};
 
 // ----------------------------------------------------------------------
 // Get parameter value from JSON with default fallback
@@ -122,6 +186,111 @@ RohdeSchwarz::ViCom::RFPOWERSCAN::SSweepSettings loadDefaultParams(const json& r
 	return sweepSettings;
 }
 
+void runPowerScanMeasurement(DLLConnectionData& DLLConn, ClientSession& session,
+	const RohdeSchwarz::ViCom::RFPOWERSCAN::SSweepSettings& sweepSettings,
+	bool singleSweep, const std::atomic<edll::INT_CODE>& interruptionCode,
+	const std::string& logSource) {
+	if (session.stopRequested.load(std::memory_order_acquire) ||
+		session.measurementStopRequested.load(std::memory_order_acquire) ||
+		interruptionCode != edll::Code::RUNNING) {
+		return;
+	}
+
+	try {
+		RohdeSchwarz::ViCom::CViComError err;
+		RohdeSchwarz::ViCom::CViComBasicInterface& basicIF = DLLConn.ps_pInterface->GetBasicInterface();
+		bool cleanupNeeded = true;
+		VicomScopeExit measurementCleanup([&]() {
+			if (cleanupNeeded) {
+				stopAndWaitForMeasurementStop(basicIF, "Power Scan");
+				cleanupNeeded = false;
+			}
+			session.measurementInProgress.store(false, std::memory_order_release);
+		});
+
+		// The worker owns all measurement calls, including the eventual stop.
+		basicIF.StartMeasurement();
+		session.measurementInProgress.store(true, std::memory_order_release);
+		if (session.stopRequested.load(std::memory_order_acquire) ||
+			session.measurementStopRequested.load(std::memory_order_acquire) ||
+			interruptionCode != edll::Code::RUNNING) {
+			measurementCleanup.run();
+			return;
+		}
+		if (!singleSweep) {
+			json startedResponse;
+			startedResponse["status"] = "started";
+			session.response.push(startedResponse, logSource);
+		}
+
+		do {
+			if (session.stopRequested.load(std::memory_order_acquire) ||
+				session.measurementStopRequested.load(std::memory_order_acquire) ||
+				interruptionCode != edll::Code::RUNNING) {
+				break;
+			}
+
+			const int retrieveTimeMs = static_cast<int>(
+				1000 / sweepSettings.sSpectrumSettings.fMaxReportingRateInHz);
+			const RohdeSchwarz::ViCom::RFPOWERSCAN::SMeasResult* pResult =
+				DLLConn.ps_pInterface->GetResult(err, 100);
+
+			if (session.stopRequested.load(std::memory_order_acquire) ||
+				session.measurementStopRequested.load(std::memory_order_acquire) ||
+				interruptionCode != edll::Code::RUNNING) {
+				break;
+			}
+
+			json responseJson;
+			if (pResult != nullptr) {
+				responseJson = processPowerScanResult(&sweepSettings, pResult);
+				loggerPtr->info("Power scan successful.");
+			}
+			else {
+				CStringA ansiErrorString(err.GetErrorString());
+				loggerPtr->error("Failed to get power scan result: {}", ansiErrorString.GetString());
+				responseJson["error"] = vicomErrorToJson(err);
+			}
+			session.response.push(responseJson, logSource);
+
+			const auto startTime = std::chrono::steady_clock::now();
+			while (std::chrono::duration_cast<std::chrono::milliseconds>(
+				std::chrono::steady_clock::now() - startTime).count() < retrieveTimeMs &&
+				interruptionCode == edll::Code::RUNNING &&
+				!session.stopRequested.load(std::memory_order_acquire) &&
+				!session.measurementStopRequested.load(std::memory_order_acquire) &&
+				singleSweep == false) {
+				std::this_thread::sleep_for(std::chrono::milliseconds(50));
+			}
+		} while (singleSweep == false &&
+			!session.stopRequested.load(std::memory_order_acquire) &&
+			!session.measurementStopRequested.load(std::memory_order_acquire) &&
+			interruptionCode == edll::Code::RUNNING);
+
+		measurementCleanup.run();
+	}
+	catch (const std::exception& e) {
+		if (!session.stopRequested.load(std::memory_order_acquire) &&
+			!session.measurementStopRequested.load(std::memory_order_acquire) &&
+			interruptionCode == edll::Code::RUNNING) {
+			json errorResponse;
+			errorResponse["error"] = e.what();
+			session.response.push(errorResponse, logSource);
+		}
+		loggerPtr->error("Power scan measurement failed: {}", e.what());
+	}
+	catch (...) {
+		if (!session.stopRequested.load(std::memory_order_acquire) &&
+			!session.measurementStopRequested.load(std::memory_order_acquire) &&
+			interruptionCode == edll::Code::RUNNING) {
+			json errorResponse;
+			errorResponse["error"] = "Unknown power scan measurement error";
+			session.response.push(errorResponse, logSource);
+		}
+		loggerPtr->error("Power scan measurement failed with an unknown exception");
+	}
+}
+
 // ----------------------------------------------------------------------
 // Execute DLL function based on message type
 // @brief Main request dispatcher - calls appropriate ViCom API function
@@ -133,9 +302,17 @@ RohdeSchwarz::ViCom::RFPOWERSCAN::SSweepSettings loadDefaultParams(const json& r
 // @note Handles Power Scan config, measurement, GPS, IDN, and stop commands
 // @ingroup vicom_request
 // ----------------------------------------------------------------------
-void DLLFunctionCall(DLLConnectionData& DLLConn, json request, unsigned long msgType, std::atomic<bool>& refMeasurementInProgress, const std::atomic<edll::INT_CODE>& interruptionCode)
+void DLLFunctionCall(DLLConnectionData& DLLConn, ClientSession& session,
+	json request, unsigned long msgType,
+	const std::atomic<edll::INT_CODE>& interruptionCode)
 {
 	const std::string logSource = "Vicom::DLLFunctionCall";
+	MessageQueue& response = session.response;
+	std::atomic<bool>& refMeasurementInProgress = session.measurementInProgress;
+	const std::atomic<bool>& sessionStop = session.stopRequested;
+	if (sessionStop.load(std::memory_order_acquire)) {
+		return;
+	}
 	loggerPtr->debug("Processing request: {}", request.dump());
 	
 	unsigned long requestID = request.value(TaskKeys::QueueId::VALUE, TaskKeys::QueueId::INIT_VALUE);
@@ -143,8 +320,11 @@ void DLLFunctionCall(DLLConnectionData& DLLConn, json request, unsigned long msg
 	json responseJson;
 
 	switch (msgType) {
-		case VicomTask::POWER_SCAN_CONFIG_CODE:
+	case VicomTask::POWER_SCAN_CONFIG_CODE:
 		{
+			if (sessionStop.load(std::memory_order_acquire)) {
+				return;
+			}
 			loggerPtr->debug(">>> POWER_SCAN_CONFIG_CODE: Start");
 
 			try {
@@ -169,10 +349,15 @@ void DLLFunctionCall(DLLConnectionData& DLLConn, json request, unsigned long msg
 					loggerPtr->debug(">>> POWER_SCAN_CONFIG_CODE: End (SetSweepSettings failed)");
 					return;
 				}
+				if (sessionStop.load(std::memory_order_acquire)) {
+					return;
+				}
 				loggerPtr->debug(">>> POWER_SCAN_CONFIG_CODE: SetSweepSettings succeeded");
 
 				DLLConn.sweepSettings = sweepSettings;
 				DLLConn.isConfigured = true;
+				DLLConn.singleSweepMode = getParamValue(reqArguments,
+					DefaultDLLParam::SweepSettings::SINGLE_SWEEP, true);
 
 				responseJson["status"] = "configured";
 				loggerPtr->info("Power scan configured successfully.");
@@ -192,6 +377,14 @@ void DLLFunctionCall(DLLConnectionData& DLLConn, json request, unsigned long msg
 
 		case VicomTask::POWER_SCAN_MEASURE_CODE:
 		{
+			if (sessionStop.load(std::memory_order_acquire)) {
+				return;
+			}
+			if (session.measurementWorkerRunning.load(std::memory_order_acquire)) {
+				response.push(buildErrorResponse(request,
+					"A power scan measurement is already running."), logSource);
+				return;
+			}
 			if (DLLConn.ps_pInterface == nullptr) {
 				loggerPtr->error("Vicom interface not connected.");
 				responseJson["error"] = "Vicom interface not connected.";
@@ -202,9 +395,15 @@ void DLLFunctionCall(DLLConnectionData& DLLConn, json request, unsigned long msg
 			RohdeSchwarz::ViCom::CViComError err;
 
 			if (!DLLConn.isConfigured) {
+				if (sessionStop.load(std::memory_order_acquire)) {
+					return;
+				}
 				SSweepSettings defaultSettings = loadDefaultParams(reqArguments);
-
-				if (!DLLConn.ps_pInterface->SetSweepSettings(err, defaultSettings)) {
+				const bool settingsApplied = DLLConn.ps_pInterface->SetSweepSettings(err, defaultSettings);
+				if (sessionStop.load(std::memory_order_acquire)) {
+					return;
+				}
+				if (!settingsApplied) {
 					responseJson["error"] = vicomErrorToJson(err);
 					response.push(responseJson, logSource);
 					return;
@@ -215,54 +414,55 @@ void DLLFunctionCall(DLLConnectionData& DLLConn, json request, unsigned long msg
 			}
 
 			RohdeSchwarz::ViCom::RFPOWERSCAN::SSweepSettings sweepSettings = DLLConn.sweepSettings;
-			bool singleSweep = getParamValue(reqArguments, DefaultDLLParam::SweepSettings::SINGLE_SWEEP, true);
+			const bool singleSweep = getParamValue(reqArguments,
+				DefaultDLLParam::SweepSettings::SINGLE_SWEEP, DLLConn.singleSweepMode);
 
-			if (!DLLConn.ps_pInterface->SetSweepSettings(err, sweepSettings)) {
+			if (sessionStop.load(std::memory_order_acquire)) {
+				return;
+			}
+			const bool settingsApplied = DLLConn.ps_pInterface->SetSweepSettings(err, sweepSettings);
+			if (sessionStop.load(std::memory_order_acquire)) {
+				return;
+			}
+			if (!settingsApplied) {
 				CStringA ansiErrorString(err.GetErrorString());
 				loggerPtr->error("Error configuring SweepSettings: {}", ansiErrorString.GetString());
 				responseJson["error"] = vicomErrorToJson(err);
 				response.push(responseJson, logSource);
 				return;
 			}
-			
-			RohdeSchwarz::ViCom::CViComBasicInterface& basicIF = DLLConn.ps_pInterface->GetBasicInterface();
-			basicIF.StartMeasurement();
-			refMeasurementInProgress.store(true, std::memory_order_release);
 
-			do {
-				int retrieveTimeMs = static_cast<int>(1000 / sweepSettings.sSpectrumSettings.fMaxReportingRateInHz);
-				const RohdeSchwarz::ViCom::RFPOWERSCAN::SMeasResult* pResult = DLLConn.ps_pInterface->GetResult(err, 5000);
-				if (pResult) {
-					responseJson = processPowerScanResult(&sweepSettings, pResult);
-					loggerPtr->info("Power scan successful.");
-				}
-				else {
-					CStringA ansiErrorString(err.GetErrorString());
-					loggerPtr->error("Failed to get power scan result: {}", ansiErrorString.GetString());
-					responseJson["error"] = vicomErrorToJson(err);
-				}
-				response.push(responseJson, logSource);
-				
-				auto startTime = std::chrono::steady_clock::now();
-				while (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - startTime).count() < retrieveTimeMs
-					&& interruptionCode == edll::Code::RUNNING
-					&& refMeasurementInProgress.load(std::memory_order_acquire)
-					&& singleSweep == false)
-				{
-					std::this_thread::sleep_for(std::chrono::milliseconds(50));
-				}
-			} while (singleSweep == false
-				&& refMeasurementInProgress.load(std::memory_order_acquire)
-				&& interruptionCode == edll::Code::RUNNING);
+			const auto runMeasurement = [&DLLConn, &session, &interruptionCode,
+				logSource, sweepSettings, singleSweep]() {
+				runPowerScanMeasurement(DLLConn, session, sweepSettings, singleSweep,
+					interruptionCode, logSource);
+			};
 
-			basicIF.StopMeasurement();
-			basicIF.HasMeasurementStopped();
-			
+			if (singleSweep) {
+				session.measurementStopRequested.store(false, std::memory_order_release);
+				runMeasurement();
+			}
+			else {
+				try {
+					if (!session.startMeasurementWorker(runMeasurement)) {
+						response.push(buildErrorResponse(request,
+							"A power scan measurement is already running."), logSource);
+						return;
+					}
+				}
+				catch (const std::exception& e) {
+					responseJson["error"] = e.what();
+					response.push(responseJson, logSource);
+				}
+			}
 			break;
 		}
 
 		case VicomTask::GPS_GET_LOCATION_CODE:
 		{
+			if (sessionStop.load(std::memory_order_acquire)) {
+				return;
+			}
 			loggerPtr->debug(">>> GPS_GET_LOCATION_CODE: Start");
 
 			try {
@@ -277,8 +477,15 @@ void DLLFunctionCall(DLLConnectionData& DLLConn, json request, unsigned long msg
 				RohdeSchwarz::ViCom::CViComError err;
 				RohdeSchwarz::ViCom::GPS::SGPSDeviceSettings gpsSettings; // Use default settings
 
+				if (sessionStop.load(std::memory_order_acquire)) {
+					return;
+				}
 				loggerPtr->debug(">>> GPS_GET_LOCATION_CODE: Calling SetGPSDeviceSettings");
-				if (!DLLConn.gps_pInterface->SetGPSDeviceSettings(err, gpsSettings)) {
+				const bool gpsSettingsApplied = DLLConn.gps_pInterface->SetGPSDeviceSettings(err, gpsSettings);
+				if (sessionStop.load(std::memory_order_acquire)) {
+					return;
+				}
+				if (!gpsSettingsApplied) {
 					CStringA ansiErrorString(err.GetErrorString());
 					loggerPtr->error("Error configuring GPS Settings: {}", ansiErrorString.GetString());
 					responseJson["error"] = vicomErrorToJson(err);
@@ -286,12 +493,31 @@ void DLLFunctionCall(DLLConnectionData& DLLConn, json request, unsigned long msg
 					loggerPtr->debug(">>> GPS_GET_LOCATION_CODE: End (SetGPSDeviceSettings failed)");
 					return;
 				}
+				if (sessionStop.load(std::memory_order_acquire)) {
+					return;
+				}
 				loggerPtr->debug(">>> GPS_GET_LOCATION_CODE: SetGPSDeviceSettings succeeded");
 
 				RohdeSchwarz::ViCom::CViComBasicInterface& basicIF = DLLConn.gps_pInterface->GetBasicInterface();
 
+				if (sessionStop.load(std::memory_order_acquire)) {
+					return;
+				}
 				loggerPtr->debug(">>> GPS_GET_LOCATION_CODE: Calling StartMeasurement");
-				if (!basicIF.StartMeasurement(err)) {
+				bool gpsCleanupNeeded = true;
+				VicomScopeExit gpsMeasurementCleanup([&]() {
+					if (gpsCleanupNeeded) {
+						stopAndWaitForMeasurementStop(basicIF, "GPS");
+						gpsCleanupNeeded = false;
+					}
+				});
+				const bool gpsMeasurementStarted = basicIF.StartMeasurement(err);
+				if (sessionStop.load(std::memory_order_acquire)) {
+					gpsMeasurementCleanup.run();
+					return;
+				}
+				if (!gpsMeasurementStarted) {
+					gpsCleanupNeeded = false;
 					CStringA ansiErrorString(err.GetErrorString());
 					loggerPtr->error("Error starting GPS measurement: {}", ansiErrorString.GetString());
 					responseJson["error"] = vicomErrorToJson(err);
@@ -301,15 +527,34 @@ void DLLFunctionCall(DLLConnectionData& DLLConn, json request, unsigned long msg
 				}
 				loggerPtr->debug(">>> GPS_GET_LOCATION_CODE: StartMeasurement succeeded");
 
-				// Get result with a 5-second timeout
+				// Poll the ViCom result API in short intervals so a client-session
+				// cancellation is observed promptly instead of waiting the full 5s.
 				loggerPtr->info("Waiting for GPS result...");
-				loggerPtr->debug(">>> GPS_GET_LOCATION_CODE: Calling GetResult");
-				const RohdeSchwarz::ViCom::GPS::SMeasResult* pResult = DLLConn.gps_pInterface->GetResult(err, 5000);
-				if (pResult) {
+				const auto gpsDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+				const RohdeSchwarz::ViCom::GPS::SMeasResult* pResult = nullptr;
+				while (!sessionStop.load(std::memory_order_acquire) &&
+					interruptionCode == edll::Code::RUNNING &&
+					std::chrono::steady_clock::now() < gpsDeadline) {
+					auto remainingMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+						gpsDeadline - std::chrono::steady_clock::now()).count();
+					DWORD waitMs = static_cast<DWORD>(remainingMs < 100 ? (remainingMs > 0 ? remainingMs : 1) : 100);
+					loggerPtr->debug(">>> GPS_GET_LOCATION_CODE: Calling GetResult with {} ms timeout", waitMs);
+					pResult = DLLConn.gps_pInterface->GetResult(err, waitMs);
+					if (pResult != nullptr) {
+						break;
+					}
+					if (err.GetErrorCode() != VICEC_TIME_OUT) {
+						break;
+					}
+				}
+
+				const bool cancelled = sessionStop.load(std::memory_order_acquire) ||
+					interruptionCode != edll::Code::RUNNING;
+				if (pResult != nullptr && !cancelled) {
 					responseJson = processGPSResult(pResult);
 					loggerPtr->info("GPS location retrieval successful.");
 				}
-				else {
+				else if (!cancelled) {
 					CStringA ansiErrorString(err.GetErrorString());
 					loggerPtr->error("Failed to get GPS location result: {}", ansiErrorString.GetString());
 					responseJson["error"] = vicomErrorToJson(err);
@@ -317,17 +562,30 @@ void DLLFunctionCall(DLLConnectionData& DLLConn, json request, unsigned long msg
 				loggerPtr->debug(">>> GPS_GET_LOCATION_CODE: GetResult completed");
 
 				loggerPtr->debug("Stopping GPS measurement...");
-				basicIF.StopMeasurement();
+				gpsMeasurementCleanup.run();
 				loggerPtr->debug("GPS measurement stop command sent.");
-				
+				if (cancelled || sessionStop.load(std::memory_order_acquire) ||
+					interruptionCode != edll::Code::RUNNING) {
+					loggerPtr->debug("GPS request cancelled with its client session");
+					return;
+				}
+
 				response.push(responseJson, logSource);
 				loggerPtr->debug(">>> GPS_GET_LOCATION_CODE: End (success)");
 			} catch (const std::exception& e) {
 				loggerPtr->error(">>> GPS_GET_LOCATION_CODE: Exception: {}", e.what());
+				if (sessionStop.load(std::memory_order_acquire) ||
+					interruptionCode != edll::Code::RUNNING) {
+					return;
+				}
 				responseJson["error"] = e.what();
 				response.push(responseJson, logSource);
 			} catch (...) {
 				loggerPtr->error(">>> GPS_GET_LOCATION_CODE: Unknown exception");
+				if (sessionStop.load(std::memory_order_acquire) ||
+					interruptionCode != edll::Code::RUNNING) {
+					return;
+				}
 				responseJson["error"] = "Unknown exception occurred";
 				response.push(responseJson, logSource);
 			}
@@ -353,15 +611,23 @@ void DLLFunctionCall(DLLConnectionData& DLLConn, json request, unsigned long msg
 
 		case VicomTask::STOP_MEASUMENT_CODE:
 		{
+			const bool measurementWasRunning = session.measurementWorkerRunning.load(std::memory_order_acquire);
+			session.requestMeasurementStop();
+			session.joinMeasurementWorker();
 			refMeasurementInProgress.store(false, std::memory_order_release);
-			loggerPtr->info("Stop measurement command received.");
-			responseJson["message"] = "Stop measurement command processed.";
+			loggerPtr->info("Stop measurement command processed.");
+			responseJson["message"] = measurementWasRunning
+				? "Continuous measurement stopped."
+				: "No continuous measurement was running.";
 			response.push(responseJson, logSource);
 			break;
 		}
 
 		case VicomTask::GET_SETTINGS_CODE:
 		{
+			if (sessionStop.load(std::memory_order_acquire)) {
+				return;
+			}
 			loggerPtr->debug(">>> GET_SETTINGS_CODE: Start");
 
 			if (DLLConn.ps_pInterface == nullptr) {
@@ -375,9 +641,16 @@ void DLLFunctionCall(DLLConnectionData& DLLConn, json request, unsigned long msg
 			RohdeSchwarz::ViCom::CViComError err;
 
 			if (!DLLConn.isConfigured) {
+				if (sessionStop.load(std::memory_order_acquire)) {
+					return;
+				}
 				SSweepSettings defaultSettings = loadDefaultParams(reqArguments);
 
-				if (!DLLConn.ps_pInterface->SetSweepSettings(err, defaultSettings)) {
+				const bool settingsApplied = DLLConn.ps_pInterface->SetSweepSettings(err, defaultSettings);
+				if (sessionStop.load(std::memory_order_acquire)) {
+					return;
+				}
+				if (!settingsApplied) {
 					responseJson["error"] = vicomErrorToJson(err);
 					response.push(responseJson, logSource);
 					return;
@@ -387,8 +660,14 @@ void DLLFunctionCall(DLLConnectionData& DLLConn, json request, unsigned long msg
 				DLLConn.isConfigured = true;
 			}
 
+			if (sessionStop.load(std::memory_order_acquire)) {
+				return;
+			}
 			loggerPtr->debug(">>> GET_SETTINGS_CODE: Calling GetSettings");
 			const RohdeSchwarz::ViCom::RFPOWERSCAN::SSettings* pSettings = DLLConn.ps_pInterface->GetSettings(err);
+			if (sessionStop.load(std::memory_order_acquire)) {
+				return;
+			}
 
 			if (pSettings) {
 				responseJson = processSettingsResult(pSettings);
@@ -432,21 +711,23 @@ void DLLFunctionCall(DLLConnectionData& DLLConn, json request, unsigned long msg
 // ----------------------------------------------------------------------
 void processRequestQueue(
     DLLConnectionData& DLLConn,
-    MessageQueue& request,
-    MessageQueue& response,
-    const std::atomic<edll::INT_CODE>& interruptionCode,
-    std::atomic<bool>& refMeasurementInProgress
+    ClientSession& session,
+    const std::atomic<edll::INT_CODE>& interruptionCode
 )
 {
     const std::string funcName = "processRequestQueue";
+    MessageQueue& request = session.request;
+    MessageQueue& response = session.response;
 
-    while (interruptionCode == edll::Code::RUNNING)
+    while (interruptionCode == edll::Code::RUNNING &&
+        !session.stopRequested.load(std::memory_order_acquire))
     {
         loggerPtr->debug("processRequestQueue: waiting for request");
-        json oneRequest = request.waitAndPop(interruptionCode, funcName);
+        json oneRequest = request.waitAndPop(interruptionCode, funcName, &session.stopRequested);
         loggerPtr->debug("processRequestQueue: got request, processing...");
 
-		if (interruptionCode != edll::Code::RUNNING) {
+		if (interruptionCode != edll::Code::RUNNING ||
+			session.stopRequested.load(std::memory_order_acquire)) {
 			loggerPtr->debug("processRequestQueue: interruption detected, breaking");
 			break;
 		}
@@ -459,9 +740,20 @@ void processRequestQueue(
             continue;
         }
 
+		if (session.measurementWorkerRunning.load(std::memory_order_acquire) &&
+			cmd != VicomTask::STOP_MEASUMENT_CODE && cmd != VicomTask::IDN_CODE) {
+			response.push(buildErrorResponse(oneRequest,
+				"A continuous power scan measurement is active."), funcName);
+			continue;
+		}
+
         loggerPtr->debug("processRequestQueue: calling DLLFunctionCall");
-        DLLFunctionCall(DLLConn, oneRequest, cmd, refMeasurementInProgress, interruptionCode);
+		DLLFunctionCall(DLLConn, session, oneRequest, cmd, interruptionCode);
         loggerPtr->debug("processRequestQueue: DLLFunctionCall returned");
     }
+
+	session.requestMeasurementStop();
+	session.joinMeasurementWorker();
+	session.measurementInProgress.store(false, std::memory_order_release);
     loggerPtr->debug("processRequestQueue: exiting loop");
 }

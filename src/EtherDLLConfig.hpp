@@ -25,6 +25,7 @@
 // Include general C++ libraries
 #include <string>
 #include <iostream>
+#include <cstddef>
 
 // For convenience
 using json = nlohmann::json;
@@ -37,6 +38,9 @@ namespace edll {
 
     // Current version of the EtherDLL
     constexpr const char* VERSION = "1.0.0";
+
+    // Hard limit for one complete client frame, excluding its delimiter.
+    constexpr std::size_t MAX_FRAME_SIZE_BYTES = 1000000;
 
 	// Alias for interruption code type
 	using INT_CODE = int;
@@ -130,10 +134,6 @@ namespace edll {
 			struct Sleep {
 				static constexpr const char* KEY = "sleepMs";
 				static constexpr int VALUE = 100;
-			};
-			struct BufferTTL {
-				static constexpr const char* KEY = "bufferTTLMsgCount";
-				static constexpr int VALUE = 5;
 			};
 			struct PingPeriod {
 				static constexpr const char* KEY = "pingPeriodS";
@@ -232,7 +232,6 @@ json buildCoreDefaultConfigJson(json default_config = json::object()) {
 	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::BufferSize::KEY] = edll::DefaultConfig::Service::BufferSize::VALUE;
 	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::Timeout::KEY] = edll::DefaultConfig::Service::Timeout::VALUE;
 	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::Sleep::KEY] = edll::DefaultConfig::Service::Sleep::VALUE;
-	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::BufferTTL::KEY] = edll::DefaultConfig::Service::BufferTTL::VALUE;
 	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::PingPeriod::KEY] = edll::DefaultConfig::Service::PingPeriod::VALUE;
 	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::PingEnable::KEY] = edll::DefaultConfig::Service::PingEnable::VALUE;
 	default_config[edll::DefaultConfig::Service::KEY][edll::DefaultConfig::Service::DemoMode::KEY] = edll::DefaultConfig::Service::DemoMode::VALUE;
@@ -345,11 +344,6 @@ bool validServiceParams(json config) {
 	int sleepMs = service_config.value(service::Sleep::KEY, -1);
 	if (sleepMs < 1) {
 		loggerPtr->error("Invalid sleep_ms value in configuration. Expected greater than 0. Received: " + std::to_string(sleepMs));
-		test_result = false;
-	}
-	int bufferTTL = service_config.value(service::BufferTTL::KEY, -1);
-	if (bufferTTL < 1) {
-		loggerPtr->error("Invalid buffer_ttl_period value in configuration. Expected greater than 0. Received: " + std::to_string(bufferTTL));
 		test_result = false;
 	}
 	int pingPeriod = service_config.value(service::PingPeriod::KEY, -1);

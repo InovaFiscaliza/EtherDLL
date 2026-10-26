@@ -36,6 +36,11 @@
 #include <atomic>
 #include <queue>
 #include <chrono>
+#include <condition_variable>
+#include <cstdint>
+#include <functional>
+#include <limits>
+#include <utility>
 #include <winsock2.h>
 #include <ws2tcpip.h>
 
@@ -52,6 +57,42 @@ using taskKeys = edll::DefaultConfig::Service::TaskKeys;
 // Global variables
 extern spdlog::logger* loggerPtr;
 
+namespace edll::detail {
+
+// Send a complete byte range, continuing after short positive writes.
+// The callbacks keep this helper testable without relying on OS scheduling.
+template<typename SendFunction, typename LastErrorFunction>
+bool sendAllBytes(const char* data, size_t length, SendFunction&& sendFunction,
+	LastErrorFunction&& lastErrorFunction, size_t& bytesSent, int& errorCode) {
+	bytesSent = 0;
+	errorCode = 0;
+
+	while (bytesSent < length) {
+		const size_t remaining = length - bytesSent;
+		const size_t maxChunk = static_cast<size_t>((std::numeric_limits<int>::max)());
+		const int chunkLength = static_cast<int>(remaining < maxChunk ? remaining : maxChunk);
+		const int result = sendFunction(data + bytesSent, chunkLength);
+
+		if (result == SOCKET_ERROR) {
+			errorCode = lastErrorFunction();
+			if (errorCode == WSAEINTR) {
+				continue;
+			}
+			return false;
+		}
+		if (result <= 0 || result > chunkLength) {
+			errorCode = result == 0 ? WSAECONNRESET : WSAEINVAL;
+			return false;
+		}
+
+		bytesSent += static_cast<size_t>(result);
+	}
+
+	return true;
+}
+
+} // namespace edll::detail
+
 
 // ----------------------------------------------------------------------
 /** @brief Thread-safe message queue object
@@ -60,18 +101,61 @@ extern spdlog::logger* loggerPtr;
 **/
 class MessageQueue {
 private:
-	// Internal queue to hold messages
-	std::queue<json> msgQueue;
+	struct QueuedMessage {
+		std::uint64_t sequence;
+		json item;
+	};
+
+	// Internal queue to hold messages and their private, monotonic sequence.
+	std::queue<QueuedMessage> msgQueue;
 	// Mutex to protect access to the queue
 	mutable std::mutex mtx;
 	// Total number of messages ever added to the queue. May return to zero if it overflows.
 	unsigned long messageCount = 0;
+	// Sequence numbers are independent of the externally visible queue ID.
+	std::uint64_t nextSequence = 0;
+	std::uint64_t lastPoppedSequence = 0;
 	// Condition variable to signal addition of messages
 	std::condition_variable push_condition;
 	// Flag to indicate that a message was pushed
 	bool messagePushed = false;
 	// Condition variable to signal removal of messages
 	std::condition_variable pop_condition;
+
+	// Enqueue a message and return both its public queue ID and private sequence.
+	std::pair<unsigned long, std::uint64_t> pushInternal(
+		json item, const std::string& logSource, bool setClientKey) {
+
+		std::lock_guard<std::mutex> lock(mtx);
+		const unsigned long queueId = messageCount++;
+		const std::uint64_t sequence = ++nextSequence;
+
+		item[taskKeys::QueueId::VALUE] = queueId;
+		if (setClientKey) {
+			item[taskKeys::ClientId::VALUE] = queueId;
+		}
+		msgQueue.push(QueuedMessage{ sequence, std::move(item) });
+		messagePushed = true;
+
+		push_condition.notify_all();
+		loggerPtr->debug(logSource + " pushed item to queue. New size: {}", msgQueue.size());
+
+		return { queueId, sequence };
+	}
+
+	// Remove the front item while the caller holds mtx.
+	json popLocked(const std::string& logSource) {
+		if (msgQueue.empty()) {
+			return json{};
+		}
+		QueuedMessage queuedMessage = std::move(msgQueue.front());
+		msgQueue.pop();
+		lastPoppedSequence = queuedMessage.sequence;
+		pop_condition.notify_all();
+
+		loggerPtr->debug(logSource + " popped item from queue. New size: {}", msgQueue.size());
+		return std::move(queuedMessage.item);
+	}
 
 
 
@@ -88,19 +172,7 @@ public:
 	 * @throws NO EXCEPTION HANDLING
 	**/
 	unsigned long push(json item, std::string logSource, bool setClientKey = false) {
-
-		std::lock_guard<std::mutex> lock(mtx);
-		item[taskKeys::QueueId::VALUE] = messageCount;
-		if (setClientKey) {
-			item[taskKeys::ClientId::VALUE] = messageCount;
-		}
-		msgQueue.push(item);
-		messagePushed = true;
-
-		push_condition.notify_all();
-		loggerPtr->debug(logSource + " pushed item to queue. New size: {}", msgQueue.size());
-
-		return messageCount++;
+		return pushInternal(std::move(item), logSource, setClientKey).first;
 	}
 
 	/** @brief Push an item to the queue in a thread-safe manner
@@ -115,20 +187,22 @@ public:
 	 * @return unsigned long: Message count for the item just added
 	 * @throws NO EXCEPTION HANDLING
 	**/
-	unsigned long pushAndWait(json item, std::string logSource, const std::atomic<edll::INT_CODE>& interruptionCode, bool setClientKey = false) {
+	unsigned long pushAndWait(json item, std::string logSource,
+		const std::atomic<edll::INT_CODE>& interruptionCode, bool setClientKey = false,
+		const std::atomic<bool>* sessionStop = nullptr) {
 
-		
-		unsigned long msgCount = push(item, logSource, setClientKey);
+		const auto result = pushInternal(std::move(item), logSource, setClientKey);
 
-		// Wait until the item is popped from the queue or an interruption is signaled
+		// Wait until this specific item is popped or an interruption is signaled.
 
 		{
 			std::unique_lock<std::mutex> lock(mtx);
-			pop_condition.wait(lock, [this, msgCount, &interruptionCode] {
-				return messageCount != msgCount || interruptionCode != edll::Code::RUNNING;
+			pop_condition.wait(lock, [this, sequence = result.second, &interruptionCode, sessionStop] {
+				return lastPoppedSequence >= sequence || interruptionCode != edll::Code::RUNNING ||
+					(sessionStop && sessionStop->load(std::memory_order_acquire));
 				});
 		}
-		return msgCount;
+		return result.first;
 	
 	}
 
@@ -141,15 +215,7 @@ public:
 	**/
 	json pop(std::string logSource) {
 		std::lock_guard<std::mutex> lock(mtx);
-		if (msgQueue.empty()) {
-			return json{};
-		}
-		json item = msgQueue.front();
-		msgQueue.pop();
-		pop_condition.notify_all();
-
-		loggerPtr->debug(logSource + " popped item from queue. New size: {}", msgQueue.size());
-		return item;
+		return popLocked(logSource);
 	}
 
 	/** @brief Wait for and pop an item from the front of the queue in a thread-safe manner
@@ -160,25 +226,28 @@ public:
 	* @return json: Item popped from the front of the queue, or empty json if interrupted
 	* @throws NO EXCEPTION HANDLING
 	**/
-	json waitAndPop(const std::atomic<edll::INT_CODE>& interruptionCode, std::string logSource) {
+	json waitAndPop(const std::atomic<edll::INT_CODE>& interruptionCode, std::string logSource,
+		const std::atomic<bool>* sessionStop = nullptr) {
 
-		{
-			std::unique_lock<std::mutex> lock(mtx);
+		std::unique_lock<std::mutex> lock(mtx);
 
-			loggerPtr->debug(logSource + " waiting for item in message queue");
+		loggerPtr->debug(logSource + " waiting for item in message queue");
 
-			// Wait until queue is not empty or we're interrupted
-			push_condition.wait(lock, [this, &interruptionCode] {
-				return !msgQueue.empty() || interruptionCode != edll::Code::RUNNING;
-				});
+		// Wait until queue is not empty or we're interrupted.
+		push_condition.wait(lock, [this, &interruptionCode, sessionStop] {
+			return !msgQueue.empty() || interruptionCode != edll::Code::RUNNING ||
+				(sessionStop && sessionStop->load(std::memory_order_acquire));
+			});
+
+		// Preserve the existing policy: interruption takes precedence over queued items.
+		if (interruptionCode != edll::Code::RUNNING ||
+			(sessionStop && sessionStop->load(std::memory_order_acquire))) {
+			return json{};
 		}
 
-		// If wait was interrupted, return empty json
-		if (interruptionCode != edll::Code::RUNNING) {
-			return json(); 
-		}
-
-		return pop(logSource);
+		// Keep the lock from the availability check through removal so another
+		// consumer cannot take the item between the wait and the pop.
+		return popLocked(logSource);
 	}
 
 	/** @brief Hold the thread execution waiting for any action in the queue, interruption or timeout
@@ -188,20 +257,23 @@ public:
 	 * @return bool: True if the queue changed or , false otherwise
 	 * @throws NO EXCEPTION HANDLING
 	**/
-	bool waitAction(const std::atomic<edll::INT_CODE>& interruptionCode, std::string logSource, int timeoutMs = 1000) {
+	bool waitAction(const std::atomic<edll::INT_CODE>& interruptionCode, std::string logSource,
+		int timeoutMs = 1000, const std::atomic<bool>* sessionStop = nullptr) {
 
 		std::unique_lock<std::mutex> lock(mtx);
 
 		loggerPtr->debug(logSource + " waiting for item in message queue");
 
-		// Wait until queue is not empty or we're interrupted
-		bool notified = push_condition.wait_for(lock, std::chrono::milliseconds(timeoutMs), [this, &interruptionCode] {
-			return interruptionCode != edll::Code::RUNNING;
+		// Wake promptly when a push occurs or the service is interrupted.
+		push_condition.wait_for(lock, std::chrono::milliseconds(timeoutMs), [this, &interruptionCode, sessionStop] {
+			return messagePushed || interruptionCode != edll::Code::RUNNING ||
+				(sessionStop && sessionStop->load(std::memory_order_acquire));
 			});
 
 		if (messagePushed) {
 			messagePushed = false;
-			return interruptionCode == edll::Code::RUNNING;
+			return interruptionCode == edll::Code::RUNNING &&
+				!(sessionStop && sessionStop->load(std::memory_order_acquire));
 		}
 		else {
 			return false;
@@ -251,6 +323,104 @@ public:
 		push_condition.notify_all();
 		pop_condition.notify_all();
 	}
+
+};
+
+// Own all mutable resources and cancellation/completion state for one client.
+struct ClientSession {
+	MessageQueue request;
+	MessageQueue response;
+	std::atomic<bool> stopRequested{ false };
+	std::atomic<bool> measurementInProgress{ false };
+	std::atomic<bool> measurementStopRequested{ false };
+	std::atomic<bool> measurementWorkerRunning{ false };
+	std::mutex measurementWorkerMutex;
+	std::thread measurementWorker;
+	std::mutex completionMutex;
+	std::condition_variable completionCondition;
+	std::atomic<bool> workerCompleted{ false };
+
+	void requestStop() noexcept {
+		stopRequested.store(true, std::memory_order_release);
+		measurementStopRequested.store(true, std::memory_order_release);
+		request.notify();
+		response.notify();
+	}
+
+	void requestMeasurementStop() noexcept {
+		measurementStopRequested.store(true, std::memory_order_release);
+	}
+
+	bool startMeasurementWorker(std::function<void()> task) {
+		std::lock_guard<std::mutex> lock(measurementWorkerMutex);
+		if (measurementWorkerRunning.load(std::memory_order_acquire)) {
+			return false;
+		}
+		if (measurementWorker.joinable()) {
+			measurementWorker.join();
+		}
+
+		measurementStopRequested.store(false, std::memory_order_release);
+		measurementWorkerRunning.store(true, std::memory_order_release);
+		try {
+			measurementWorker = std::thread([this, task = std::move(task)]() mutable {
+				try {
+					task();
+				}
+				catch (const std::exception& e) {
+					try { loggerPtr->error("Measurement worker failed: {}", e.what()); }
+					catch (...) {}
+				}
+				catch (...) {
+					try { loggerPtr->error("Measurement worker failed with an unknown exception"); }
+					catch (...) {}
+				}
+				measurementWorkerRunning.store(false, std::memory_order_release);
+			});
+		}
+		catch (...) {
+			measurementWorkerRunning.store(false, std::memory_order_release);
+			throw;
+		}
+		return true;
+	}
+
+	void joinMeasurementWorker() {
+		std::lock_guard<std::mutex> lock(measurementWorkerMutex);
+		if (measurementWorker.joinable()) {
+			measurementWorker.join();
+		}
+	}
+
+	void markWorkerCompleted() noexcept {
+		workerCompleted.store(true, std::memory_order_release);
+		completionCondition.notify_all();
+	}
+
+	~ClientSession() {
+		requestStop();
+		try {
+			joinMeasurementWorker();
+		}
+		catch (...) {
+		}
+	}
+};
+
+// Guarantees that every worker exit, including stack unwinding, requests
+// session cancellation and wakes the session coordinator.
+class SessionWorkerCompletionGuard {
+private:
+	ClientSession& session;
+
+public:
+	explicit SessionWorkerCompletionGuard(ClientSession& session) noexcept
+		: session(session) {}
+
+	~SessionWorkerCompletionGuard() noexcept {
+		session.requestStop();
+		session.markWorkerCompleted();
+	}
 };
 
 
@@ -274,6 +444,7 @@ private:
 	// Configuration parameters
 	json config;
 	std::atomic<edll::INT_CODE>& interruptionCode;
+	std::atomic<bool>& sessionStop;
 	spdlog::logger& logger;
 
 	// Client socket and info
@@ -315,6 +486,120 @@ private:
 		msg[taskKeys::Message::VALUE] = std::string("Service interruption. Code: ") + std::to_string(interruptionCode.load());
 
 		return msg;
+	}
+
+	// Parse and dispatch one complete delimiter-terminated protocol frame.
+	void processClientFrame(const std::string& frame, MessageQueue& request,
+		MessageQueue& response, const std::string& logSource) {
+		json jsonObj = json::parse(frame, nullptr, false);
+		if (jsonObj.is_discarded() || !jsonObj.is_object()) {
+			loggerPtr->warn(logSource + " received an invalid JSON frame of {} bytes", frame.size());
+			queueFrameNack(frame.size(), response, logSource);
+			return;
+		}
+
+		// Add client ID and queue ID to the request object.
+		jsonObj[taskKeys::ClientIp::VALUE] = clientIP;
+		if (jsonObj.contains(idStr)) {
+			jsonObj[taskKeys::QueueId::VALUE] = request.push(jsonObj, logSource, false);
+		}
+		else {
+			jsonObj[idStr] = request.push(jsonObj, logSource, true);
+			jsonObj[taskKeys::QueueId::VALUE] = jsonObj[idStr];
+		}
+
+		loggerPtr->debug(logSource + " received message from client: " + jsonObj.dump());
+
+		json ackObj;
+		ackObj[service::Msg::Ack::VALUE] = jsonObj[idStr];
+		response.push(ackObj, logSource, true);
+	}
+
+	void queueFrameNack(size_t frameSize, MessageQueue& response, const std::string& logSource) {
+		json nackObj;
+		nackObj[service::Msg::Nack::VALUE] = std::to_string(frameSize);
+		response.push(nackObj, logSource, true);
+	}
+
+	// Return the longest suffix that may be the start of a delimiter split
+	// across socket reads.
+	size_t delimiterPrefixSuffixLength(const std::string& data) const {
+		if (msgEndStr.size() <= 1) {
+			return 0;
+		}
+
+		size_t candidateLength = data.size() < msgEndStr.size() - 1
+			? data.size()
+			: msgEndStr.size() - 1;
+		while (candidateLength > 0) {
+			if (data.compare(data.size() - candidateLength, candidateLength,
+				msgEndStr, 0, candidateLength) == 0) {
+				return candidateLength;
+			}
+			--candidateLength;
+		}
+		return 0;
+	}
+
+	void addDiscardedFrameBytes(size_t& totalBytes, size_t additionalBytes) const {
+		const size_t maxSize = (std::numeric_limits<size_t>::max)();
+		totalBytes = additionalBytes > maxSize - totalBytes
+			? maxSize
+			: totalBytes + additionalBytes;
+	}
+
+	void processAccumulatedFrames(std::string& accumulatedData, bool& discardingOversizedFrame,
+		size_t& discardedFrameBytes, MessageQueue& request, MessageQueue& response,
+		const std::string& logSource) {
+		while (true) {
+			if (discardingOversizedFrame) {
+				const size_t delimiterIndex = accumulatedData.find(msgEndStr);
+				if (delimiterIndex == std::string::npos) {
+					const size_t suffixLength = delimiterPrefixSuffixLength(accumulatedData);
+					addDiscardedFrameBytes(discardedFrameBytes,
+						accumulatedData.size() - suffixLength);
+					if (suffixLength < accumulatedData.size()) {
+						accumulatedData.erase(0, accumulatedData.size() - suffixLength);
+					}
+					return;
+				}
+
+				addDiscardedFrameBytes(discardedFrameBytes, delimiterIndex);
+				loggerPtr->warn(logSource + " rejected oversized frame of {} bytes", discardedFrameBytes);
+				queueFrameNack(discardedFrameBytes, response, logSource);
+				accumulatedData.erase(0, delimiterIndex + msgEndStr.size());
+				discardingOversizedFrame = false;
+				discardedFrameBytes = 0;
+			}
+
+			const size_t delimiterIndex = accumulatedData.find(msgEndStr);
+			if (delimiterIndex != std::string::npos) {
+				if (delimiterIndex > edll::MAX_FRAME_SIZE_BYTES) {
+					loggerPtr->warn(logSource + " rejected oversized frame of {} bytes", delimiterIndex);
+					queueFrameNack(delimiterIndex, response, logSource);
+				}
+				else {
+					const std::string frame = accumulatedData.substr(0, delimiterIndex);
+					processClientFrame(frame, request, response, logSource);
+				}
+
+				accumulatedData.erase(0, delimiterIndex + msgEndStr.size());
+				continue;
+			}
+
+			const size_t suffixLength = delimiterPrefixSuffixLength(accumulatedData);
+			const size_t frameBytes = accumulatedData.size() - suffixLength;
+			if (frameBytes > edll::MAX_FRAME_SIZE_BYTES) {
+				loggerPtr->warn(logSource + " rejected oversized frame exceeding {} bytes",
+					edll::MAX_FRAME_SIZE_BYTES);
+				discardingOversizedFrame = true;
+				discardedFrameBytes = frameBytes;
+				if (suffixLength < accumulatedData.size()) {
+					accumulatedData.erase(0, accumulatedData.size() - suffixLength);
+				}
+			}
+			return;
+		}
 	}
 
 	// ----------------------------------------------------------------------
@@ -463,9 +748,10 @@ public:
 	 * @throws NO EXCEPTION HANDLING
 	**/
 	ClientConn(json config,
-		std::atomic<edll::INT_CODE>& interruptionCode, spdlog::logger& logger)
+		std::atomic<edll::INT_CODE>& interruptionCode,
+		std::atomic<bool>& sessionStop, spdlog::logger& logger)
 		: config(config),
-		interruptionCode(interruptionCode), logger(logger), clientIP("")
+		interruptionCode(interruptionCode), sessionStop(sessionStop), logger(logger), clientIP("")
 	{
 		establishConnection();
 	}
@@ -492,18 +778,17 @@ public:
 
 		int bufferSize = serviceKeys[service::BufferSize::KEY].get<int>();
 		std::string buffer;
-		buffer.resize(bufferSize + 1);
-		std::fill(buffer.begin(), buffer.end(), 0);
+		buffer.resize(bufferSize);
 		std::string accumulatedData = "";
-
-		int bufferTTLInit = serviceKeys[service::BufferTTL::KEY].get<int>();
-		int bufferTTL = bufferTTLInit;
+		bool discardingOversizedFrame = false;
+		size_t discardedFrameBytes = 0;
 
 		int iResult = 0;
 
 		loggerPtr->debug(logSource + " is waiting for messages from " + clientIP);
 
-		while (interruptionCode == edll::Code::RUNNING) {
+		while (interruptionCode == edll::Code::RUNNING &&
+			!sessionStop.load(std::memory_order_acquire)) {
 
 			fd_set readfds;
 			FD_ZERO(&readfds);
@@ -527,53 +812,9 @@ public:
 			int bytesRead = recv(clientSocket, buffer.data(), static_cast<int>(bufferSize), 0);
 
 			if (bytesRead > 0) {
-
-				bool dataToProcess = true;
-
-				json jsonObj = json::parse(buffer, nullptr, false);
-
-				
-				if (jsonObj == json::value_t::discarded) {
-					accumulatedData.append(buffer.data(), bytesRead);
-
-					jsonObj = json::parse(accumulatedData, nullptr, false);
-
-					if (jsonObj == json::value_t::discarded) {
-						loggerPtr->debug(logSource + " accumulated data. So far: " + accumulatedData);
-						bufferTTL--;
-						dataToProcess = false;
-
-						json nackObj;
-						nackObj[service::Msg::Nack::VALUE] = std::to_string(accumulatedData.length());
-						response.push(nackObj, logSource, true);
-					}
-				}
-
-				if (dataToProcess) {
-					bufferTTL = bufferTTLInit;
-					accumulatedData.clear();
-					std::fill(buffer.begin(), buffer.end(), 0);
-
-					// add client id and queue id to object
-					jsonObj[taskKeys::ClientIp::VALUE] = clientIP;
-
-					if (jsonObj.contains(idStr)) {
-						jsonObj[taskKeys::QueueId::VALUE] = request.push(jsonObj, logSource, false);
-					}
-					else
-					{
-						jsonObj[idStr] = request.push(jsonObj, logSource, true);
-
-						// add the queue id to the message for debug/tracking purposes
-						jsonObj[taskKeys::QueueId::VALUE] = jsonObj[idStr];
-					}
-						
-					loggerPtr->debug(logSource + " received message from client: " + jsonObj.dump());
-
-					json ackObj;
-					ackObj[service::Msg::Ack::VALUE] = jsonObj[idStr];
-					response.push(ackObj, logSource, true);
-				}
+				accumulatedData.append(buffer.data(), static_cast<size_t>(bytesRead));
+				processAccumulatedFrames(accumulatedData, discardingOversizedFrame, discardedFrameBytes,
+					request, response, logSource);
 			}
 			else if (bytesRead == 0) {
 				// Connection closed by client
@@ -586,14 +827,6 @@ public:
 					loggerPtr->error(logSource + " recv failed. EC:" + std::to_string(error));
 					return;
 				}
-			}
-
-			if (bufferTTL == 0) {
-				if (accumulatedData.length() > 0) {
-					loggerPtr->debug(logSource + " Buffer TTL expired. Clearing accumulated data: " + accumulatedData);
-					accumulatedData.clear();
-				}
-				bufferTTL = bufferTTLInit;
 			}
 		}
 
@@ -622,16 +855,16 @@ public:
 	{
 		const std::string logSource = "DLLResponseToClient";
 
-		int iResult = 0;
-
-		while (interruptionCode == edll::Code::RUNNING)
+		while (interruptionCode == edll::Code::RUNNING &&
+			!sessionStop.load(std::memory_order_acquire))
 		{
 			loggerPtr->debug("DLLResponseToClient: waiting for response");
-			json oneResponse = response.waitAndPop(interruptionCode, logSource);
+			json oneResponse = response.waitAndPop(interruptionCode, logSource, &sessionStop);
 			loggerPtr->debug("DLLResponseToClient: got response");
 
-			if (interruptionCode != edll::Code::RUNNING) {
-				loggerPtr->debug("DLLResponseToClient: interruption detected, breaking");
+			if (interruptionCode != edll::Code::RUNNING ||
+				sessionStop.load(std::memory_order_acquire)) {
+				loggerPtr->debug("DLLResponseToClient: cancellation detected, breaking");
 				break;
 			}
 
@@ -639,16 +872,27 @@ public:
 			std::string message = oneResponse.dump() + msgEndStr;
 			loggerPtr->debug("DLLResponseToClient: sending message: {}", message);
 
-			iResult = send(clientSocket, message.c_str(), static_cast<int>(message.length()), 0);
-			if (iResult == SOCKET_ERROR) {
-				loggerPtr->warn(logSource + "data send failed. EC:" + std::to_string(WSAGetLastError()));
+			size_t bytesSent = 0;
+			int errorCode = 0;
+			const bool sentCompletely = edll::detail::sendAllBytes(
+				message.data(), message.size(),
+				[this](const char* data, int length) {
+					return send(clientSocket, data, length, 0);
+				},
+				[] { return WSAGetLastError(); },
+				bytesSent, errorCode);
+			if (!sentCompletely) {
+				loggerPtr->error(logSource + " failed after sending {}/{} bytes. EC:{}",
+					bytesSent, message.size(), errorCode);
+				// A partial frame cannot be repaired by sending the next queued
+				// message on the same stream. End this sender and its session.
+				return;
 			}
-			else {
-				loggerPtr->debug(logSource + " sent message to client: " + message);
 
-				// reset message timer to avoid unnecessary pings if communication is active
-				lastClientMsgTime = std::chrono::steady_clock::now();
-			}
+			loggerPtr->debug(logSource + " sent message to client: " + message);
+
+			// Reset the idle timer only after the complete frame was sent.
+			lastClientMsgTime = std::chrono::steady_clock::now();
 		}
 		loggerPtr->debug("DLLResponseToClient: exiting loop");
 	}
@@ -670,25 +914,31 @@ public:
 		const std::string logSource = "pingClient";
 
 		int pingPeriodMs = config[service::KEY][service::PingPeriod::KEY].get<int>() * 1000;
-		int iResult = 0;
 
-		while (interruptionCode == edll::Code::RUNNING) {
+		while (interruptionCode == edll::Code::RUNNING &&
+			!sessionStop.load(std::memory_order_acquire)) {
 
-			bool timeout = response.waitAction(interruptionCode, logSource, pingPeriodMs);
+			const bool queueChanged = response.waitAction(interruptionCode, logSource,
+				pingPeriodMs, &sessionStop);
+			if (interruptionCode != edll::Code::RUNNING ||
+				sessionStop.load(std::memory_order_acquire)) {
+				break;
+			}
 
-			auto now = std::chrono::steady_clock::now();
-
-			if (timeout) {
-				std::chrono::milliseconds timeSinceLastMsg = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastClientMsgTime);
-				if (timeSinceLastMsg.count() > pingPeriodMs) {
-					json pingObj;
-					pingObj[service::Msg::Ping::VALUE] = now.time_since_epoch().count();
-					response.pushAndWait(pingObj, logSource, interruptionCode, true);
+			// A queue change means normal traffic is active; only generate
+			// periodic output after the wait expires without a new push.
+			if (!queueChanged) {
+				if (config[service::KEY][service::DemoMode::KEY].get<bool>()) {
+					response.pushAndWait(buildDemoData(), logSource, interruptionCode, true, &sessionStop);
 				}
-			} 
-			else {
-				if (config[service::KEY][service::DemoMode::KEY].get<bool>() && !timeout) {
-					response.pushAndWait(buildDemoData(), logSource, interruptionCode, true);
+				else if (pingEnable) {
+					auto now = std::chrono::steady_clock::now();
+					std::chrono::milliseconds timeSinceLastMsg = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastClientMsgTime);
+					if (timeSinceLastMsg.count() > pingPeriodMs) {
+						json pingObj;
+						pingObj[service::Msg::Ping::VALUE] = now.time_since_epoch().count();
+						response.pushAndWait(pingObj, logSource, interruptionCode, true, &sessionStop);
+					}
 				}
 			}
 			// sleep a 100 ms to avoid overload in case of error
@@ -724,6 +974,19 @@ public:
 	**/
 	std::string getClientIP() const {
 		return clientIP;
+	}
+
+	// Wake any socket operation blocked in this client session. The socket is
+	// closed by the owner only after all session workers have joined.
+	void shutdownConnection() {
+		if (clientSocket != INVALID_SOCKET) {
+			if (shutdown(clientSocket, SD_BOTH) == SOCKET_ERROR) {
+				const int error = WSAGetLastError();
+				if (error != WSAENOTCONN && error != WSAEINVAL) {
+					loggerPtr->debug("Socket shutdown returned EC:{}", error);
+				}
+			}
+		}
 	}
 
 	// ----------------------------------------------------------------------

@@ -40,6 +40,7 @@
 #include <fstream>
 #include <iostream>
 #include <winsock2.h>
+#include <windows.h>
 #include <ws2tcpip.h>
 
 // Libs for socket
@@ -57,56 +58,59 @@ using json = nlohmann::json;
 */
 // Code to represent the cause for not running
 std::atomic<edll::INT_CODE> interruptionCode = edll::Code::RUNNING;
-
-// Message queues
-MessageQueue request;
-MessageQueue response;
+static_assert(std::atomic<edll::INT_CODE>::is_always_lock_free,
+	"Signal handlers require a lock-free interruption code");
 
 // Logger pointer
 spdlog::logger* loggerPtr = nullptr;
 
-// Measurement in progress flag
-std::atomic<bool> measurementInProgress{ false };
-
-// Completion signaling
-std::mutex threadCompletionMutex;
-std::condition_variable threadCompletionCV;
-std::atomic<bool> anyThreadCompleted = false;
-
 // ----------------------------------------------------------------------
 /*
-	Handle interruptio signals 'ctrl+C' and 'kill'
+	Record process shutdown requests without performing cleanup in callback context.
 */
+// Keep CRT signal handlers limited to a lock-free state update. Logging,
+// queue operations, and condition-variable notifications belong to workers.
 static void signalHandler(int signal) {
+	if (signal == SIGINT) {
+		interruptionCode.store(edll::Code::CTRL_C_INTERRUPT, std::memory_order_relaxed);
+	}
+	else if (signal == SIGTERM) {
+		interruptionCode.store(edll::Code::KILL_INTERRUPT, std::memory_order_relaxed);
+	}
+}
 
-	if (signal == SIGINT)
-	{
-		interruptionCode = edll::Code::CTRL_C_INTERRUPT;
-		loggerPtr->critical("Received interrupt signal (Ctrl+C)");
+// Windows console events are handled on a system-created thread. This callback
+// only records the request; the main thread performs orderly session shutdown.
+static BOOL WINAPI consoleControlHandler(DWORD controlType) {
+	switch (controlType) {
+	case CTRL_C_EVENT:
+	case CTRL_BREAK_EVENT:
+		interruptionCode.store(edll::Code::CTRL_C_INTERRUPT, std::memory_order_relaxed);
+		return TRUE;
+	case CTRL_CLOSE_EVENT:
+	case CTRL_LOGOFF_EVENT:
+	case CTRL_SHUTDOWN_EVENT:
+		interruptionCode.store(edll::Code::KILL_INTERRUPT, std::memory_order_relaxed);
+		return TRUE;
+	default:
+		return FALSE;
 	}
-	else if (signal == SIGTERM)
-	{
-		interruptionCode = edll::Code::KILL_INTERRUPT;
-		loggerPtr->critical("Received termination signal (kill)");
-	}
-	else 	{
-		std::string message = "Received unknown signal. #LttOS: " + std::to_string(signal);
-		loggerPtr->warn(message);
-	}
-
-	request.notify();
-	response.notify();
-	threadCompletionCV.notify_all();
 }
 
 // ----------------------------------------------------------------------
 /*
-	Register the signal callback handlers
+	Register minimal CRT and Windows console shutdown callbacks.
 */
 static void registerSignalHandlers() {
-	
-	std::signal(SIGINT, signalHandler);  // Handles Ctrl+C
-	std::signal(SIGTERM, signalHandler); // Handles kill command
+	if (!SetConsoleCtrlHandler(consoleControlHandler, TRUE)) {
+		loggerPtr->warn("Failed to register Windows console control handler. EC:{}", GetLastError());
+	}
+	if (std::signal(SIGINT, signalHandler) == SIG_ERR) {
+		loggerPtr->warn("Failed to register SIGINT handler.");
+	}
+	if (std::signal(SIGTERM, signalHandler) == SIG_ERR) {
+		loggerPtr->warn("Failed to register SIGTERM handler.");
+	}
 }
 
 
@@ -290,14 +294,19 @@ int main(int argc, char* argv[]) {
 
 	while (interruptionCode == edll::Code::RUNNING)
 	{
-			
+		ClientSession session;
+
 		// Initialize ClientConn object to wait for a client connection
-		ClientConn clientConn(config, interruptionCode, *logger_ptr);
+		ClientConn clientConn(config, interruptionCode, session.stopRequested, *logger_ptr);
 
 		if (!clientConn.isConnected()) {
 			if (interruptionCode == edll::Code::RUNNING) {
 				logger_ptr->error("Error establishing client connection. Retrying in 5 seconds");
-				std::this_thread::sleep_for(std::chrono::seconds(5));
+				const auto retryDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+				while (interruptionCode == edll::Code::RUNNING &&
+					std::chrono::steady_clock::now() < retryDeadline) {
+					std::this_thread::sleep_for(std::chrono::milliseconds(100));
+				}
 				continue;
 			}
 			else {
@@ -305,74 +314,80 @@ int main(int argc, char* argv[]) {
 			}
 		}
 
-		// Reset completion flag
-		anyThreadCompleted = false;
-
-		// Lambda to signal completion
-		auto signalCompletion = []() {
-				{
-					std::lock_guard<std::mutex> lock(threadCompletionMutex);
-					anyThreadCompleted = true;
-				}
-			threadCompletionCV.notify_all();
-			};
+		auto runSessionTask = [&](const std::string& taskName, auto task) {
+			SessionWorkerCompletionGuard completionGuard(session);
+			logger_ptr->debug("Starting {}", taskName);
+			try {
+				task();
+			}
+			catch (const std::exception& e) {
+				logger_ptr->error("{} failed: {}", taskName, e.what());
+			}
+			catch (...) {
+				logger_ptr->error("{} failed with an unknown exception", taskName);
+			}
+			logger_ptr->debug("Finished {}", taskName);
+			return true;
+		};
 
 		// Start threads for each parallel task
 		auto requestComFuture = std::async(std::launch::async, [&]() {
-			logger_ptr->debug("Starting thread to receive client request and populate request queue");
-			clientConn.clientRequestToDLL(request, response);
-			signalCompletion();
-			logger_ptr->debug("Finished thread to receive client request and populate request queue");
-			return true;
+			return runSessionTask("client request receiver", [&]() {
+				clientConn.clientRequestToDLL(session.request, session.response);
 			});
+		});
 
 		auto requestProcFuture = std::async(std::launch::async, [&]() {
-			logger_ptr->debug("Starting thread that send requests from queue to DLL");
-			processRequestQueue(DLLConnID, request, response, interruptionCode, measurementInProgress);
-			signalCompletion();
-			logger_ptr->debug("Finished thread that send requests from queue to DLL");
-			return true;
+			return runSessionTask("request processor", [&]() {
+				processRequestQueue(DLLConnID, session, interruptionCode);
 			});
+		});
 
 		auto responseComFuture = std::async(std::launch::async, [&]() {
-			logger_ptr->debug("Starting thread that sends DLL response to client");
-			clientConn.DLLResponseToClient(response);
-			signalCompletion();
-			logger_ptr->debug("Finished thread that sends DLL response to client");
-			return true;
+			return runSessionTask("client response sender", [&]() {
+				clientConn.DLLResponseToClient(session.response);
 			});
+		});
 
 		auto pingComFuture = std::async(std::launch::async, [&]() {
-			logger_ptr->debug("Starting thread that send ping messages to test client connection");
-			clientConn.pingClient(response);
-		 signalCompletion();
-			logger_ptr->debug("Finished thread that send ping messages to test client connection");
-			return true;
+			return runSessionTask("client ping sender", [&]() {
+				clientConn.pingClient(session.response);
 			});
+		});
 
 		// Wait for any thread to complete or for an interruption signal
 		{
-			std::unique_lock<std::mutex> lock(threadCompletionMutex);
-			threadCompletionCV.wait(lock, [&]() {
-				return anyThreadCompleted.load() || interruptionCode != edll::Code::RUNNING;
-				});
+			std::unique_lock<std::mutex> lock(session.completionMutex);
+			while (!session.workerCompleted.load(std::memory_order_acquire) &&
+				interruptionCode == edll::Code::RUNNING) {
+				// The short timeout lets the main thread observe a process signal;
+				// the signal handler does not touch session-owned synchronization.
+				session.completionCondition.wait_for(lock, std::chrono::milliseconds(100));
+			}
 		}
 
-		logger_ptr->info("Service interrupted");
+		if (interruptionCode == edll::Code::RUNNING) {
+			logger_ptr->info("Client session ended; cleaning up its workers.");
+		}
+		else {
+			logger_ptr->info("Service shutdown requested; cleaning up client-session workers.");
+		}
 
+		// Stop all workers in this client session while keeping the service-level
+		// interruption code unchanged for ordinary client disconnects.
+		session.requestStop();
+		clientConn.shutdownConnection();
 
 		std::vector<std::future<bool>*> futures = {
 			&requestComFuture, &requestProcFuture,
 			&responseComFuture, &pingComFuture
 		};
 
-		// Check each future for exceptions
+		// get() waits for every async worker and consumes any uncaught exception.
 		for (auto* future : futures) {
 			if (future->valid()) {
 				try {
-					if (future->wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
-						future->get(); // Consume any exceptions
-					}
+					future->get();
 				}
 				catch (const std::exception& e) {
 					logger_ptr->warn("Thread exception during cleanup: {}", e.what());
@@ -380,7 +395,7 @@ int main(int argc, char* argv[]) {
 			}
 		}
 
-		// Close client connection if still open
+		// Close the socket only after no worker can still be using it.
 		if (!clientConn.isConnected()) {
 			logger_ptr->info("Client disconnected.");
 		}

@@ -48,7 +48,6 @@
             "serverId": "SID"
         },
         "bufferSizeBytes": 4096,
-        "bufferTTLMsgCount": 5,
         "demoMode": false,
         "msgKeys": {
             "ack": "ACK",

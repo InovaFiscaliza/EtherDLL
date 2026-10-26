@@ -36,8 +36,7 @@
 // For convenience
 using json = nlohmann::json;
 
-// Global variables
-extern MessageQueue response;
+// Global logger
 extern spdlog::logger* loggerPtr;
 
 // ----------------------------------------------------------------------
